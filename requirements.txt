@@ -1,0 +1,10 @@
+numpy>=1.21.0
+openvdb>=8.0.0
+scipy>=1.7.0
+requests>=2.25.0
+shapely>=1.8.0
+trimesh>=3.9.0
+pyproj>=3.2.0
+torch>=1.9.0
+matplotlib>=3.3.0
+tqdm>=4.60.0 
