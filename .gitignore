@@ -211,6 +211,7 @@ outputs/
 output/
 tiles/
 data/
+demo_outputs/
 
 checkpoints/
 checkpoints.egg-info/

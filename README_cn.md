@@ -1,8 +1,33 @@
-# VDB 测试数据生成工具
+# NeuroCity - 神经辐射场城市建模平台
 
-这个工具包提供了多种方式来生成城市建筑的 VDB 测试数据，用于神经网络训练和测试。
+NeuroCity 是一个综合性的神经辐射场（Neural Radiance Fields）平台，专门用于大规模城市场景的建模、渲染和数据生成。该平台集成了多种最先进的 NeRF 实现和数据生成工具。
 
-## 功能特性
+## 🌟 功能特性
+
+### 核心软件包
+
+- **NeRFs Package** (`src/nerfs/`): 集成 13 种 NeRF 实现的统一软件包
+- **DataGen Package** (`src/datagen/`): 专业的数据生成和采样工具
+- **GFV Package** (`src/gfv/`): 几何特征向量处理
+- **NeuralVDB Package** (`src/neuralvdb/`): 神经体素数据库
+
+### NeRF 实现
+
+- **Classic NeRF**: 原始神经辐射场实现
+- **Instant-NGP**: 即时神经图形基元，极快训练速度
+- **Mip-NeRF**: 具有抗锯齿功能的多尺度 NeRF
+- **Block-NeRF**: 大规模场景分块表示
+- **Mega-NeRF**: 大规模户外场景重建
+- **Grid-NeRF**: 基于网格的高效渲染
+- **Plenoxels**: 无神经网络的稀疏体素表示
+- **SVRaster**: 稀疏体素光栅化
+- **Bungee-NeRF**: 渐进式训练策略
+- **Pyramid-NeRF**: 多尺度金字塔表示
+- **DNMP-NeRF**: 可微分神经网格基元
+- **Nerfacto**: 实用的 NeRF 实现
+- **Mega-NeRF Plus**: 增强版大规模 NeRF
+
+### 数据生成能力
 
 - **多种数据源**：支持生成合成数据或从 OSM 下载真实数据
 - **灵活配置**：可调整城市尺寸、体素大小、建筑类型等
