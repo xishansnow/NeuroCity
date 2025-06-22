@@ -7,4 +7,9 @@ trimesh>=3.9.0
 pyproj>=3.2.0
 torch>=1.9.0
 matplotlib>=3.3.0
-tqdm>=4.60.0 
+tqdm>=4.60.0
+# PyTorch Lightning dependencies
+pytorch-lightning>=2.0.0
+torchmetrics>=0.11.0
+tensorboard>=2.8.0
+wandb>=0.13.0 
