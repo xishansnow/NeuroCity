@@ -262,8 +262,7 @@ config = GridNeRFConfig(
     # 训练参数
     batch_size=2048,             # 光线批量大小
     num_epochs=300,              # 训练轮数
-    
-    # 学习率
+    src/nerfs/dnmp_nerf
     grid_lr=5e-3,                # 网格特征学习率
     mlp_lr=1e-3,                 # MLP网络学习率
     

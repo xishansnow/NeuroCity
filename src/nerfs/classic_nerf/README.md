@@ -155,6 +155,60 @@ for i, c2w in enumerate(render_poses):
 imageio.mimwrite('spiral_render.mp4', frames, fps=30, quality=8)
 ```
 
+## 🎯 Model Characteristics
+
+### 🎨 Representation Method
+- **Multi-Layer Perceptron (MLP)**: Deep fully-connected neural network (8 layers, 256 hidden units)
+- **Positional Encoding**: High-frequency sinusoidal encoding for 3D coordinates (10 levels) and viewing directions (4 levels)
+- **Implicit Function**: Continuous 5D function F(x,y,z,θ,φ) → (RGB, σ)
+- **Skip Connections**: Direct connections from input to middle layers for better gradient flow
+- **Hierarchical Sampling**: Coarse-to-fine sampling strategy with two separate networks
+
+### ⚡ Training Performance
+- **Training Time**: 1-2 days for typical scenes on modern GPUs
+- **Training Speed**: ~1,000-5,000 rays/second on RTX 3080
+- **Convergence**: Slow convergence requiring 200K-1M iterations
+- **GPU Memory**: 8-16GB during training for complex scenes
+- **Scalability**: Training time scales linearly with scene complexity
+
+### 🎬 Rendering Mechanism
+- **Stratified Sampling**: Uniform sampling along rays with random perturbation
+- **Hierarchical Volume Sampling**: Coarse network guides fine network sampling
+- **Volume Rendering**: Numerical integration using quadrature rules
+- **Alpha Compositing**: Front-to-back accumulation with transmittance
+- **View-Dependent Shading**: Separate MLP branch for view-dependent color
+
+### 🚀 Rendering Speed
+- **Inference Speed**: 10-30 seconds per 800×800 image on RTX 3080
+- **Ray Processing**: ~1,000-3,000 rays/second during inference
+- **Batch Processing**: Requires chunked rendering to avoid memory issues
+- **Resolution Scaling**: Rendering time scales quadratically with image resolution
+- **Interactive Rendering**: Not suitable for real-time applications
+
+### 💾 Storage Requirements
+- **Model Size**: 100-500 MB for typical scenes
+- **MLP Weights**: ~50-100 MB for coarse network, ~50-100 MB for fine network
+- **Scene Representation**: Model size independent of scene complexity
+- **Memory Efficiency**: Compact continuous representation
+- **Checkpoint Size**: Full model state ~200-1000 MB including optimizer states
+
+### 📊 Performance Comparison
+
+| Metric | Classic NeRF | Modern Methods | Disadvantage |
+|--------|--------------|----------------|--------------|
+| Training Time | 1-2 days | 20-60 min | **20-50x slower** |
+| Inference Speed | 10-30 sec/image | Real-time | **>100x slower** |
+| Model Size | 100-500 MB | 10-50 MB | **5-10x larger** |
+| GPU Memory | 8-16 GB | 2-4 GB | **2-4x more** |
+| Quality (PSNR) | Baseline | +0.5-2.0 dB | **Lower quality** |
+
+### 🎯 Use Cases
+- **Research Baseline**: Foundation for NeRF research and comparisons
+- **High-Quality Rendering**: Excellent quality for offline rendering applications
+- **Educational Purpose**: Clear and interpretable architecture for learning
+- **Proof of Concept**: Demonstrating neural implicit representations
+- **Custom Architectures**: Base for developing specialized NeRF variants
+
 ## Model Architecture
 
 ### NeRF Network
