@@ -11,9 +11,17 @@ import torch
 import logging
 from pathlib import Path
 
-from .core import SVRasterConfig, SVRasterModel
-from .dataset import SVRasterDatasetConfig, create_svraster_dataset
-from .trainer import SVRasterTrainerConfig, create_svraster_trainer
+import sys
+import os
+
+# Add src to path for imports
+sys.path.append(os.path.join(os.path.dirname(__file__), '..', '..'))
+
+# Import modules
+
+from nerfs.svraster.core import SVRasterConfig, SVRasterModel
+from nerfs.svraster.dataset import SVRasterDatasetConfig, create_svraster_dataset
+from nerfs.svraster.trainer import SVRasterTrainerConfig, create_svraster_trainer
 
 # Setup logging
 logging.basicConfig(level=logging.INFO)
@@ -25,61 +33,25 @@ def create_sample_config():
     
     # Model configuration
     model_config = SVRasterConfig(
-        max_octree_levels=12,
-        base_resolution=64,
-        scene_bounds=(-2.0, -2.0, -2.0, 2.0, 2.0, 2.0),
-        density_activation="exp",
-        color_activation="sigmoid",
-        sh_degree=2,
-        subdivision_threshold=0.01,
-        pruning_threshold=0.001,
-        ray_samples_per_voxel=8,
-        background_color=(0.0, 0.0, 0.0),
-        use_view_dependent_color=True,
-        use_opacity_regularization=True,
-        opacity_reg_weight=0.01
+        max_octree_levels=12, base_resolution=64, scene_bounds=(
+            -2.0,
+            -2.0,
+            -2.0,
+            2.0,
+            2.0,
+            2.0,
+        )
     )
     
     # Dataset configuration
     dataset_config = SVRasterDatasetConfig(
-        data_dir="./data/nerf_synthetic/lego",
-        images_dir="images",
-        dataset_type="blender",
-        image_height=800,
-        image_width=800,
-        downscale_factor=2.0,
-        train_split=0.8,
-        val_split=0.1,
-        test_split=0.1,
-        num_rays_train=1024,
-        num_rays_val=512,
-        white_background=True
+        data_dir="./data/nerf_synthetic/lego", images_dir="images", dataset_type="blender", image_height=800, image_width=800, downscale_factor=2.0, train_split=0.8, val_split=0.1, test_split=0.1, num_rays_train=1024, num_rays_val=512, white_background=True
     )
     
     # Trainer configuration
     trainer_config = SVRasterTrainerConfig(
-        num_epochs=100,
-        batch_size=1,
-        learning_rate=1e-3,
-        weight_decay=1e-4,
-        optimizer_type="adam",
-        scheduler_type="cosine",
-        rgb_loss_weight=1.0,
-        enable_subdivision=True,
-        subdivision_start_epoch=10,
-        subdivision_interval=5,
-        enable_pruning=True,
-        pruning_start_epoch=20,
-        pruning_interval=10,
-        val_interval=5,
-        log_interval=100,
-        save_interval=1000,
-        checkpoint_dir="./checkpoints/svraster",
-        log_dir="./logs/svraster",
-        device="cuda" if torch.cuda.is_available() else "cpu",
-        use_mixed_precision=True,
-        gradient_clip_norm=1.0,
-        render_chunk_size=1024
+        num_epochs=100, batch_size=1, learning_rate=1e-3, weight_decay=1e-4, optimizer_type="adam", scheduler_type="cosine", rgb_loss_weight=1.0, subdivision_start_epoch=10, subdivision_interval=5, enable_pruning=True, pruning_start_epoch=20, pruning_interval=10, val_interval=5, log_interval=100, save_interval=1000, checkpoint_dir="./checkpoints/svraster", log_dir="./logs/svraster", device="cuda" if torch.cuda.is_available(
+        )
     )
     
     return model_config, dataset_config, trainer_config
@@ -193,14 +165,16 @@ def render_svraster(checkpoint_path: str, output_dir: str, dataset_config: SVRas
 def main():
     """Main function for command-line usage."""
     parser = argparse.ArgumentParser(description="SVRaster Example Usage")
-    parser.add_argument("--mode", choices=["train", "render"], required=True,
-                       help="Mode: train or render")
-    parser.add_argument("--data_dir", required=True,
-                       help="Path to dataset directory")
-    parser.add_argument("--output_dir", required=True,
-                       help="Path to output directory")
-    parser.add_argument("--checkpoint", 
-                       help="Path to checkpoint file (for rendering)")
+    parser.add_argument(
+        "--mode",
+        choices=["train",
+        "render"],
+        required=True,
+        help="Mode: train or render",
+    )
+    parser.add_argument("--data_dir", required=True, help="Path to dataset directory")
+    parser.add_argument("--output_dir", required=True, help="Path to output directory")
+    parser.add_argument("--checkpoint", help="Path to checkpoint file (for rendering)")
     
     args = parser.parse_args()
     

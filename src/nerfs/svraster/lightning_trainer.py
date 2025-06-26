@@ -1,8 +1,7 @@
 """
 PyTorch Lightning trainer for SVRaster.
 
-This module provides a Lightning-based training framework for SVRaster models,
-offering automatic optimization, distributed training, checkpointing, and logging.
+This module provides a Lightning-based training framework for SVRaster models, offering automatic optimization, distributed training, checkpointing, and logging.
 """
 
 import torch
@@ -12,7 +11,7 @@ from pytorch_lightning.callbacks import ModelCheckpoint, LearningRateMonitor, Ea
 from pytorch_lightning.loggers import TensorBoardLogger, WandbLogger
 from pytorch_lightning.strategies import DDPStrategy
 import torchmetrics
-from typing import Dict, List, Optional, Tuple, Any, Union
+from typing import Dict, List, Optional, Tuple, Any
 from dataclasses import dataclass
 import numpy as np
 import logging
@@ -37,7 +36,7 @@ class SVRasterLightningConfig:
     
     # Scheduler settings
     scheduler_type: str = "cosine"  # cosine, step, exponential, none
-    scheduler_params: Dict[str, Any] = None
+    scheduler_params: dict[str, Any] = None
     warmup_steps: int = 1000
     
     # Loss weights
@@ -103,12 +102,17 @@ class SVRasterLightningModule(pl.LightningModule):
         # Training state
         self.automatic_optimization = True
         
-    def forward(self, ray_origins: torch.Tensor, ray_directions: torch.Tensor, 
-                camera_params: Optional[Dict[str, torch.Tensor]] = None) -> Dict[str, torch.Tensor]:
+    def forward(
+        self,
+        ray_origins: torch.Tensor,
+        ray_directions: torch.Tensor,
+        camera_params: Optional[dict[str,
+        torch.Tensor]] = None,
+    )
         """Forward pass through the model."""
         return self.model(ray_origins, ray_directions, camera_params)
     
-    def training_step(self, batch: Dict[str, torch.Tensor], batch_idx: int) -> torch.Tensor:
+    def training_step(self, batch: dict[str, torch.Tensor], batch_idx: int) -> torch.Tensor:
         """Training step."""
         # Extract batch data
         ray_origins = batch['ray_origins']  # [B, N, 3]
@@ -155,7 +159,12 @@ class SVRasterLightningModule(pl.LightningModule):
         
         return losses['total_loss']
     
-    def validation_step(self, batch: Dict[str, torch.Tensor], batch_idx: int) -> Dict[str, torch.Tensor]:
+    def validation_step(
+        self,
+        batch: dict[str,
+        torch.Tensor],
+        batch_idx: int,
+    )
         """Validation step."""
         # Use EMA model if available
         model = self.ema_model if self.ema_model is not None else self.model
@@ -197,21 +206,20 @@ class SVRasterLightningModule(pl.LightningModule):
             target_img = target_image.view(B, H, W, 3).permute(0, 3, 1, 2)
             
             ssim = self.val_ssim(pred_img, target_img)
-            lpips = self.val_lpips(pred_img, target_img) if self.val_lpips is not None else torch.tensor(0.0, device=self.device)
+            lpips = self.val_lpips(
+                pred_img,
+                target_img,
+            )
         else:
             ssim = torch.tensor(0.0, device=self.device)
             lpips = torch.tensor(0.0, device=self.device)
         
         return {
-            'val_loss': losses['total_loss'],
-            'val_psnr': psnr,
-            'val_ssim': ssim,
-            'val_lpips': lpips,
-            'pred_rgb': outputs['rgb'][:100],  # Log first 100 pixels
+            'val_loss': losses['total_loss'], 'val_psnr': psnr, 'val_ssim': ssim, 'val_lpips': lpips, 'pred_rgb': outputs['rgb'][:100], # Log first 100 pixels
             'target_rgb': target_colors[:100]
         }
     
-    def validation_epoch_end(self, outputs: List[Dict[str, torch.Tensor]]) -> None:
+    def validation_epoch_end(self, outputs: list[dict[str, torch.Tensor]]) -> None:
         """Aggregate validation results."""
         # Average metrics
         avg_loss = torch.stack([x['val_loss'] for x in outputs]).mean()
@@ -230,7 +238,7 @@ class SVRasterLightningModule(pl.LightningModule):
         for key, value in voxel_stats.items():
             self.log(f'val_voxels/{key}', value)
     
-    def configure_optimizers(self) -> Dict[str, Any]:
+    def configure_optimizers(self) -> dict[str, Any]:
         """Configure optimizers and schedulers."""
         # Group parameters for different learning rates
         voxel_params = []
@@ -243,24 +251,33 @@ class SVRasterLightningModule(pl.LightningModule):
                 other_params.append(param)
         
         param_groups = [
-            {'params': voxel_params, 'lr': self.config.learning_rate, 'name': 'voxels'},
-            {'params': other_params, 'lr': self.config.learning_rate * 0.1, 'name': 'other'}
+            {
+                'params': voxel_params,
+                'lr': self.config.learning_rate,
+                'name': 'voxels',
+            }
         ]
         
         # Create optimizer
         if self.config.optimizer_type == "adam":
-            optimizer = torch.optim.Adam(param_groups, 
-                                       lr=self.config.learning_rate,
-                                       weight_decay=self.config.weight_decay)
+            optimizer = torch.optim.Adam(
+                param_groups,
+                lr=self.config.learning_rate,
+                weight_decay=self.config.weight_decay,
+            )
         elif self.config.optimizer_type == "adamw":
-            optimizer = torch.optim.AdamW(param_groups,
-                                        lr=self.config.learning_rate,
-                                        weight_decay=self.config.weight_decay)
+            optimizer = torch.optim.AdamW(
+                param_groups,
+                lr=self.config.learning_rate,
+                weight_decay=self.config.weight_decay,
+            )
         elif self.config.optimizer_type == "sgd":
-            optimizer = torch.optim.SGD(param_groups,
-                                      lr=self.config.learning_rate,
-                                      momentum=0.9,
-                                      weight_decay=self.config.weight_decay)
+            optimizer = torch.optim.SGD(
+                param_groups,
+                lr=self.config.learning_rate,
+                momentum=0.9,
+                weight_decay=self.config.weight_decay,
+            )
         else:
             raise ValueError(f"Unsupported optimizer: {self.config.optimizer_type}")
         
@@ -342,17 +359,9 @@ class SVRasterLightningModule(pl.LightningModule):
 
 
 def create_lightning_trainer(
-    config: SVRasterLightningConfig,
-    train_dataset: SVRasterDataset,
-    val_dataset: Optional[SVRasterDataset] = None,
-    max_epochs: int = 100,
-    gpus: Union[int, List[int]] = 1,
-    logger_type: str = "tensorboard",  # tensorboard, wandb
-    project_name: str = "svraster",
-    experiment_name: str = "default",
-    checkpoint_dir: str = "checkpoints",
-    **trainer_kwargs
-) -> Tuple[SVRasterLightningModule, pl.Trainer]:
+    config: SVRasterLightningConfig, train_dataset: SVRasterDataset, val_dataset: Optional[SVRasterDataset] = None, max_epochs: int = 100, gpus: int | list[int] = 1, logger_type: str = "tensorboard", # tensorboard, wandb
+    project_name: str = "svraster", experiment_name: str = "default", checkpoint_dir: str = "checkpoints", **trainer_kwargs
+) -> tuple[SVRasterLightningModule, pl.Trainer]:
     """
     Create SVRaster Lightning module and trainer.
     
@@ -377,15 +386,11 @@ def create_lightning_trainer(
     # Setup logger
     if logger_type == "tensorboard":
         logger = TensorBoardLogger(
-            save_dir="logs",
-            name=project_name,
-            version=experiment_name
+            save_dir="logs", name=project_name, version=experiment_name
         )
     elif logger_type == "wandb":
         logger = WandbLogger(
-            project=project_name,
-            name=experiment_name,
-            save_dir="logs"
+            project=project_name, name=experiment_name, save_dir="logs"
         )
     else:
         logger = None
@@ -393,19 +398,11 @@ def create_lightning_trainer(
     # Setup callbacks
     callbacks = [
         ModelCheckpoint(
-            dirpath=checkpoint_dir,
-            filename=f"{experiment_name}-{{epoch:02d}}-{{val/psnr:.2f}}",
-            monitor="val/psnr",
-            mode="max",
-            save_top_k=3,
-            save_last=True
-        ),
-        LearningRateMonitor(logging_interval="step"),
-        EarlyStopping(
-            monitor="val/psnr",
-            mode="max",
-            patience=20,
-            verbose=True
+            dirpath=checkpoint_dir, filename=f"{
+                experiment_name,
+            }
+        ), LearningRateMonitor(logging_interval="step"), EarlyStopping(
+            monitor="val/psnr", mode="max", patience=20, verbose=True
         )
     ]
     
@@ -418,15 +415,8 @@ def create_lightning_trainer(
     
     # Create trainer
     trainer = pl.Trainer(
-        max_epochs=max_epochs,
-        devices=gpus,
-        logger=logger,
-        callbacks=callbacks,
-        strategy=strategy,
-        gradient_clip_val=config.gradient_clip_val,
-        precision="16-mixed",  # Use mixed precision for efficiency
-        log_every_n_steps=50,
-        val_check_interval=0.5,  # Validate twice per epoch
+        max_epochs=max_epochs, devices=gpus, logger=logger, callbacks=callbacks, strategy=strategy, gradient_clip_val=config.gradient_clip_val, precision="16-mixed", # Use mixed precision for efficiency
+        log_every_n_steps=50, val_check_interval=0.5, # Validate twice per epoch
         **trainer_kwargs
     )
     
@@ -434,11 +424,7 @@ def create_lightning_trainer(
 
 
 def train_svraster_lightning(
-    model_config: SVRasterConfig,
-    lightning_config: SVRasterLightningConfig,
-    train_dataset: SVRasterDataset,
-    val_dataset: Optional[SVRasterDataset] = None,
-    **trainer_kwargs
+    model_config: SVRasterConfig, lightning_config: SVRasterLightningConfig, train_dataset: SVRasterDataset, val_dataset: Optional[SVRasterDataset] = None, **trainer_kwargs
 ) -> SVRasterLightningModule:
     """
     Simplified training function using Lightning.
@@ -458,31 +444,21 @@ def train_svraster_lightning(
     
     # Create Lightning module and trainer
     lightning_module, trainer = create_lightning_trainer(
-        lightning_config,
-        train_dataset,
-        val_dataset,
-        **trainer_kwargs
+        lightning_config, train_dataset, val_dataset, **trainer_kwargs
     )
     
     # Create data loaders
     from torch.utils.data import DataLoader
     
     train_loader = DataLoader(
-        train_dataset,
-        batch_size=1,  # SVRaster typically processes one image at a time
-        shuffle=True,
-        num_workers=4,
-        pin_memory=True
+        train_dataset, batch_size=1, # SVRaster typically processes one image at a time
+        shuffle=True, num_workers=4, pin_memory=True
     )
     
     val_loader = None
     if val_dataset is not None:
         val_loader = DataLoader(
-            val_dataset,
-            batch_size=1,
-            shuffle=False,
-            num_workers=2,
-            pin_memory=True
+            val_dataset, batch_size=1, shuffle=False, num_workers=2, pin_memory=True
         )
     
     # Start training

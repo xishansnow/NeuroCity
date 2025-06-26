@@ -1,19 +1,21 @@
 """
 Voxel processing utilities for DNMP.
 
-This module provides functions for voxel grid operations, point cloud voxelization,
-and voxel-based scene management.
+This module provides functions for voxel grid operations, point cloud voxelization, and voxel-based scene management.
 """
 
 import torch
 import numpy as np
-from typing import Tuple, List, Optional, Dict, Union
+from typing import Dict, List, Optional, Tuple, Union 
 import open3d as o3d
 
 
-def voxelize_point_cloud(points: torch.Tensor, 
-                        voxel_size: float = 0.1,
-                        scene_bounds: Optional[Tuple[float, ...]] = None) -> Dict[str, torch.Tensor]:
+def voxelize_point_cloud(
+    points: torch.Tensor,
+    voxel_size: float = 0.1,
+    scene_bounds: Optional[tuple[float,
+    ...]] = None
+):
     """
     Voxelize point cloud into regular grid.
     
@@ -37,11 +39,11 @@ def voxelize_point_cloud(points: torch.Tensor,
     
     if len(points) == 0:
         return {
-            'voxel_centers': torch.empty(0, 3, device=device),
-            'voxel_coords': torch.empty(0, 3, device=device, dtype=torch.long),
-            'point_voxel_ids': torch.empty(0, device=device, dtype=torch.long),
-            'points_per_voxel': torch.empty(0, device=device, dtype=torch.long),
-            'voxel_size': voxel_size
+            'voxel_centers': torch.empty(
+                0,
+                3,
+                device=device,
+            )
         }
     
     # Compute voxel coordinates
@@ -56,17 +58,14 @@ def voxelize_point_cloud(points: torch.Tensor,
     voxel_centers = unique_coords.float() * voxel_size + min_coords + voxel_size / 2
     
     return {
-        'voxel_centers': voxel_centers,
-        'voxel_coords': unique_coords,
-        'point_voxel_ids': inverse_indices,
-        'points_per_voxel': counts,
-        'voxel_size': voxel_size,
-        'origin': min_coords
+        'voxel_centers': voxel_centers, 'voxel_coords': unique_coords, 'point_voxel_ids': inverse_indices, 'points_per_voxel': counts, 'voxel_size': voxel_size, 'origin': min_coords
     }
 
 
-def create_voxel_grid(scene_bounds: Tuple[float, ...],
-                     voxel_size: float) -> Dict[str, torch.Tensor]:
+def create_voxel_grid(
+    scene_bounds: tuple[float, float, float, float, float, float],
+    voxel_size: float
+):
     """
     Create regular voxel grid for given scene bounds.
     
@@ -95,18 +94,16 @@ def create_voxel_grid(scene_bounds: Tuple[float, ...],
     voxel_centers = voxel_coords.float() * voxel_size + torch.tensor(min_bound) + voxel_size / 2
     
     return {
-        'voxel_centers': voxel_centers,
-        'voxel_coords': voxel_coords,
-        'grid_size': grid_size,
-        'voxel_size': voxel_size,
-        'scene_bounds': scene_bounds
+        'voxel_centers': voxel_centers, 'voxel_coords': voxel_coords, 'grid_size': grid_size, 'voxel_size': voxel_size, 'scene_bounds': scene_bounds
     }
 
 
-def adaptive_voxel_subdivision(points: torch.Tensor,
-                              initial_voxel_size: float = 1.0,
-                              max_points_per_voxel: int = 1000,
-                              min_voxel_size: float = 0.1) -> Dict[str, torch.Tensor]:
+def adaptive_voxel_subdivision(
+    points: torch.Tensor,
+    initial_voxel_size: float = 1.0,
+    max_points_per_voxel: int = 1000,
+    min_voxel_size: float = 0.1
+):
     """
     Perform adaptive voxel subdivision based on point density.
     
@@ -137,7 +134,7 @@ def adaptive_voxel_subdivision(points: torch.Tensor,
     keep_mask = ~needs_subdivision
     final_centers = voxel_info['voxel_centers'][keep_mask]
     final_coords = voxel_info['voxel_coords'][keep_mask]
-    final_sizes = torch.full((keep_mask.sum(),), initial_voxel_size, device=device)
+    final_sizes = torch.full((keep_mask.sum(), ), initial_voxel_size, device=device)
     
     # Recursively subdivide dense voxels
     subdivision_centers = []
@@ -156,9 +153,7 @@ def adaptive_voxel_subdivision(points: torch.Tensor,
         if len(sub_voxel_info['voxel_centers']) > 0:
             subdivision_centers.append(sub_voxel_info['voxel_centers'])
             subdivision_coords.append(sub_voxel_info['voxel_coords'])
-            subdivision_sizes.append(
-                torch.full((len(sub_voxel_info['voxel_centers']),), 
-                          initial_voxel_size / 2, device=device))
+            subdivision_sizes.append(torch.full((sub_voxel_info['voxel_centers'].shape[0], ), initial_voxel_size / 2, device=device))
     
     # Combine results
     if subdivision_centers:
@@ -171,17 +166,17 @@ def adaptive_voxel_subdivision(points: torch.Tensor,
         all_sizes = final_sizes
     
     return {
-        'voxel_centers': all_centers,
-        'voxel_coords': all_coords,
-        'voxel_sizes': all_sizes,
-        'adaptive': True
+        'voxel_centers': all_centers, 'voxel_coords': all_coords, 'voxel_sizes': all_sizes, 'adaptive': True
     }
 
 
-def compute_voxel_features(points: torch.Tensor,
-                          point_features: Optional[torch.Tensor],
-                          voxel_info: Dict[str, torch.Tensor],
-                          aggregation: str = 'mean') -> torch.Tensor:
+def compute_voxel_features(
+    points: torch.Tensor,
+    point_features: Optional[torch.Tensor],
+    voxel_info: dict[str,
+    torch.Tensor],
+    aggregation: str = 'mean'
+):
     """
     Compute aggregated features for each voxel.
     
@@ -222,9 +217,11 @@ def compute_voxel_features(points: torch.Tensor,
     return voxel_features
 
 
-def voxel_to_mesh(voxel_centers: torch.Tensor,
-                 voxel_size: float,
-                 voxel_features: Optional[torch.Tensor] = None) -> Tuple[torch.Tensor, torch.Tensor]:
+def voxel_to_mesh(
+    voxel_centers: torch.Tensor,
+    voxel_size: float,
+    voxel_features: Optional[torch.Tensor] = None
+):
     """
     Convert voxel grid to mesh representation.
     
@@ -246,24 +243,17 @@ def voxel_to_mesh(voxel_centers: torch.Tensor,
     # Create cube vertices for each voxel
     half_size = voxel_size / 2
     cube_vertices = torch.tensor([
-        [-half_size, -half_size, -half_size],
-        [half_size, -half_size, -half_size],
-        [half_size, half_size, -half_size],
-        [-half_size, half_size, -half_size],
-        [-half_size, -half_size, half_size],
-        [half_size, -half_size, half_size],
-        [half_size, half_size, half_size],
-        [-half_size, half_size, half_size]
+        [-half_size, -half_size, -half_size], [half_size, -half_size, -half_size], [half_size, half_size, -half_size], [-half_size, half_size, -half_size], [-half_size, -half_size, half_size], [half_size, -half_size, half_size], [half_size, half_size, half_size], [-half_size, half_size, half_size]
     ], device=device, dtype=torch.float32)
     
     # Create cube faces
     cube_faces = torch.tensor([
-        [0, 1, 2], [0, 2, 3],  # bottom
-        [4, 7, 6], [4, 6, 5],  # top
-        [0, 4, 5], [0, 5, 1],  # front
-        [2, 6, 7], [2, 7, 3],  # back
-        [0, 3, 7], [0, 7, 4],  # left
-        [1, 5, 6], [1, 6, 2],  # right
+        [0, 1, 2], [0, 2, 3], # bottom
+        [4, 7, 6], [4, 6, 5], # top
+        [0, 4, 5], [0, 5, 1], # front
+        [2, 6, 7], [2, 7, 3], # back
+        [0, 3, 7], [0, 7, 4], # left
+        [1, 5, 6], [1, 6, 2], # right
     ], device=device, dtype=torch.long)
     
     # Generate vertices for all voxels
@@ -285,9 +275,11 @@ def voxel_to_mesh(voxel_centers: torch.Tensor,
     return vertices, faces
 
 
-def sparse_voxel_grid(points: torch.Tensor,
-                     voxel_size: float,
-                     feature_threshold: float = 0.1) -> Dict[str, torch.Tensor]:
+def sparse_voxel_grid(
+    points: torch.Tensor,
+    voxel_size: float,
+    feature_threshold: float = 0.1 
+):
     """
     Create sparse voxel grid representation.
     
@@ -312,9 +304,5 @@ def sparse_voxel_grid(points: torch.Tensor,
     keep_mask = density_features >= feature_threshold
     
     return {
-        'voxel_centers': voxel_info['voxel_centers'][keep_mask],
-        'voxel_coords': voxel_info['voxel_coords'][keep_mask],
-        'density_features': density_features[keep_mask],
-        'voxel_size': voxel_size,
-        'sparse': True
+        'voxel_centers': voxel_info['voxel_centers'][keep_mask], 'voxel_coords': voxel_info['voxel_coords'][keep_mask], 'density_features': density_features[keep_mask], 'voxel_size': voxel_size, 'sparse': True
     } 

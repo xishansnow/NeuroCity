@@ -5,7 +5,7 @@
 """
 
 import numpy as np
-from typing import Dict, List, Tuple, Optional, Any
+from typing import Dict, List, Optional, Tuple, Any
 import logging
 from scipy.spatial.distance import cdist
 from scipy.ndimage import gaussian_filter
@@ -16,10 +16,12 @@ logger = logging.getLogger(__name__)
 class SurfaceSampler:
     """表面采样器类"""
     
-    def __init__(self, 
-                 surface_threshold: float = 0.5,
-                 sampling_radius: float = 3.0,
-                 adaptive_sampling: bool = True):
+    def __init__(
+        self,
+        surface_threshold: float = 0.5,
+        sampling_radius: float = 3.0,
+        adaptive_sampling: bool = True,
+    )
         """
         初始化表面采样器
         
@@ -32,11 +34,13 @@ class SurfaceSampler:
         self.sampling_radius = sampling_radius
         self.adaptive_sampling = adaptive_sampling
         
-    def sample_near_surface(self,
-                           coordinates: np.ndarray,
-                           occupancy: np.ndarray,
-                           n_samples: int = 10000,
-                           noise_std: float = 1.0) -> Dict[str, np.ndarray]:
+    def sample_near_surface(
+        self,
+        coordinates: np.ndarray,
+        occupancy: np.ndarray,
+        n_samples: int = 10000,
+        noise_std: float = 1.0,
+    )
         """
         在表面附近采样
         
@@ -85,9 +89,9 @@ class SurfaceSampler:
             sample_sdf.append(sdf_value)
         
         return {
-            'coordinates': np.array(sample_coords),
-            'sdf': np.array(sample_sdf),
-            'surface_points': surface_coords
+            'coordinates': np.array(
+                sample_coords,
+            )
         }
     
     def _detect_surface_points(self, coordinates: np.ndarray, occupancy: np.ndarray) -> np.ndarray:
@@ -102,7 +106,11 @@ class SurfaceSampler:
         
         return surface_indices
     
-    def _gradient_based_detection(self, coordinates: np.ndarray, occupancy: np.ndarray) -> np.ndarray:
+    def _gradient_based_detection(
+        self,
+        coordinates: np.ndarray,
+        occupancy: np.ndarray,
+    )
         """基于梯度的表面检测"""
         # 计算局部梯度
         gradients = []
@@ -117,7 +125,11 @@ class SurfaceSampler:
                 neighbor_occupancy = occupancy[neighbor_indices]
                 
                 # 计算简单梯度
-                grad = self._compute_local_gradient(coordinates[i], neighbor_coords, neighbor_occupancy)
+                grad = self._compute_local_gradient(
+                    coordinates[i],
+                    neighbor_coords,
+                    neighbor_occupancy,
+                )
                 gradients.append(np.linalg.norm(grad))
             else:
                 gradients.append(0.0)
@@ -130,7 +142,12 @@ class SurfaceSampler:
         
         return surface_indices
     
-    def _compute_local_gradient(self, center: np.ndarray, neighbors: np.ndarray, values: np.ndarray) -> np.ndarray:
+    def _compute_local_gradient(
+        self,
+        center: np.ndarray,
+        neighbors: np.ndarray,
+        values: np.ndarray,
+    )
         """计算局部梯度"""
         if len(neighbors) < 4:
             return np.zeros(3)
@@ -165,9 +182,16 @@ class SurfaceSampler:
         # 这里可以根据需要添加内外判断逻辑
         return min_distance
     
-    def _fallback_random_sampling(self, coordinates: np.ndarray, occupancy: np.ndarray, n_samples: int) -> Dict[str, np.ndarray]:
+    def _fallback_random_sampling(
+        self,
+        coordinates: np.ndarray,
+        occupancy: np.ndarray,
+        n_samples: int,
+    )
         """备用随机采样"""
-        indices = np.random.choice(len(coordinates), min(n_samples, len(coordinates)), replace=False)
+        indices = np.random.choice(
+            len,
+        )
         
         sample_coords = coordinates[indices]
         sample_occupancy = occupancy[indices]
@@ -176,16 +200,18 @@ class SurfaceSampler:
         sample_sdf = np.where(sample_occupancy > self.surface_threshold, -1.0, 1.0)
         
         return {
-            'coordinates': sample_coords,
-            'sdf': sample_sdf,
-            'surface_points': sample_coords[sample_occupancy > self.surface_threshold]
+            'coordinates': sample_coords, 'sdf': sample_sdf, 'surface_points': sample_coords[sample_occupancy > self.surface_threshold]
         }
     
-    def sample_multi_resolution(self,
-                               coordinates: np.ndarray,
-                               occupancy: np.ndarray,
-                               resolution_levels: List[float] = [1.0, 0.5, 0.25],
-                               samples_per_level: int = 3000) -> Dict[str, np.ndarray]:
+    def sample_multi_resolution(
+        self,
+        coordinates: np.ndarray,
+        occupancy: np.ndarray,
+        resolution_levels: list[float] = [1.0,
+        0.5,
+        0.25],
+        samples_per_level: int = 3000,
+    )
         """
         多分辨率表面采样
         
@@ -208,9 +234,7 @@ class SurfaceSampler:
             
             # 进行采样
             samples = self.sample_near_surface(
-                coordinates, occupancy, 
-                n_samples=samples_per_level,
-                noise_std=level_noise
+                coordinates, occupancy, n_samples=samples_per_level, noise_std=level_noise
             )
             
             all_coords.append(samples['coordinates'])
@@ -218,17 +242,18 @@ class SurfaceSampler:
             level_labels.extend([level_idx] * len(samples['coordinates']))
         
         return {
-            'coordinates': np.vstack(all_coords),
-            'sdf': np.concatenate(all_sdf),
-            'resolution_levels': np.array(level_labels),
-            'resolution_values': resolution_levels
+            'coordinates': np.vstack(
+                all_coords,
+            )
         }
     
-    def adaptive_surface_sampling(self,
-                                 coordinates: np.ndarray,
-                                 occupancy: np.ndarray,
-                                 target_samples: int = 10000,
-                                 max_iterations: int = 5) -> Dict[str, np.ndarray]:
+    def adaptive_surface_sampling(
+        self,
+        coordinates: np.ndarray,
+        occupancy: np.ndarray,
+        target_samples: int = 10000,
+        max_iterations: int = 5,
+    )
         """
         自适应表面采样
         
@@ -254,9 +279,7 @@ class SurfaceSampler:
             
             # 采样
             samples = self.sample_near_surface(
-                coordinates, occupancy,
-                n_samples=iteration_samples,
-                noise_std=iteration_noise
+                coordinates, occupancy, n_samples=iteration_samples, noise_std=iteration_noise
             )
             
             all_coords.append(samples['coordinates'])
@@ -266,8 +289,7 @@ class SurfaceSampler:
             logger.info(f"自适应采样迭代 {iteration + 1}: {len(samples['coordinates'])} 个样本")
         
         return {
-            'coordinates': np.vstack(all_coords),
-            'sdf': np.concatenate(all_sdf),
-            'iterations': len(all_coords),
-            'surface_points': surface_coords
+            'coordinates': np.vstack(
+                all_coords,
+            )
         } 

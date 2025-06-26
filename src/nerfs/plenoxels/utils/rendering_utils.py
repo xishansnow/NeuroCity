@@ -1,22 +1,23 @@
 """
 Rendering Utilities for Plenoxels
 
-This module provides rendering utilities including ray generation,
-point sampling, volume rendering, and ray-voxel intersection computations.
+This module provides rendering utilities including ray generation, point sampling, volume rendering, and ray-voxel intersection computations.
 """
 
 import torch
 import numpy as np
-from typing import Tuple, Optional, List, Dict, Any
+from typing import Dict, List, Optional, Tuple, Any
 import math
 
 
-def generate_rays(poses: torch.Tensor,
-                 focal: float,
-                 H: int,
-                 W: int,
-                 near: float = 0.1,
-                 far: float = 10.0) -> Tuple[torch.Tensor, torch.Tensor]:
+def generate_rays(
+    poses: torch.Tensor,
+    focal: float,
+    H: int,
+    W: int,
+    near: float = 0.1,
+    far: float = 10.0,
+)
     """
     Generate rays from camera poses.
     
@@ -36,16 +37,16 @@ def generate_rays(poses: torch.Tensor,
     
     # Create pixel coordinates
     i, j = torch.meshgrid(
-        torch.arange(W, dtype=torch.float32, device=device),
-        torch.arange(H, dtype=torch.float32, device=device),
-        indexing='xy'
+        torch.arange(
+            W,
+            dtype=torch.float32,
+            device=device,
+        )
     )
     
     # Convert to camera coordinates
     dirs = torch.stack([
-        (i - W * 0.5) / focal,
-        -(j - H * 0.5) / focal,
-        -torch.ones_like(i)
+        (i - W * 0.5) / focal, -(j - H * 0.5) / focal, -torch.ones_like(i)
     ], dim=-1)  # [H, W, 3]
     
     rays_o = []
@@ -69,12 +70,14 @@ def generate_rays(poses: torch.Tensor,
     return rays_o, rays_d
 
 
-def sample_points_along_rays(ray_origins: torch.Tensor,
-                           ray_directions: torch.Tensor,
-                           near: float,
-                           far: float,
-                           num_samples: int,
-                           perturb: bool = True) -> Tuple[torch.Tensor, torch.Tensor]:
+def sample_points_along_rays(
+    ray_origins: torch.Tensor,
+    ray_directions: torch.Tensor,
+    near: float,
+    far: float,
+    num_samples: int,
+    perturb: bool = True,
+)
     """
     Sample points along rays for volume rendering.
     
@@ -110,11 +113,13 @@ def sample_points_along_rays(ray_origins: torch.Tensor,
     return points, t_vals
 
 
-def volume_render(densities: torch.Tensor,
-                 colors: torch.Tensor,
-                 t_vals: torch.Tensor,
-                 ray_directions: torch.Tensor,
-                 white_background: bool = False) -> Dict[str, torch.Tensor]:
+def volume_render(
+    densities: torch.Tensor,
+    colors: torch.Tensor,
+    t_vals: torch.Tensor,
+    ray_directions: torch.Tensor,
+    white_background: bool = False,
+)
     """
     Perform volume rendering given densities and colors.
     
@@ -140,8 +145,9 @@ def volume_render(densities: torch.Tensor,
     
     # Compute transmittance
     transmittance = torch.cumprod(1.0 - alpha + 1e-10, dim=-1)
-    transmittance = torch.cat([torch.ones_like(transmittance[..., :1]), 
-                              transmittance[..., :-1]], dim=-1)
+    transmittance = torch.cat(
+        [torch.ones_like,
+    )
     
     # Compute weights
     weights = alpha * transmittance
@@ -164,20 +170,16 @@ def volume_render(densities: torch.Tensor,
     acc = torch.sum(weights, dim=-1)
     
     return {
-        'rgb': rgb,
-        'depth': depth,
-        'disp': disp,
-        'acc': acc,
-        'weights': weights,
-        'alpha': alpha,
-        'transmittance': transmittance
+        'rgb': rgb, 'depth': depth, 'disp': disp, 'acc': acc, 'weights': weights, 'alpha': alpha, 'transmittance': transmittance
     }
 
 
-def compute_ray_aabb_intersection(ray_origins: torch.Tensor,
-                                ray_directions: torch.Tensor,
-                                aabb_min: torch.Tensor,
-                                aabb_max: torch.Tensor) -> Tuple[torch.Tensor, torch.Tensor]:
+def compute_ray_aabb_intersection(
+    ray_origins: torch.Tensor,
+    ray_directions: torch.Tensor,
+    aabb_min: torch.Tensor,
+    aabb_max: torch.Tensor,
+)
     """
     Compute ray-AABB intersection for efficient ray marching.
     
@@ -211,12 +213,14 @@ def compute_ray_aabb_intersection(ray_origins: torch.Tensor,
     return t_near, t_far
 
 
-def hierarchical_sampling(ray_origins: torch.Tensor,
-                         ray_directions: torch.Tensor,
-                         t_vals_coarse: torch.Tensor,
-                         weights_coarse: torch.Tensor,
-                         num_fine_samples: int,
-                         perturb: bool = True) -> Tuple[torch.Tensor, torch.Tensor]:
+def hierarchical_sampling(
+    ray_origins: torch.Tensor,
+    ray_directions: torch.Tensor,
+    t_vals_coarse: torch.Tensor,
+    weights_coarse: torch.Tensor,
+    num_fine_samples: int,
+    perturb: bool = True,
+)
     """
     Perform hierarchical sampling based on coarse weights.
     
@@ -268,8 +272,7 @@ def hierarchical_sampling(ray_origins: torch.Tensor,
     return points_fine, t_fine
 
 
-def compute_optical_depth(densities: torch.Tensor,
-                         dists: torch.Tensor) -> torch.Tensor:
+def compute_optical_depth(densities: torch.Tensor, dists: torch.Tensor) -> torch.Tensor:
     """
     Compute optical depth from densities and distances.
     
@@ -283,8 +286,7 @@ def compute_optical_depth(densities: torch.Tensor,
     return torch.relu(densities) * dists
 
 
-def alpha_composite(colors: torch.Tensor,
-                   alphas: torch.Tensor) -> torch.Tensor:
+def alpha_composite(colors: torch.Tensor, alphas: torch.Tensor) -> torch.Tensor:
     """
     Perform alpha compositing of colors.
     
@@ -297,8 +299,9 @@ def alpha_composite(colors: torch.Tensor,
     """
     # Compute transmittance
     transmittance = torch.cumprod(1.0 - alphas + 1e-10, dim=-1)
-    transmittance = torch.cat([torch.ones_like(transmittance[..., :1]), 
-                              transmittance[..., :-1]], dim=-1)
+    transmittance = torch.cat(
+        [torch.ones_like,
+    )
     
     # Compute weights
     weights = alphas * transmittance
@@ -309,8 +312,7 @@ def alpha_composite(colors: torch.Tensor,
     return rgb
 
 
-def compute_expected_depth(t_vals: torch.Tensor,
-                          weights: torch.Tensor) -> torch.Tensor:
+def compute_expected_depth(t_vals: torch.Tensor, weights: torch.Tensor) -> torch.Tensor:
     """
     Compute expected depth from sample positions and weights.
     
@@ -324,9 +326,11 @@ def compute_expected_depth(t_vals: torch.Tensor,
     return torch.sum(weights * t_vals, dim=-1)
 
 
-def compute_depth_variance(t_vals: torch.Tensor,
-                          weights: torch.Tensor,
-                          expected_depth: torch.Tensor) -> torch.Tensor:
+def compute_depth_variance(
+    t_vals: torch.Tensor,
+    weights: torch.Tensor,
+    expected_depth: torch.Tensor,
+)
     """
     Compute depth variance for uncertainty estimation.
     
@@ -343,10 +347,12 @@ def compute_depth_variance(t_vals: torch.Tensor,
     return variance
 
 
-def ray_sphere_intersection(ray_origins: torch.Tensor,
-                           ray_directions: torch.Tensor,
-                           sphere_center: torch.Tensor,
-                           sphere_radius: float) -> Tuple[torch.Tensor, torch.Tensor]:
+def ray_sphere_intersection(
+    ray_origins: torch.Tensor,
+    ray_directions: torch.Tensor,
+    sphere_center: torch.Tensor,
+    sphere_radius: float,
+)
     """
     Compute ray-sphere intersection.
     
@@ -385,10 +391,12 @@ def ray_sphere_intersection(ray_origins: torch.Tensor,
     return t_near, t_far
 
 
-def compute_ray_bundle_intersections(ray_origins: torch.Tensor,
-                                   ray_directions: torch.Tensor,
-                                   voxel_centers: torch.Tensor,
-                                   voxel_size: float) -> torch.Tensor:
+def compute_ray_bundle_intersections(
+    ray_origins: torch.Tensor,
+    ray_directions: torch.Tensor,
+    voxel_centers: torch.Tensor,
+    voxel_size: float,
+)
     """
     Compute intersections between ray bundle and voxel grid.
     

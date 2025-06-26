@@ -18,20 +18,7 @@ import os
 sys.path.append(os.path.join(os.path.dirname(__file__), '..', '..', 'src'))
 
 from nerfs.classic_nerf import (
-    NeRFConfig,
-    NeRF,
-    Embedder, 
-    NeRFRenderer,
-    NeRFLoss,
-    BlenderDataset,
-    NeRFTrainer,
-    raw2outputs,
-    sample_pdf,
-    get_rays_np,
-    pose_spherical,
-    to8b,
-    img2mse,
-    mse2psnr
+    NeRFConfig, NeRF, Embedder, NeRFRenderer, NeRFLoss, BlenderDataset, NeRFTrainer, raw2outputs, sample_pdf, get_rays_np, pose_spherical, to8b, img2mse, mse2psnr
 )
 
 
@@ -52,10 +39,7 @@ class TestNeRFConfig(unittest.TestCase):
     def test_custom_config(self):
         """Test custom configuration."""
         config = NeRFConfig(
-            netdepth=6,
-            netwidth=128,
-            N_samples=32,
-            learning_rate=1e-3
+            netdepth=6, netwidth=128, N_samples=32, learning_rate=1e-3
         )
         
         self.assertEqual(config.netdepth, 6)
@@ -161,8 +145,8 @@ class TestVolumeRendering(unittest.TestCase):
         self.assertIn('weights', outputs)
         
         self.assertEqual(outputs['rgb_map'].shape, (batch_size, 3))
-        self.assertEqual(outputs['depth_map'].shape, (batch_size,))
-        self.assertEqual(outputs['acc_map'].shape, (batch_size,))
+        self.assertEqual(outputs['depth_map'].shape, (batch_size, ))
+        self.assertEqual(outputs['acc_map'].shape, (batch_size, ))
         self.assertEqual(outputs['weights'].shape, (batch_size, n_samples))
     
     def test_sample_pdf(self):
@@ -193,11 +177,9 @@ class TestDataset(unittest.TestCase):
         # Create minimal dataset structure
         for split in ['train', 'val', 'test']:
             transforms = {
-                'camera_angle_x': 0.6911112070083618,
-                'frames': [
+                'camera_angle_x': 0.6911112070083618, 'frames': [
                     {
-                        'file_path': f'./{split}/r_{i:03d}',
-                        'transform_matrix': np.eye(4).tolist()
+                        'file_path': f'./{split}/r_{i:03d}', 'transform_matrix': np.eye(4).tolist()
                     } for i in range(5)
                 ]
             }
@@ -208,10 +190,7 @@ class TestDataset(unittest.TestCase):
     def test_blender_dataset_creation(self):
         """Test Blender dataset creation."""
         dataset = BlenderDataset(
-            basedir=self.temp_dir,
-            split='train',
-            half_res=True,
-            white_bkgd=True
+            basedir=self.temp_dir, split='train', half_res=True, white_bkgd=True
         )
         
         self.assertGreater(len(dataset), 0)
@@ -222,9 +201,9 @@ class TestDataset(unittest.TestCase):
         self.assertIn('rays_d', sample)
         self.assertIn('target', sample)
         
-        self.assertEqual(sample['rays_o'].shape, (3,))
-        self.assertEqual(sample['rays_d'].shape, (3,))
-        self.assertEqual(sample['target'].shape, (3,))
+        self.assertEqual(sample['rays_o'].shape, (3, ))
+        self.assertEqual(sample['rays_d'].shape, (3, ))
+        self.assertEqual(sample['target'].shape, (3, ))
     
     def tearDown(self):
         """Clean up test files."""
@@ -238,12 +217,7 @@ class TestTrainer(unittest.TestCase):
     def setUp(self):
         """Set up trainer test."""
         self.config = NeRFConfig(
-            netdepth=2, 
-            netwidth=32, 
-            N_samples=8, 
-            N_importance=8,
-            multires=2,
-            multires_views=1
+            netdepth=2, netwidth=32, N_samples=8, N_importance=8, multires=2, multires_views=1
         )
         self.device = torch.device('cpu')  # Use CPU for testing
         self.trainer = NeRFTrainer(self.config, device=self.device)
@@ -261,9 +235,10 @@ class TestTrainer(unittest.TestCase):
         
         # Create synthetic batch
         batch = {
-            'rays_o': torch.randn(batch_size, 3),
-            'rays_d': torch.randn(batch_size, 3),
-            'targets': torch.rand(batch_size, 3)
+            'rays_o': torch.randn(
+                batch_size,
+                3,
+            )
         }
         
         # Normalize ray directions
@@ -344,8 +319,10 @@ class TestLoss(unittest.TestCase):
         
         # Create test predictions and targets
         pred = {
-            'rgb_map': torch.rand(batch_size, 3),
-            'rgb_map0': torch.rand(batch_size, 3)  # Coarse network output
+            'rgb_map': torch.rand(
+                batch_size,
+                3,
+            )
         }
         target = torch.rand(batch_size, 3)
         
@@ -365,14 +342,7 @@ def run_tests():
     """Run all tests."""
     # Create test suite
     test_classes = [
-        TestNeRFConfig,
-        TestEmbedder,
-        TestNeRF,
-        TestVolumeRendering,
-        TestDataset,
-        TestTrainer,
-        TestUtilities,
-        TestLoss
+        TestNeRFConfig, TestEmbedder, TestNeRF, TestVolumeRendering, TestDataset, TestTrainer, TestUtilities, TestLoss
     ]
     
     loader = unittest.TestLoader()

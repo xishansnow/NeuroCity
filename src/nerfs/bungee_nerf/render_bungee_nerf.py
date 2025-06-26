@@ -28,57 +28,82 @@ def parse_args():
     parser = argparse.ArgumentParser(description="Render with BungeeNeRF model")
     
     # Model arguments
-    parser.add_argument("--checkpoint", type=str, required=True,
-                       help="Path to model checkpoint")
-    parser.add_argument("--config", type=str, default=None,
-                       help="Path to config file (optional)")
+    parser.add_argument("--checkpoint", type=str, required=True, help="Path to model checkpoint")
+    parser.add_argument("--config", type=str, default=None, help="Path to config file (optional)")
     
     # Data arguments
-    parser.add_argument("--data_dir", type=str, required=True,
-                       help="Path to dataset directory")
-    parser.add_argument("--dataset_type", type=str, default="auto",
-                       choices=["auto", "nerf_synthetic", "llff", "google_earth"],
-                       help="Dataset type")
-    parser.add_argument("--split", type=str, default="test",
-                       choices=["train", "val", "test"],
-                       help="Dataset split to render")
-    parser.add_argument("--img_downscale", type=int, default=1,
-                       help="Image downscale factor")
+    parser.add_argument("--data_dir", type=str, required=True, help="Path to dataset directory")
+    parser.add_argument(
+        "--dataset_type",
+        type=str,
+        default="auto",
+        choices=["auto",
+        "nerf_synthetic",
+        "llff",
+        "google_earth"],
+        help="Dataset type",
+    )
+    parser.add_argument(
+        "--split",
+        type=str,
+        default="test",
+        choices=["train",
+        "val",
+        "test"],
+        help="Dataset split to render",
+    )
+    parser.add_argument("--img_downscale", type=int, default=1, help="Image downscale factor")
     
     # Rendering arguments
-    parser.add_argument("--render_type", type=str, default="test",
-                       choices=["test", "train", "video", "spiral"],
-                       help="Type of rendering")
-    parser.add_argument("--output_dir", type=str, default="./renders",
-                       help="Output directory for rendered images")
-    parser.add_argument("--save_depth", action="store_true",
-                       help="Save depth maps")
-    parser.add_argument("--save_weights", action="store_true",
-                       help="Save attention weights")
+    parser.add_argument(
+        "--render_type",
+        type=str,
+        default="test",
+        choices=["test",
+        "train",
+        "video",
+        "spiral"],
+        help="Type of rendering",
+    )
+    parser.add_argument(
+        "--output_dir",
+        type=str,
+        default="./renders",
+        help="Output directory for rendered images",
+    )
+    parser.add_argument("--save_depth", action="store_true", help="Save depth maps")
+    parser.add_argument("--save_weights", action="store_true", help="Save attention weights")
     
     # Video rendering arguments
-    parser.add_argument("--video_fps", type=int, default=30,
-                       help="FPS for video rendering")
-    parser.add_argument("--video_frames", type=int, default=120,
-                       help="Number of frames for video")
+    parser.add_argument("--video_fps", type=int, default=30, help="FPS for video rendering")
+    parser.add_argument("--video_frames", type=int, default=120, help="Number of frames for video")
     
     # Spiral rendering arguments
-    parser.add_argument("--spiral_radius", type=float, default=1.0,
-                       help="Radius for spiral camera path")
-    parser.add_argument("--spiral_height_variation", type=float, default=0.5,
-                       help="Height variation for spiral path")
+    parser.add_argument(
+        "--spiral_radius",
+        type=float,
+        default=1.0,
+        help="Radius for spiral camera path",
+    )
+    parser.add_argument(
+        "--spiral_height_variation",
+        type=float,
+        default=0.5,
+        help="Height variation for spiral path",
+    )
     
     # Evaluation arguments
-    parser.add_argument("--compute_metrics", action="store_true",
-                       help="Compute evaluation metrics")
-    parser.add_argument("--save_metrics", action="store_true",
-                       help="Save metrics to file")
+    parser.add_argument("--compute_metrics", action="store_true", help="Compute evaluation metrics")
+    parser.add_argument("--save_metrics", action="store_true", help="Save metrics to file")
     
     # Device arguments
-    parser.add_argument("--device", type=str, default="cuda",
-                       help="Device to use for rendering")
-    parser.add_argument("--chunk_size", type=int, default=1024,
-                       help="Chunk size for rendering (to avoid OOM)")
+    parser.add_argument("--device", type=str, default="cuda", help="Device to use for rendering")
+    parser.add_argument(
+        "--chunk_size",
+        type=int,
+        default=1024,
+        help="Chunk size for rendering,
+    )
     
     return parser.parse_args()
 
@@ -125,22 +150,14 @@ def create_dataset(args, split: str):
         dataset_class = BungeeNeRFDataset
     
     dataset = dataset_class(
-        data_dir=args.data_dir,
-        split=split,
-        img_downscale=args.img_downscale
+        data_dir=args.data_dir, split=split, img_downscale=args.img_downscale
     )
     
     return dataset
 
 
 def render_image(
-    model: BungeeNeRF,
-    rays_o: torch.Tensor,
-    rays_d: torch.Tensor,
-    bounds: torch.Tensor,
-    distances: torch.Tensor,
-    chunk_size: int = 1024,
-    device: str = "cuda"
+    model: BungeeNeRF, rays_o: torch.Tensor, rays_d: torch.Tensor, bounds: torch.Tensor, distances: torch.Tensor, chunk_size: int = 1024, device: str = "cuda"
 ) -> dict:
     """
     Render a single image
@@ -216,8 +233,7 @@ def render_test_images(model, dataset, args):
         
         # Render
         outputs = render_image(
-            model, rays_o, rays_d, bounds, distances, 
-            args.chunk_size, args.device
+            model, rays_o, rays_d, bounds, distances, args.chunk_size, args.device
         )
         
         # Reshape to image
@@ -332,16 +348,14 @@ def render_spiral_video(model, dataset, args):
         
         # Create pixel coordinates
         i_coords, j_coords = np.meshgrid(
-            np.arange(W, dtype=np.float32),
-            np.arange(H, dtype=np.float32),
-            indexing='xy'
+            np.arange(W, dtype=np.float32), np.arange(H, dtype=np.float32), indexing='xy'
         )
         
         # Convert to camera coordinates
         dirs = np.stack([
-            (i_coords - W * 0.5) / dataset.focal,
-            -(j_coords - H * 0.5) / dataset.focal,
-            -np.ones_like(i_coords)
+            (
+                i_coords - W * 0.5,
+            )
         ], axis=-1)
         
         # Transform to world coordinates
@@ -367,8 +381,7 @@ def render_spiral_video(model, dataset, args):
         
         # Render
         outputs = render_image(
-            model, rays_o, rays_d, bounds, distances,
-            args.chunk_size, args.device
+            model, rays_o, rays_d, bounds, distances, args.chunk_size, args.device
         )
         
         # Reshape to image

@@ -11,8 +11,7 @@ from torch.utils.data import Dataset, DataLoader
 import numpy as np
 import json
 import os
-from typing import List, Tuple, Dict, Optional, Union
-import matplotlib.pyplot as plt
+from typing import Dict, List, Optional, Tuple, import matplotlib.pyplot as plt
 from tqdm import tqdm
 import logging
 
@@ -22,18 +21,20 @@ logger = logging.getLogger(__name__)
 class VoxelDataset(Dataset):
     """体素数据集"""
     
-    def __init__(self, 
-                 coords: np.ndarray, 
-                 labels: Optional[np.ndarray] = None,
-                 sdf_values: Optional[np.ndarray] = None,
-                 task_type: str = 'occupancy'):
+    def __init__(
+        self,
+        coords: np.ndarray,
+        labels: Optional[np.ndarray] = None,
+        sdf_values: Optional[np.ndarray] = None,
+        task_type: str = 'occupancy',
+    )
         """
         初始化数据集
         
         Args:
             coords: 坐标数据 (N, 3)
-            labels: 占用标签 (N,) 或 None
-            sdf_values: SDF值 (N,) 或 None
+            labels: 占用标签 (N, ) 或 None
+            sdf_values: SDF值 (N, ) 或 None
             task_type: 任务类型 ('occupancy' 或 'sdf')
         """
         self.coords = torch.FloatTensor(coords)
@@ -59,12 +60,18 @@ class VoxelDataset(Dataset):
 class MLP(nn.Module):
     """多层感知机网络"""
     
-    def __init__(self, 
-                 input_dim: int = 3,
-                 hidden_dims: List[int] = [256, 512, 512, 256, 128],
-                 output_dim: int = 1,
-                 activation: str = 'relu',
-                 dropout: float = 0.1):
+    def __init__(
+        self,
+        input_dim: int = 3,
+        hidden_dims: list[int] = [256,
+        512,
+        512,
+        256,
+        128],
+        output_dim: int = 1,
+        activation: str = 'relu',
+        dropout: float = 0.1,
+    )
         """
         初始化MLP
         
@@ -82,10 +89,10 @@ class MLP(nn.Module):
         
         for hidden_dim in hidden_dims:
             layers.extend([
-                nn.Linear(prev_dim, hidden_dim),
-                nn.BatchNorm1d(hidden_dim),
-                self._get_activation(activation),
-                nn.Dropout(dropout)
+                nn.Linear(
+                    prev_dim,
+                    hidden_dim,
+                )
             ])
             prev_dim = hidden_dim
         
@@ -149,8 +156,7 @@ class PositionalEncoding(nn.Module):
         
         # 应用编码
         encoded = torch.cat([
-            torch.sin(self.encodings * x_expanded),
-            torch.cos(self.encodings * x_expanded)
+            torch.sin(self.encodings * x_expanded), torch.cos(self.encodings * x_expanded)
         ], dim=-1)
         
         # 展平
@@ -161,11 +167,13 @@ class PositionalEncoding(nn.Module):
 class NeuralSDFTrainer:
     """SDF/Occupancy网络训练器"""
     
-    def __init__(self, 
-                 model: nn.Module,
-                 device: str = 'auto',
-                 learning_rate: float = 1e-3,
-                 weight_decay: float = 1e-5):
+    def __init__(
+        self,
+        model: nn.Module,
+        device: str = 'auto',
+        learning_rate: float = 1e-3,
+        weight_decay: float = 1e-5,
+    )
         """
         初始化训练器
         
@@ -187,9 +195,7 @@ class NeuralSDFTrainer:
         
         # 设置优化器
         self.optimizer = optim.Adam(
-            self.model.parameters(), 
-            lr=learning_rate, 
-            weight_decay=weight_decay
+            self.model.parameters(), lr=learning_rate, weight_decay=weight_decay
         )
         
         # 设置损失函数
@@ -242,12 +248,14 @@ class NeuralSDFTrainer:
         
         return total_loss / num_batches
     
-    def train(self, 
-              train_dataloader: DataLoader,
-              val_dataloader: Optional[DataLoader] = None,
-              num_epochs: int = 100,
-              save_path: Optional[str] = None,
-              early_stopping_patience: int = 10):
+    def train(
+        self,
+        train_dataloader: DataLoader,
+        val_dataloader: Optional[DataLoader] = None,
+        num_epochs: int = 100,
+        save_path: Optional[str] = None,
+        early_stopping_patience: int = 10,
+    )
         """
         训练模型
         
@@ -301,10 +309,8 @@ class NeuralSDFTrainer:
     def save_model(self, path: str):
         """保存模型"""
         torch.save({
-            'model_state_dict': self.model.state_dict(),
-            'optimizer_state_dict': self.optimizer.state_dict(),
-            'train_losses': self.train_losses,
-            'val_losses': self.val_losses
+            'model_state_dict': self.model.state_dict(
+            )
         }, path)
         logger.info(f"模型已保存到: {path}")
     
@@ -360,9 +366,11 @@ class NeuralSDFTrainer:
         else:
             plt.show()
 
-def load_training_data(samples_dir: str, 
-                      task_type: str = 'occupancy',
-                      train_ratio: float = 0.8) -> Tuple[DataLoader, DataLoader]:
+def load_training_data(
+    samples_dir: str,
+    task_type: str = 'occupancy',
+    train_ratio: float = 0.8,
+)
     """
     加载训练数据
     
@@ -422,17 +430,11 @@ def load_training_data(samples_dir: str,
     
     # 创建数据集
     train_dataset = VoxelDataset(
-        all_coords[train_indices], 
-        all_targets[train_indices] if task_type == 'occupancy' else None,
-        all_targets[train_indices] if task_type == 'sdf' else None,
-        task_type
+        all_coords[train_indices], all_targets[train_indices] if task_type == 'occupancy' else None, all_targets[train_indices] if task_type == 'sdf' else None, task_type
     )
     
     val_dataset = VoxelDataset(
-        all_coords[val_indices], 
-        all_targets[val_indices] if task_type == 'occupancy' else None,
-        all_targets[val_indices] if task_type == 'sdf' else None,
-        task_type
+        all_coords[val_indices], all_targets[val_indices] if task_type == 'occupancy' else None, all_targets[val_indices] if task_type == 'sdf' else None, task_type
     )
     
     # 创建数据加载器
@@ -457,34 +459,22 @@ def main():
     # 创建模型
     if task_type == 'occupancy':
         model = MLP(
-            input_dim=3,
-            hidden_dims=[256, 512, 512, 256, 128],
-            output_dim=1,
-            activation='relu'
+            input_dim=3, hidden_dims=[256, 512, 512, 256, 128], output_dim=1, activation='relu'
         )
     else:  # SDF
         model = MLP(
-            input_dim=3,
-            hidden_dims=[512, 1024, 1024, 512, 256],
-            output_dim=1,
-            activation='relu'
+            input_dim=3, hidden_dims=[512, 1024, 1024, 512, 256], output_dim=1, activation='relu'
         )
     
     # 创建训练器
     trainer = NeuralSDFTrainer(
-        model=model,
-        learning_rate=1e-3,
-        weight_decay=1e-5
+        model=model, learning_rate=1e-3, weight_decay=1e-5
     )
     
     # 训练模型
     logger.info("开始训练...")
     trainer.train(
-        train_dataloader=train_dataloader,
-        val_dataloader=val_dataloader,
-        num_epochs=50,
-        save_path=model_save_path,
-        early_stopping_patience=10
+        train_dataloader=train_dataloader, val_dataloader=val_dataloader, num_epochs=50, save_path=model_save_path, early_stopping_patience=10
     )
     
     # 绘制训练历史

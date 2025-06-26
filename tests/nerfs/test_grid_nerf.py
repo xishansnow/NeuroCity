@@ -15,16 +15,18 @@ import torch
 import numpy as np
 from pathlib import Path
 import shutil
+import sys
 
-from .core import (
-    GridNeRF, GridNeRFConfig, GridNeRFLoss, 
-    GridNeRFRenderer, GridGuidedMLP, HierarchicalGrid
+# Add src to path for imports
+sys.path.append(os.path.join(os.path.dirname(__file__), '..', '..', 'src'))
+
+from nerfs.grid_nerf.core import (
+    GridNeRF, GridNeRFConfig, GridNeRFLoss, GridNeRFRenderer, GridGuidedMLP, HierarchicalGrid
 )
-from .dataset import GridNeRFDataset, create_dataset, create_dataloader
-from .trainer import GridNeRFTrainer
-from .utils import (
-    compute_psnr, compute_ssim, positional_encoding,
-    get_ray_directions, sample_along_rays, volume_rendering
+from nerfs.grid_nerf.dataset import GridNeRFDataset, create_dataset, create_dataloader
+from nerfs.grid_nerf.trainer import GridNeRFTrainer
+from nerfs.grid_nerf.utils import (
+    compute_psnr, compute_ssim, positional_encoding, get_ray_directions, sample_along_rays, volume_rendering
 )
 
 
@@ -44,9 +46,7 @@ class TestGridNeRFConfig(unittest.TestCase):
     def test_custom_config(self):
         """Test custom configuration."""
         config = GridNeRFConfig(
-            grid_levels=3,
-            base_resolution=32,
-            batch_size=512
+            grid_levels=3, base_resolution=32, batch_size=512
         )
         
         self.assertEqual(config.grid_levels, 3)
@@ -62,8 +62,7 @@ class TestGridNeRFConfig(unittest.TestCase):
         
         # Dict format
         config = GridNeRFConfig(scene_bounds={
-            "min_bound": [-10, -10, -5],
-            "max_bound": [10, 10, 5]
+            "min_bound": [-10, -10, -5], "max_bound": [10, 10, 5]
         })
         self.assertTrue(torch.allclose(config.get_scene_bounds(), expected))
 
@@ -74,9 +73,7 @@ class TestHierarchicalGrid(unittest.TestCase):
     def setUp(self):
         """Set up test fixtures."""
         self.config = GridNeRFConfig(
-            grid_levels=3,
-            base_resolution=32,
-            grid_feature_dim=16
+            grid_levels=3, base_resolution=32, grid_feature_dim=16
         )
         self.grid = HierarchicalGrid(self.config)
     
@@ -129,11 +126,7 @@ class TestGridGuidedMLP(unittest.TestCase):
     def setUp(self):
         """Set up test fixtures."""
         self.config = GridNeRFConfig(
-            grid_feature_dim=32,
-            density_hidden_dim=128,
-            color_hidden_dim=64,
-            position_encoding_levels=6,
-            direction_encoding_levels=3
+            grid_feature_dim=32, density_hidden_dim=128, color_hidden_dim=64, position_encoding_levels=6, direction_encoding_levels=3
         )
         self.mlp = GridGuidedMLP(self.config)
     
@@ -182,8 +175,7 @@ class TestGridNeRFRenderer(unittest.TestCase):
     def setUp(self):
         """Set up test fixtures."""
         self.config = GridNeRFConfig(
-            num_samples=32,
-            num_importance_samples=64
+            num_samples=32, num_importance_samples=64
         )
         self.renderer = GridNeRFRenderer(self.config)
     
@@ -211,7 +203,7 @@ class TestGridNeRFRenderer(unittest.TestCase):
         self.assertIn('rgb', outputs)
         self.assertIn('depth', outputs)
         self.assertEqual(outputs['rgb'].shape, (3, 3))
-        self.assertEqual(outputs['depth'].shape, (3,))
+        self.assertEqual(outputs['depth'].shape, (3, ))
 
 
 class TestGridNeRF(unittest.TestCase):
@@ -220,12 +212,8 @@ class TestGridNeRF(unittest.TestCase):
     def setUp(self):
         """Set up test fixtures."""
         self.config = GridNeRFConfig(
-            grid_levels=2,  # Smaller for testing
-            base_resolution=16,
-            grid_feature_dim=8,
-            density_hidden_dim=32,
-            color_hidden_dim=32,
-            num_samples=16
+            grid_levels=2, # Smaller for testing
+            base_resolution=16, grid_feature_dim=8, density_hidden_dim=32, color_hidden_dim=32, num_samples=16
         )
         self.model = GridNeRF(self.config)
     
@@ -246,7 +234,7 @@ class TestGridNeRF(unittest.TestCase):
         self.assertIn('rgb', outputs)
         self.assertIn('depth', outputs)
         self.assertEqual(outputs['rgb'].shape, (10, 3))
-        self.assertEqual(outputs['depth'].shape, (10,))
+        self.assertEqual(outputs['depth'].shape, (10, ))
     
     def test_model_parameters(self):
         """Test model has trainable parameters."""
@@ -263,9 +251,7 @@ class TestGridNeRFLoss(unittest.TestCase):
     def setUp(self):
         """Set up test fixtures."""
         self.config = GridNeRFConfig(
-            color_weight=1.0,
-            depth_weight=0.1,
-            grid_regularization_weight=1e-4
+            color_weight=1.0, depth_weight=0.1, grid_regularization_weight=1e-4
         )
         self.loss_fn = GridNeRFLoss(self.config)
     
@@ -283,9 +269,10 @@ class TestGridNeRFLoss(unittest.TestCase):
     def test_full_loss(self):
         """Test full loss computation."""
         outputs = {
-            'rgb': torch.rand(10, 3),
-            'depth': torch.rand(10),
-            'weights': torch.rand(10, 16)  # [N, n_samples]
+            'rgb': torch.rand(
+                10,
+                3,
+            )
         }
         target_rgb = torch.rand(10, 3)
         batch = {'target_rgb': target_rgb}
@@ -332,9 +319,7 @@ class TestDataset(unittest.TestCase):
     def test_dataset_creation(self):
         """Test dataset creation."""
         dataset = GridNeRFDataset(
-            data_path=self.temp_dir,
-            split='train',
-            config=self.config
+            data_path=self.temp_dir, split='train', config=self.config
         )
         
         self.assertEqual(len(dataset), 5)
@@ -342,9 +327,7 @@ class TestDataset(unittest.TestCase):
     def test_dataset_getitem(self):
         """Test dataset item retrieval."""
         dataset = GridNeRFDataset(
-            data_path=self.temp_dir,
-            split='train', 
-            config=self.config
+            data_path=self.temp_dir, split='train', config=self.config
         )
         
         try:
@@ -359,15 +342,11 @@ class TestDataset(unittest.TestCase):
     def test_dataloader_creation(self):
         """Test dataloader creation."""
         dataset = GridNeRFDataset(
-            data_path=self.temp_dir,
-            split='train',
-            config=self.config
+            data_path=self.temp_dir, split='train', config=self.config
         )
         
         dataloader = create_dataloader(
-            dataset,
-            batch_size=2,
-            num_workers=0,  # Use 0 for testing
+            dataset, batch_size=2, num_workers=0, # Use 0 for testing
             shuffle=True
         )
         
@@ -456,7 +435,7 @@ class TestUtilities(unittest.TestCase):
         self.assertIn('rgb', outputs)
         self.assertIn('depth', outputs)
         self.assertEqual(outputs['rgb'].shape, (3, 3))
-        self.assertEqual(outputs['depth'].shape, (3,))
+        self.assertEqual(outputs['depth'].shape, (3, ))
 
 
 class TestTrainer(unittest.TestCase):
@@ -466,13 +445,7 @@ class TestTrainer(unittest.TestCase):
         """Set up test fixtures."""
         self.temp_dir = tempfile.mkdtemp()
         self.config = GridNeRFConfig(
-            grid_levels=2,
-            base_resolution=8,
-            grid_feature_dim=4,
-            batch_size=4,
-            num_epochs=2,
-            max_steps=10,
-            log_every_n_steps=5
+            grid_levels=2, base_resolution=8, grid_feature_dim=4, batch_size=4, num_epochs=2, max_steps=10, log_every_n_steps=5
         )
         
     def tearDown(self):
@@ -482,10 +455,9 @@ class TestTrainer(unittest.TestCase):
     def test_trainer_creation(self):
         """Test trainer creation."""
         trainer = GridNeRFTrainer(
-            config=self.config,
-            output_dir=self.temp_dir,
-            device=torch.device('cpu'),
-            use_tensorboard=False
+            config=self.config, output_dir=self.temp_dir, device=torch.device(
+                'cpu',
+            )
         )
         
         self.assertEqual(trainer.config, self.config)
@@ -494,10 +466,9 @@ class TestTrainer(unittest.TestCase):
     def test_model_setup(self):
         """Test model setup in trainer."""
         trainer = GridNeRFTrainer(
-            config=self.config,
-            output_dir=self.temp_dir,
-            device=torch.device('cpu'),
-            use_tensorboard=False
+            config=self.config, output_dir=self.temp_dir, device=torch.device(
+                'cpu',
+            )
         )
         
         trainer.setup_model()
@@ -508,10 +479,9 @@ class TestTrainer(unittest.TestCase):
     def test_optimizer_setup(self):
         """Test optimizer setup."""
         trainer = GridNeRFTrainer(
-            config=self.config,
-            output_dir=self.temp_dir,
-            device=torch.device('cpu'),
-            use_tensorboard=False
+            config=self.config, output_dir=self.temp_dir, device=torch.device(
+                'cpu',
+            )
         )
         
         trainer.setup_model()
@@ -575,9 +545,7 @@ class TestPerformance(unittest.TestCase):
     def setUp(self):
         """Set up test fixtures."""
         self.config = GridNeRFConfig(
-            grid_levels=3,
-            base_resolution=32,
-            batch_size=1024
+            grid_levels=3, base_resolution=32, batch_size=1024
         )
         self.model = GridNeRF(self.config)
         if torch.cuda.is_available():
@@ -650,17 +618,7 @@ def run_tests():
     
     # Add test classes
     test_classes = [
-        TestGridNeRFConfig,
-        TestHierarchicalGrid,
-        TestGridGuidedMLP,
-        TestGridNeRFRenderer,
-        TestGridNeRF,
-        TestGridNeRFLoss,
-        TestDataset,
-        TestUtilities,
-        TestTrainer,
-        TestIntegration,
-        TestPerformance
+        TestGridNeRFConfig, TestHierarchicalGrid, TestGridGuidedMLP, TestGridNeRFRenderer, TestGridNeRF, TestGridNeRFLoss, TestDataset, TestUtilities, TestTrainer, TestIntegration, TestPerformance
     ]
     
     for test_class in test_classes:

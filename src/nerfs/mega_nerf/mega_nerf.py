@@ -18,8 +18,7 @@ import numpy as np
 import os
 import json
 import cv2
-from typing import List, Tuple, Dict, Optional, Union
-import matplotlib.pyplot as plt
+from typing import Dict, List, Optional, Tuple, import matplotlib.pyplot as plt
 from tqdm import tqdm
 import logging
 from dataclasses import dataclass
@@ -37,13 +36,13 @@ class MegaNeRFConfig:
     """Mega-NeRF配置参数"""
     # 场景分解参数
     num_submodules: int = 8
-    grid_size: Tuple[int, int] = (4, 2)  # 2D网格分解
+    grid_size: tuple[int, int] = (4, 2)  # 2D网格分解
     overlap_factor: float = 0.15
     
     # 网络参数
     hidden_dim: int = 256
     num_layers: int = 8
-    skip_connections: List[int] = None
+    skip_connections: list[int] = None
     use_viewdirs: bool = True
     
     # 训练参数
@@ -63,7 +62,7 @@ class MegaNeRFConfig:
     appearance_dim: int = 48
     
     # 边界参数
-    scene_bounds: Tuple[float, float, float, float, float, float] = (-100, -100, -10, 100, 100, 50)
+    scene_bounds: tuple[float, float, float, float, float, float] = (-100, -100, -10, 100, 100, 50)
     foreground_ratio: float = 0.8
     
     def __post_init__(self):
@@ -103,7 +102,11 @@ class MegaNeRFSubmodule(nn.Module):
         
         # 位置编码
         self.pos_encoder = PositionalEncoding(3, max_freq_log2=10, num_freqs=10)
-        self.dir_encoder = PositionalEncoding(3, max_freq_log2=4, num_freqs=4) if config.use_viewdirs else None
+        self.dir_encoder = PositionalEncoding(
+            3,
+            max_freq_log2=4,
+            num_freqs=4,
+        )
         
         # 计算输入维度
         pos_dim = self.pos_encoder.output_dim
@@ -140,15 +143,14 @@ class MegaNeRFSubmodule(nn.Module):
             self.feature_head = nn.Linear(config.hidden_dim, config.hidden_dim)
             color_input_dim = config.hidden_dim + dir_dim
             self.color_layers = nn.Sequential(
-                nn.Linear(color_input_dim, config.hidden_dim // 2),
-                nn.ReLU(inplace=True),
-                nn.Linear(config.hidden_dim // 2, 3),
-                nn.Sigmoid()
+                nn.Linear(
+                    color_input_dim,
+                    config.hidden_dim // 2,
+                )
             )
         else:
             self.color_head = nn.Sequential(
-                nn.Linear(config.hidden_dim, 3),
-                nn.Sigmoid()
+                nn.Linear(config.hidden_dim, 3), nn.Sigmoid()
             )
     
     def forward(self, points, viewdirs=None, appearance_idx=None):
@@ -242,7 +244,9 @@ class MegaNeRF(nn.Module):
         x_min, y_min, z_min, x_max, y_max, z_max = bounds
         
         center = np.array([(x_min + x_max) / 2, (y_min + y_max) / 2, (z_min + z_max) / 2])
-        radius = np.array([(x_max - x_min) / 2, (y_max - y_min) / 2, (z_max - z_min) / 2]) * self.config.foreground_ratio
+        radius = np.array(
+            [,
+        )
         
         return {'center': center, 'radius': radius}
     
@@ -346,10 +350,9 @@ class MegaNeRFDataset:
             for frame in data['frames']:
                 # 相机参数
                 camera = {
-                    'transform_matrix': np.array(frame['transform_matrix']),
-                    'focal_length': data.get('fl_x', 800),
-                    'width': data.get('w', 800),
-                    'height': data.get('h', 600)
+                    'transform_matrix': np.array(
+                        frame['transform_matrix'],
+                    )
                 }
                 cameras.append(camera)
                 
@@ -369,8 +372,9 @@ class MegaNeRFDataset:
             
             # 分配给最近的子模块
             distances = np.linalg.norm(
-                camera_pos[None, :] - np.array([centroid for centroid in self._get_centroids()]), 
-                axis=1
+                camera_pos[None, :] - np.array(
+                    [centroid for centroid in self._get_centroids,
+                )
             )
             assignment = np.argmin(distances)
             
@@ -432,7 +436,7 @@ class VolumetricRenderer:
         
         # 外观索引
         if appearance_idx is not None:
-            app_idx = torch.full((points.shape[0],), appearance_idx, device=points.device)
+            app_idx = torch.full((points.shape[0], ), appearance_idx, device=points.device)
         else:
             app_idx = None
         
@@ -450,7 +454,9 @@ class VolumetricRenderer:
         
         alpha = 1.0 - torch.exp(-density[..., 0] * dists)
         transmittance = torch.cumprod(1.0 - alpha + 1e-10, dim=-1)
-        transmittance = torch.cat([torch.ones_like(transmittance[..., :1]), transmittance[..., :-1]], dim=-1)
+        transmittance = torch.cat(
+            [torch.ones_like,
+        )
         
         weights = alpha * transmittance
         rgb = torch.sum(weights[..., None] * color, dim=-2)
@@ -471,9 +477,7 @@ class VolumetricRenderer:
             batch_rays_d = rays_d[i:i+batch_size]
             
             rgb, _, _ = self.render_ray(
-                model, batch_rays_o, batch_rays_d, 
-                self.config.near, self.config.far, 
-                appearance_idx
+                model, batch_rays_o, batch_rays_d, self.config.near, self.config.far, appearance_idx
             )
             rgb_map.append(rgb)
         
@@ -490,16 +494,15 @@ class VolumetricRenderer:
         
         # 生成像素坐标
         i, j = torch.meshgrid(
-            torch.arange(width, dtype=torch.float32),
-            torch.arange(height, dtype=torch.float32),
-            indexing='xy'
+            torch.arange(
+                width,
+                dtype=torch.float32,
+            )
         )
         
         # 转换为相机坐标
         dirs = torch.stack([
-            (i - width * 0.5) / focal,
-            -(j - height * 0.5) / focal,
-            -torch.ones_like(i)
+            (i - width * 0.5) / focal, -(j - height * 0.5) / focal, -torch.ones_like(i)
         ], dim=-1)
         
         # 转换为世界坐标
@@ -566,9 +569,7 @@ class MegaNeRFTrainer:
             
             # 渲染
             rgb_pred, _, _ = self.renderer.render_ray(
-                self.model, batch_rays_o, batch_rays_d,
-                self.config.near, self.config.far,
-                appearance_idx=image_indices[img_idx]
+                self.model, batch_rays_o, batch_rays_d, self.config.near, self.config.far, appearance_idx=image_indices[img_idx]
             )
             
             # 获取目标颜色（这里需要根据实际情况实现）
@@ -590,7 +591,9 @@ class MegaNeRFTrainer:
         logger.info("开始并行训练")
         
         # 使用多进程并行训练
-        with ProcessPoolExecutor(max_workers=min(len(self.model.submodules), mp.cpu_count())) as executor:
+        with ProcessPoolExecutor(
+            max_workers=min,
+        )
             futures = []
             for i in range(len(self.model.submodules)):
                 future = executor.submit(self.train_submodule, i)
@@ -629,9 +632,8 @@ class MegaNeRFTrainer:
     def save_model(self, path: str):
         """保存模型"""
         torch.save({
-            'model_state_dict': self.model.state_dict(),
-            'config': self.config,
-            'centroids': self.model.centroids
+            'model_state_dict': self.model.state_dict(
+            )
         }, path)
         logger.info(f"模型已保存到: {path}")
     
@@ -662,10 +664,7 @@ class InteractiveRenderer:
         
         # 生成相机参数
         camera = {
-            'transform_matrix': camera_pose,
-            'focal_length': 800,
-            'width': width,
-            'height': height
+            'transform_matrix': camera_pose, 'focal_length': 800, 'width': width, 'height': height
         }
         
         # 渲染图像
@@ -718,9 +717,7 @@ def create_sample_camera_path(num_frames=100):
     for angle in angles:
         # 相机位置
         pos = np.array([
-            radius * np.cos(angle),
-            radius * np.sin(angle),
-            height
+            radius * np.cos(angle), radius * np.sin(angle), height
         ])
         
         # 朝向中心
@@ -748,10 +745,7 @@ def main():
     """主函数示例"""
     # 配置参数
     config = MegaNeRFConfig(
-        num_submodules=8,
-        grid_size=(4, 2),
-        max_iterations=100000,
-        batch_size=1024
+        num_submodules=8, grid_size=(4, 2), max_iterations=100000, batch_size=1024
     )
     
     logger.info("Mega-NeRF实现创建完成！")

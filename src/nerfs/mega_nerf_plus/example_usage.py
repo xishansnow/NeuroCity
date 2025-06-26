@@ -26,53 +26,15 @@ def create_sample_config() -> MegaNeRFPlusConfig:
     
     return MegaNeRFPlusConfig(
         # Network architecture
-        num_levels=8,
-        base_resolution=32,
-        max_resolution=2048,
-        
-        # MLP parameters
-        netdepth=8,
-        netwidth=256,
-        netdepth_fine=8,
-        netwidth_fine=256,
-        
-        # Spatial partitioning
-        max_partition_size=1024,
-        min_partition_size=64,
-        overlap_ratio=0.1,
-        adaptive_partitioning=True,
-        
-        # Multi-resolution parameters
-        num_lods=4,
-        lod_threshold=0.01,
-        
-        # Photogrammetric parameters
-        max_image_resolution=4096,
-        downsample_factor=2,
-        progressive_upsampling=True,
-        
-        # Training parameters
-        batch_size=4096,
-        chunk_size=1024,
-        lr_init=5e-4,
-        lr_final=5e-6,
-        lr_decay_steps=200000,
-        
-        # Memory management
-        max_memory_gb=12.0,
-        use_mixed_precision=True,
-        gradient_checkpointing=True,
-        
-        # Rendering parameters
-        num_samples=64,
-        num_importance=128,
-        use_viewdirs=True,
-        
-        # Loss parameters
-        lambda_rgb=1.0,
-        lambda_depth=0.1,
-        lambda_semantic=0.0,
-        lambda_distortion=0.01
+        num_levels=8, base_resolution=32, max_resolution=2048, # MLP parameters
+        netdepth=8, netwidth=256, netdepth_fine=8, netwidth_fine=256, # Spatial partitioning
+        max_partition_size=1024, min_partition_size=64, overlap_ratio=0.1, adaptive_partitioning=True, # Multi-resolution parameters
+        num_lods=4, lod_threshold=0.01, # Photogrammetric parameters
+        max_image_resolution=4096, downsample_factor=2, progressive_upsampling=True, # Training parameters
+        batch_size=4096, chunk_size=1024, lr_init=5e-4, lr_final=5e-6, lr_decay_steps=200000, # Memory management
+        max_memory_gb=12.0, use_mixed_precision=True, gradient_checkpointing=True, # Rendering parameters
+        num_samples=64, num_importance=128, use_viewdirs=True, # Loss parameters
+        lambda_rgb=1.0, lambda_depth=0.1, lambda_semantic=0.0, lambda_distortion=0.01
     )
 
 
@@ -93,19 +55,11 @@ def basic_training_example(data_dir: str, output_dir: str):
     # Create dataset
     print("Loading dataset...")
     train_dataset = create_meganerf_plus_dataset(
-        data_dir, 
-        dataset_type='photogrammetric',
-        split='train',
-        max_image_resolution=config.max_image_resolution,
-        downsample_factor=config.downsample_factor
+        data_dir, dataset_type='photogrammetric', split='train', max_image_resolution=config.max_image_resolution, downsample_factor=config.downsample_factor
     )
     
     val_dataset = create_meganerf_plus_dataset(
-        data_dir,
-        dataset_type='photogrammetric', 
-        split='val',
-        max_image_resolution=config.max_image_resolution,
-        downsample_factor=config.downsample_factor
+        data_dir, dataset_type='photogrammetric', split='val', max_image_resolution=config.max_image_resolution, downsample_factor=config.downsample_factor
     )
     
     print(f"Training samples: {len(train_dataset)}")
@@ -118,21 +72,17 @@ def basic_training_example(data_dir: str, output_dir: str):
     # Print model info
     total_params = sum(p.numel() for p in model.parameters())
     trainable_params = sum(p.numel() for p in model.parameters() if p.requires_grad)
-    print(f"Total parameters: {total_params:,}")
-    print(f"Trainable parameters: {trainable_params:,}")
+    print(f"Total parameters: {total_params:, }")
+    print(f"Trainable parameters: {trainable_params:, }")
     
     # Create trainer
     device = 'cuda' if torch.cuda.is_available() else 'cpu'
     print(f"Using device: {device}")
     
     trainer = MegaNeRFPlusTrainer(
-        config=config,
-        model=model,
-        train_dataset=train_dataset,
-        val_dataset=val_dataset,
-        device=device,
-        log_dir=Path(output_dir) / 'logs',
-        checkpoint_dir=Path(output_dir) / 'checkpoints'
+        config=config, model=model, train_dataset=train_dataset, val_dataset=val_dataset, device=device, log_dir=Path(
+            output_dir,
+        )
     )
     
     # Start training
@@ -165,23 +115,17 @@ def large_scene_training_example(data_dir: str, output_dir: str):
     # Create large scene dataset with partitioning
     print("Loading large scene dataset...")
     partition_config = {
-        'max_partition_size': 2048,
-        'min_partition_size': 128,
-        'overlap_ratio': 0.15,
-        'adaptive_threshold': 0.02
+        'max_partition_size': 2048, 'min_partition_size': 128, 'overlap_ratio': 0.15, 'adaptive_threshold': 0.02
     }
     
     train_dataset = create_meganerf_plus_dataset(
-        data_dir,
-        dataset_type='large_scene',
-        split='train',
-        partition_config=partition_config,
-        streaming_mode=True,
-        max_image_resolution=config.max_image_resolution,
-        downsample_factor=1  # Full resolution
+        data_dir, dataset_type='large_scene', split='train', partition_config=partition_config, streaming_mode=True, max_image_resolution=config.max_image_resolution, downsample_factor=1  # Full resolution
     )
     
-    print(f"Dataset partitions: {len(train_dataset.partitions) if hasattr(train_dataset, 'partitions') else 'N/A'}")
+    print(f"Dataset partitions: {
+        len(train_dataset.partitions) if hasattr(train_dataset,
+        'partitions') else 'N/A',
+    }
     
     # Create model with memory optimization
     print("Creating optimized model...")
@@ -190,21 +134,16 @@ def large_scene_training_example(data_dir: str, output_dir: str):
     # Apply memory optimizations
     from .memory_manager import MemoryOptimizer
     model = MemoryOptimizer.optimize_model_memory(
-        model,
-        use_checkpointing=True,
-        use_mixed_precision=True
+        model, use_checkpointing=True, use_mixed_precision=True
     )
     
     # Create multi-scale trainer
     device = 'cuda' if torch.cuda.is_available() else 'cpu'
     trainer = MultiScaleTrainer(
-        config=config,
-        model=model,
-        train_dataset=train_dataset,
-        val_dataset=None,  # Skip validation for large scenes
-        device=device,
-        log_dir=Path(output_dir) / 'logs_large',
-        checkpoint_dir=Path(output_dir) / 'checkpoints_large'
+        config=config, model=model, train_dataset=train_dataset, val_dataset=None, # Skip validation for large scenes
+        device=device, log_dir=Path(
+            output_dir,
+        )
     )
     
     # Start training
@@ -239,11 +178,7 @@ def inference_example(model_path: str, data_dir: str, output_dir: str):
     
     # Load test dataset
     test_dataset = create_meganerf_plus_dataset(
-        data_dir,
-        dataset_type='photogrammetric',
-        split='test',
-        max_image_resolution=config.max_image_resolution,
-        use_cached_rays=False  # Load full images for inference
+        data_dir, dataset_type='photogrammetric', split='test', max_image_resolution=config.max_image_resolution, use_cached_rays=False  # Load full images for inference
     )
     
     # Create renderer
@@ -269,8 +204,7 @@ def inference_example(model_path: str, data_dir: str, output_dir: str):
             
             # Render image
             rendered_image = render_full_image(
-                model, renderer, pose, intrinsic, 
-                target_image.shape[:2], config
+                model, renderer, pose, intrinsic, target_image.shape[:2], config
             )
             
             # Save images
@@ -291,9 +225,14 @@ def inference_example(model_path: str, data_dir: str, output_dir: str):
             print(f"  PSNR: {psnr:.2f} dB")
 
 
-def render_full_image(model: nn.Module, renderer, pose: torch.Tensor, 
-                     intrinsic: torch.Tensor, image_size: tuple,
-                     config: MegaNeRFPlusConfig) -> torch.Tensor:
+def render_full_image(
+    model: nn.Module,
+    renderer,
+    pose: torch.Tensor,
+    intrinsic: torch.Tensor,
+    image_size: tuple,
+    config: MegaNeRFPlusConfig,
+)
     """Render a full image using the trained model"""
     
     h, w = image_size
@@ -301,18 +240,18 @@ def render_full_image(model: nn.Module, renderer, pose: torch.Tensor,
     
     # Generate rays
     i_coords, j_coords = torch.meshgrid(
-        torch.arange(w, dtype=torch.float32, device=device),
-        torch.arange(h, dtype=torch.float32, device=device),
-        indexing='xy'
+        torch.arange(
+            w,
+            dtype=torch.float32,
+            device=device,
+        )
     )
     
     fx, fy = intrinsic[0, 0], intrinsic[1, 1]
     cx, cy = intrinsic[0, 2], intrinsic[1, 2]
     
     dirs = torch.stack([
-        (i_coords - cx) / fx,
-        -(j_coords - cy) / fy,
-        -torch.ones_like(i_coords)
+        (i_coords - cx) / fx, -(j_coords - cy) / fy, -torch.ones_like(i_coords)
     ], dim=-1)
     
     dirs = torch.sum(dirs[..., None, :] * pose[:3, :3], dim=-1)
@@ -331,9 +270,7 @@ def render_full_image(model: nn.Module, renderer, pose: torch.Tensor,
         
         # Render chunk
         chunk_results = model.render_rays(
-            chunk_rays_o, chunk_rays_d,
-            near=0.1, far=100.0,
-            lod=0, white_bkgd=True
+            chunk_rays_o, chunk_rays_d, near=0.1, far=100.0, lod=0, white_bkgd=True
         )
         
         if 'fine' in chunk_results:
@@ -376,10 +313,7 @@ def distributed_training_example(data_dir: str, output_dir: str):
     
     # Create dataset
     train_dataset = create_meganerf_plus_dataset(
-        data_dir,
-        dataset_type='photogrammetric',
-        split='train',
-        max_image_resolution=config.max_image_resolution
+        data_dir, dataset_type='photogrammetric', split='train', max_image_resolution=config.max_image_resolution
     )
     
     # Create model
@@ -387,12 +321,9 @@ def distributed_training_example(data_dir: str, output_dir: str):
     
     # Create distributed trainer
     trainer = DistributedTrainer(
-        config=config,
-        model=model,
-        train_dataset=train_dataset,
-        device='cuda',
-        log_dir=Path(output_dir) / 'logs_distributed',
-        checkpoint_dir=Path(output_dir) / 'checkpoints_distributed'
+        config=config, model=model, train_dataset=train_dataset, device='cuda', log_dir=Path(
+            output_dir,
+        )
     )
     
     # Start training
@@ -403,15 +334,19 @@ def main():
     """Main function with command line interface"""
     
     parser = argparse.ArgumentParser(description='Mega-NeRF++ Examples')
-    parser.add_argument('--mode', type=str, required=True,
-                       choices=['basic', 'large_scene', 'inference', 'distributed'],
-                       help='Example mode to run')
-    parser.add_argument('--data_dir', type=str, required=True,
-                       help='Path to dataset directory')
-    parser.add_argument('--output_dir', type=str, required=True,
-                       help='Path to output directory')
-    parser.add_argument('--model_path', type=str,
-                       help='Path to model checkpoint (for inference)')
+    parser.add_argument(
+        '--mode',
+        type=str,
+        required=True,
+        choices=['basic',
+        'large_scene',
+        'inference',
+        'distributed'],
+        help='Example mode to run',
+    )
+    parser.add_argument('--data_dir', type=str, required=True, help='Path to dataset directory')
+    parser.add_argument('--output_dir', type=str, required=True, help='Path to output directory')
+    parser.add_argument('--model_path', type=str, help='Path to model checkpoint (for inference)')
     
     args = parser.parse_args()
     

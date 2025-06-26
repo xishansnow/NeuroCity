@@ -1,8 +1,7 @@
 """
 Dataset for Block-NeRF
 
-This module handles data loading and preprocessing for Block-NeRF training,
-including multi-view images, camera poses, and metadata.
+This module handles data loading and preprocessing for Block-NeRF training, including multi-view images, camera poses, and metadata.
 """
 
 import torch
@@ -12,7 +11,7 @@ import cv2
 import json
 import os
 from pathlib import Path
-from typing import Dict, List, Optional, Tuple, Union, Any
+from typing import Dict, List, Optional, Tuple, Any
 import random
 from PIL import Image
 import h5py
@@ -25,16 +24,20 @@ class BlockNeRFDataset(Dataset):
     Supports various data formats including COLMAP, LLFF, and custom formats.
     """
     
-    def __init__(self,
-                 data_root: str,
-                 split: str = 'train',
-                 img_scale: float = 1.0,
-                 ray_batch_size: int = 1024,
-                 use_cache: bool = True,
-                 cache_dir: Optional[str] = None,
-                 load_appearance_ids: bool = True,
-                 load_exposure: bool = True,
-                 background_color: Tuple[float, float, float] = (1.0, 1.0, 1.0)):
+    def __init__(
+        self,
+        data_root: str | Path,
+        split: str = 'train',
+        img_scale: float = 1.0,
+        ray_batch_size: int = 1024,
+        use_cache: bool = True,
+        cache_dir: Optional[str] = None,
+        load_appearance_ids: bool = True,
+        load_exposure: bool = True,
+        background_color: tuple[float,
+        float,
+        float] =,
+    )
         """
         Initialize Block-NeRF dataset
         
@@ -82,7 +85,7 @@ class BlockNeRFDataset(Dataset):
         self.num_images = len(self.images)
         print(f"Loaded {self.num_images} images for {split} split")
     
-    def _load_metadata(self) -> Dict[str, Any]:
+    def _load_metadata(self) -> dict[str, Any]:
         """Load dataset metadata"""
         metadata_path = self.data_root / 'metadata.json'
         
@@ -92,15 +95,12 @@ class BlockNeRFDataset(Dataset):
         else:
             # Default metadata
             metadata = {
-                'scene_bounds': [[-100, 100], [-100, 100], [-10, 10]],
-                'near': 0.1,
-                'far': 100.0,
-                'format': 'colmap'
+                'scene_bounds': [[-100, 100], [-100, 100], [-10, 10]], 'near': 0.1, 'far': 100.0, 'format': 'colmap'
             }
         
         return metadata
     
-    def _load_images_and_poses(self) -> Tuple[List[np.ndarray], np.ndarray, np.ndarray]:
+    def _load_images_and_poses(self) -> tuple[list[np.ndarray], np.ndarray, np.ndarray]:
         """Load images, camera poses, and intrinsics"""
         cache_path = self.cache_dir / f'{self.split}_images_poses.npz'
         
@@ -130,7 +130,7 @@ class BlockNeRFDataset(Dataset):
         
         return images, poses, intrinsics
     
-    def _load_colmap_data(self) -> Tuple[List[np.ndarray], np.ndarray, np.ndarray]:
+    def _load_colmap_data(self) -> tuple[list[np.ndarray], np.ndarray, np.ndarray]:
         """Load COLMAP format data"""
         from .utils.colmap_utils import read_cameras_binary, read_images_binary, read_points3D_binary
         
@@ -187,9 +187,7 @@ class BlockNeRFDataset(Dataset):
             cy *= self.img_scale
             
             intrinsics = np.array([
-                [fx, 0, cx],
-                [0, fy, cy],
-                [0, 0, 1]
+                [fx, 0, cx], [0, fy, cy], [0, 0, 1]
             ])
             intrinsics_list.append(intrinsics)
             
@@ -208,7 +206,7 @@ class BlockNeRFDataset(Dataset):
         
         return images, poses, intrinsics
     
-    def _load_llff_data(self) -> Tuple[List[np.ndarray], np.ndarray, np.ndarray]:
+    def _load_llff_data(self) -> tuple[list[np.ndarray], np.ndarray, np.ndarray]:
         """Load LLFF format data"""
         poses_bounds = np.load(self.data_root / 'poses_bounds.npy')
         
@@ -239,9 +237,7 @@ class BlockNeRFDataset(Dataset):
         focal = focal * self.img_scale
         
         intrinsics = np.array([
-            [focal, 0, W/2],
-            [0, focal, H/2],
-            [0, 0, 1]
+            [focal, 0, W/2], [0, focal, H/2], [0, 0, 1]
         ])
         intrinsics = np.tile(intrinsics[None], (len(poses), 1, 1))
         
@@ -252,7 +248,7 @@ class BlockNeRFDataset(Dataset):
         
         return images, poses_4x4, intrinsics
     
-    def _load_custom_data(self) -> Tuple[List[np.ndarray], np.ndarray, np.ndarray]:
+    def _load_custom_data(self) -> tuple[list[np.ndarray], np.ndarray, np.ndarray]:
         """Load custom format data"""
         # Implement custom data loading logic here
         raise NotImplementedError("Custom data format not implemented")
@@ -285,9 +281,7 @@ class BlockNeRFDataset(Dataset):
             print(f"Loading cached rays from {cache_path}")
             with h5py.File(cache_path, 'r') as f:
                 self.rays = {
-                    'origins': f['ray_origins'][:],
-                    'directions': f['ray_directions'][:],
-                    'image_ids': f['image_ids'][:]
+                    'origins': f['ray_origins'][:], 'directions': f['ray_directions'][:], 'image_ids': f['image_ids'][:]
                 }
                 self.colors = f['colors'][:]
             return
@@ -317,9 +311,10 @@ class BlockNeRFDataset(Dataset):
         
         # Concatenate all rays
         self.rays = {
-            'origins': np.concatenate(all_ray_origins, axis=0),
-            'directions': np.concatenate(all_ray_directions, axis=0),
-            'image_ids': np.concatenate(all_image_ids, axis=0)
+            'origins': np.concatenate(
+                all_ray_origins,
+                axis=0,
+            )
         }
         self.colors = np.concatenate(all_colors, axis=0)
         
@@ -332,15 +327,22 @@ class BlockNeRFDataset(Dataset):
         
         print(f"Cached {len(self.colors)} rays to {cache_path}")
     
-    def _get_rays(self, H: int, W: int, intrinsic: np.ndarray, pose: np.ndarray) -> Tuple[np.ndarray, np.ndarray]:
+    def _get_rays(
+        self,
+        H: int,
+        W: int,
+        intrinsic: np.ndarray,
+        pose: np.ndarray,
+    )
         """Generate rays for a camera"""
         i, j = np.meshgrid(np.arange(W), np.arange(H), indexing='xy')
         
         # Pixel coordinates to camera coordinates
         dirs = np.stack([
-            (i - intrinsic[0, 2]) / intrinsic[0, 0],
-            -(j - intrinsic[1, 2]) / intrinsic[1, 1],
-            -np.ones_like(i)
+            (
+                i - intrinsic[0,
+                2],
+            )
         ], axis=-1)
         
         # Transform ray directions to world coordinates
@@ -358,7 +360,7 @@ class BlockNeRFDataset(Dataset):
         else:
             return len(self.images)
     
-    def __getitem__(self, idx: int) -> Dict[str, torch.Tensor]:
+    def __getitem__(self, idx: int) -> dict[str, torch.Tensor]:
         """Get a batch of rays"""
         if self.rays is not None:
             # Return batch of rays
@@ -374,18 +376,18 @@ class BlockNeRFDataset(Dataset):
             # Get camera positions (from poses)
             unique_image_ids = torch.unique(image_ids)
             if len(unique_image_ids) == 1:
-                camera_position = torch.from_numpy(self.poses[unique_image_ids[0].item()][:3, 3]).float()
+                camera_position = torch.from_numpy(
+                    self.poses[unique_image_ids[0].item,
+                )
             else:
                 # Use mean position if multiple images
                 positions = [self.poses[img_id.item()][:3, 3] for img_id in unique_image_ids]
                 camera_position = torch.from_numpy(np.mean(positions, axis=0)).float()
             
             batch = {
-                'ray_origins': ray_origins,
-                'ray_directions': ray_directions,
-                'rgb': colors,
-                'image_ids': image_ids,
-                'camera_positions': camera_position.unsqueeze(0)
+                'ray_origins': ray_origins, 'ray_directions': ray_directions, 'rgb': colors, 'image_ids': image_ids, 'camera_positions': camera_position.unsqueeze(
+                    0,
+                )
             }
             
             # Add appearance IDs
@@ -411,10 +413,10 @@ class BlockNeRFDataset(Dataset):
             intrinsic = torch.from_numpy(self.intrinsics[idx]).float()
             
             batch = {
-                'image': image,
-                'pose': pose,
-                'intrinsic': intrinsic,
-                'image_id': torch.tensor(idx, dtype=torch.long)
+                'image': image, 'pose': pose, 'intrinsic': intrinsic, 'image_id': torch.tensor(
+                    idx,
+                    dtype=torch.long,
+                )
             }
             
             return batch
@@ -423,7 +425,7 @@ class BlockNeRFDataset(Dataset):
         """Get all camera positions"""
         return self.poses[:, :3, 3]
     
-    def get_scene_bounds(self) -> Tuple[np.ndarray, np.ndarray]:
+    def get_scene_bounds(self) -> tuple[np.ndarray, np.ndarray]:
         """Get scene bounding box"""
         camera_positions = self.get_camera_positions()
         
@@ -433,12 +435,17 @@ class BlockNeRFDataset(Dataset):
         
         return min_bounds, max_bounds
     
-    def create_dataloader(self, batch_size: int = 1, shuffle: bool = True, num_workers: int = 4) -> DataLoader:
+    def create_dataloader(
+        self,
+        batch_size: int = 1,
+        shuffle: bool = True,
+        num_workers: int = 4,
+    )
         """Create a DataLoader for this dataset"""
         return DataLoader(
-            self,
-            batch_size=batch_size,
-            shuffle=shuffle,
-            num_workers=num_workers,
-            pin_memory=True
-        ) 
+            self, batch_size=batch_size, shuffle=shuffle, num_workers=num_workers, pin_memory=True
+        )
+
+    def get_metadata(self) -> dict[str, Any]:
+        """Get dataset metadata"""
+        return self.metadata 

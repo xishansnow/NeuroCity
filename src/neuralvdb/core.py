@@ -7,7 +7,7 @@ This module contains the core NeuralVDB classes and configurations.
 import torch
 import torch.nn as nn
 import numpy as np
-from typing import List, Tuple, Dict, Optional, Union, Any
+from typing import Dict, List, Optional, Tuple, Any
 import logging
 from dataclasses import dataclass
 
@@ -28,7 +28,7 @@ class NeuralVDBConfig:
     
     # 神经网络参数
     feature_dim: int = 32
-    hidden_dims: List[int] = None
+    hidden_dims: list[int] = None
     activation: str = 'relu'
     dropout: float = 0.1
     
@@ -56,7 +56,7 @@ class AdvancedNeuralVDBConfig:
     
     # 神经网络参数
     feature_dim: int = 64
-    hidden_dims: List[int] = None
+    hidden_dims: list[int] = None
     activation: str = 'relu'
     dropout: float = 0.1
     
@@ -110,19 +110,21 @@ class NeuralVDB:
         
         logger.info("NeuralVDB初始化完成")
     
-    def fit(self, 
-            points: np.ndarray, 
-            occupancies: np.ndarray, 
-            train_ratio: float = 0.8, 
-            num_epochs: int = 100, 
-            save_path: str = 'neural_vdb_model.pth',
-            device: str = 'auto') -> Dict[str, Any]:
+    def fit(
+        self,
+        points: np.ndarray,
+        occupancies: np.ndarray,
+        train_ratio: float = 0.8,
+        num_epochs: int = 100,
+        save_path: str = 'neural_vdb_model.pth',
+        device: str = 'auto',
+    ) -> dict[str, Any]:
         """
         训练NeuralVDB模型
         
         Args:
             points: 3D坐标点 (N, 3)
-            occupancies: 占用值 (N,)
+            occupancies: 占用值 (N, )
             train_ratio: 训练集比例
             num_epochs: 训练轮数
             save_path: 模型保存路径
@@ -139,9 +141,7 @@ class NeuralVDB:
         
         # 创建训练器
         self.trainer = NeuralVDBTrainer(
-            self.sparse_grid, 
-            self.config, 
-            device=device
+            self.sparse_grid, self.config, device=device
         )
         
         # 准备训练数据
@@ -156,23 +156,16 @@ class NeuralVDB:
         )
         
         train_loader = torch.utils.data.DataLoader(
-            train_dataset, 
-            batch_size=self.config.batch_size, 
-            shuffle=True
+            train_dataset, batch_size=self.config.batch_size, shuffle=True
         )
         
         val_loader = torch.utils.data.DataLoader(
-            val_dataset, 
-            batch_size=self.config.batch_size, 
-            shuffle=False
+            val_dataset, batch_size=self.config.batch_size, shuffle=False
         )
         
         # 开始训练
         training_stats = self.trainer.train(
-            train_loader, 
-            val_loader, 
-            num_epochs=num_epochs, 
-            save_path=save_path
+            train_loader, val_loader, num_epochs=num_epochs, save_path=save_path
         )
         
         logger.info("NeuralVDB训练完成")
@@ -186,14 +179,14 @@ class NeuralVDB:
             points: 3D坐标点 (N, 3)
             
         Returns:
-            占用概率 (N,)
+            占用概率 (N, )
         """
         if self.trainer is None:
             raise ValueError("模型未训练，请先调用fit()方法")
         
         return self.trainer.predict(points)
     
-    def save(self, path: str):
+    def save(self, path: str) -> None:
         """保存模型"""
         if self.trainer is None:
             raise ValueError("模型未训练，无法保存")
@@ -201,7 +194,7 @@ class NeuralVDB:
         self.trainer.save_model(path)
         logger.info(f"模型已保存到: {path}")
     
-    def load(self, path: str):
+    def load(self, path: str) -> None:
         """加载模型"""
         # 创建稀疏网格和训练器
         self.sparse_grid = SparseVoxelGrid(self.config)
@@ -264,8 +257,8 @@ class NeuralVDB:
         # 绘制立方体边框
         # 定义立方体的12条边
         edges = [
-            [0, 1], [1, 3], [3, 2], [2, 0],  # 底面
-            [4, 5], [5, 7], [7, 6], [6, 4],  # 顶面
+            [0, 1], [1, 3], [3, 2], [2, 0], # 底面
+            [4, 5], [5, 7], [7, 6], [6, 4], # 顶面
             [0, 4], [1, 5], [2, 6], [3, 7]   # 垂直边
         ]
         
@@ -278,12 +271,10 @@ class NeuralVDB:
             for child in node.children:
                 self._visualize_node_recursive(child, ax, max_depth)
     
-    def get_model_info(self) -> Dict[str, Any]:
+    def get_model_info(self) -> dict[str, Any]:
         """获取模型信息"""
         info = {
-            'config': self.config,
-            'is_trained': self.trainer is not None,
-            'has_sparse_grid': self.sparse_grid is not None
+            'config': self.config, 'is_trained': self.trainer is not None, 'has_sparse_grid': self.sparse_grid is not None
         }
         
         if self.sparse_grid and self.sparse_grid.root:
@@ -341,19 +332,21 @@ class AdvancedNeuralVDB:
         
         logger.info("高级NeuralVDB初始化完成")
     
-    def fit(self, 
-            points: np.ndarray, 
-            occupancies: np.ndarray, 
-            train_ratio: float = 0.8, 
-            num_epochs: int = 100, 
-            save_path: str = 'advanced_neural_vdb_model.pth',
-            device: str = 'auto') -> Dict[str, Any]:
+    def fit(
+        self,
+        points: np.ndarray,
+        occupancies: np.ndarray,
+        train_ratio: float = 0.8,
+        num_epochs: int = 100,
+        save_path: str = 'advanced_neural_vdb_model.pth',
+        device: str = 'auto',
+    ) -> dict[str, Any]:
         """
         训练高级NeuralVDB模型
         
         Args:
             points: 3D坐标点 (N, 3)
-            occupancies: 占用值 (N,)
+            occupancies: 占用值 (N, )
             train_ratio: 训练集比例
             num_epochs: 训练轮数
             save_path: 模型保存路径
@@ -370,9 +363,7 @@ class AdvancedNeuralVDB:
         
         # 创建高级训练器
         self.trainer = AdvancedNeuralVDBTrainer(
-            self.sparse_grid, 
-            self.config, 
-            device=device
+            self.sparse_grid, self.config, device=device
         )
         
         # 准备训练数据
@@ -387,23 +378,16 @@ class AdvancedNeuralVDB:
         )
         
         train_loader = torch.utils.data.DataLoader(
-            train_dataset, 
-            batch_size=self.config.batch_size, 
-            shuffle=True
+            train_dataset, batch_size=self.config.batch_size, shuffle=True
         )
         
         val_loader = torch.utils.data.DataLoader(
-            val_dataset, 
-            batch_size=self.config.batch_size, 
-            shuffle=False
+            val_dataset, batch_size=self.config.batch_size, shuffle=False
         )
         
         # 开始训练
         training_stats = self.trainer.train(
-            train_loader, 
-            val_loader, 
-            num_epochs=num_epochs, 
-            save_path=save_path
+            train_loader, val_loader, num_epochs=num_epochs, save_path=save_path
         )
         
         logger.info("高级NeuralVDB训练完成")
@@ -417,14 +401,14 @@ class AdvancedNeuralVDB:
             points: 3D坐标点 (N, 3)
             
         Returns:
-            占用概率 (N,)
+            占用概率 (N, )
         """
         if self.trainer is None:
             raise ValueError("模型未训练，请先调用fit()方法")
         
         return self.trainer.predict(points)
     
-    def save(self, path: str):
+    def save(self, path: str) -> None:
         """保存模型"""
         if self.trainer is None:
             raise ValueError("模型未训练，无法保存")
@@ -432,7 +416,7 @@ class AdvancedNeuralVDB:
         self.trainer.save_model(path)
         logger.info(f"高级模型已保存到: {path}")
     
-    def load(self, path: str):
+    def load(self, path: str) -> None:
         """加载模型"""
         # 创建稀疏网格和训练器
         self.sparse_grid = AdvancedSparseVoxelGrid(self.config)
@@ -442,7 +426,7 @@ class AdvancedNeuralVDB:
         self.trainer.load_model(path)
         logger.info(f"高级模型已从 {path} 加载")
     
-    def get_memory_usage(self) -> Dict[str, float]:
+    def get_memory_usage(self) -> dict[str, float]:
         """获取内存使用情况"""
         if self.sparse_grid is None:
             return {'total_memory_mb': 0.0}
@@ -472,19 +456,16 @@ class AdvancedNeuralVDB:
         total_memory_mb = (node_memory + network_memory) / (1024 * 1024)
         
         return {
-            'octree_nodes': num_nodes,
-            'node_memory_mb': node_memory / (1024 * 1024),
-            'network_memory_mb': network_memory / (1024 * 1024),
-            'total_memory_mb': total_memory_mb
+            'octree_nodes': num_nodes, 'node_memory_mb': node_memory / (
+                1024 * 1024,
+            )
         }
     
-    def get_model_info(self) -> Dict[str, Any]:
+    def get_model_info(self) -> dict[str, Any]:
         """获取模型信息"""
         info = {
-            'config': self.config,
-            'is_trained': self.trainer is not None,
-            'has_sparse_grid': self.sparse_grid is not None,
-            'memory_usage': self.get_memory_usage()
+            'config': self.config, 'is_trained': self.trainer is not None, 'has_sparse_grid': self.sparse_grid is not None, 'memory_usage': self.get_memory_usage(
+            )
         }
         
         return info 

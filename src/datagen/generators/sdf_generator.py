@@ -9,8 +9,7 @@ import torch.nn as nn
 import torch.optim as optim
 from torch.utils.data import Dataset, DataLoader
 import numpy as np
-from typing import List, Tuple, Dict, Optional, Union
-import logging
+from typing import Dict, List, Optional, Tuple, import logging
 
 logger = logging.getLogger(__name__)
 
@@ -18,15 +17,13 @@ logger = logging.getLogger(__name__)
 class SDFDataset(Dataset):
     """SDF数据集"""
     
-    def __init__(self, 
-                 coords: np.ndarray, 
-                 sdf_values: np.ndarray):
+    def __init__(self, coords: np.ndarray, sdf_values: np.ndarray):
         """
         初始化SDF数据集
         
         Args:
             coords: 坐标数据 (N, 3)
-            sdf_values: SDF值 (N,)
+            sdf_values: SDF值 (N, )
         """
         self.coords = torch.FloatTensor(coords)
         self.sdf_values = torch.FloatTensor(sdf_values)
@@ -69,14 +66,20 @@ class PositionalEncoding(nn.Module):
 class SDFMLP(nn.Module):
     """SDF多层感知机网络"""
     
-    def __init__(self, 
-                 input_dim: int = 3,
-                 hidden_dims: List[int] = [256, 512, 512, 256, 128],
-                 output_dim: int = 1,
-                 activation: str = 'relu',
-                 dropout: float = 0.1,
-                 use_positional_encoding: bool = True,
-                 encoding_freqs: int = 10):
+    def __init__(
+        self,
+        input_dim: int = 3,
+        hidden_dims: list[int] = [256,
+        512,
+        512,
+        256,
+        128],
+        output_dim: int = 1,
+        activation: str = 'relu',
+        dropout: float = 0.1,
+        use_positional_encoding: bool = True,
+        encoding_freqs: int = 10,
+    )
         """
         初始化SDF MLP
         """
@@ -97,10 +100,10 @@ class SDFMLP(nn.Module):
         
         for i, hidden_dim in enumerate(hidden_dims):
             layers.extend([
-                nn.Linear(prev_dim, hidden_dim),
-                nn.BatchNorm1d(hidden_dim),
-                self._get_activation(activation),
-                nn.Dropout(dropout)
+                nn.Linear(
+                    prev_dim,
+                    hidden_dim,
+                )
             ])
             prev_dim = hidden_dim
         
@@ -115,10 +118,8 @@ class SDFMLP(nn.Module):
     def _get_activation(self, activation: str) -> nn.Module:
         """获取激活函数"""
         activations = {
-            'relu': nn.ReLU(),
-            'leaky_relu': nn.LeakyReLU(),
-            'tanh': nn.Tanh(),
-            'sigmoid': nn.Sigmoid()
+            'relu': nn.ReLU(
+            )
         }
         
         return activations.get(activation, nn.ReLU())
@@ -139,21 +140,17 @@ class SDFMLP(nn.Module):
 class SDFGenerator:
     """SDF生成器"""
     
-    def __init__(self,
-                 model_config: Optional[Dict] = None,
-                 device: str = 'auto',
-                 learning_rate: float = 1e-3,
-                 weight_decay: float = 1e-5):
+    def __init__(
+        self,
+        model_config: Optional[Dict] = None,
+        device: str = 'auto',
+        learning_rate: float = 1e-3,
+        weight_decay: float = 1e-5,
+    )
         """初始化SDF生成器"""
         # 默认模型配置
         default_config = {
-            'input_dim': 3,
-            'hidden_dims': [256, 512, 512, 256, 128],
-            'output_dim': 1,
-            'activation': 'relu',
-            'dropout': 0.1,
-            'use_positional_encoding': True,
-            'encoding_freqs': 10
+            'input_dim': 3, 'hidden_dims': [256, 512, 512, 256, 128], 'output_dim': 1, 'activation': 'relu', 'dropout': 0.1, 'use_positional_encoding': True, 'encoding_freqs': 10
         }
         
         if model_config:
@@ -174,9 +171,7 @@ class SDFGenerator:
         
         # 设置优化器
         self.optimizer = optim.Adam(
-            self.model.parameters(), 
-            lr=learning_rate, 
-            weight_decay=weight_decay
+            self.model.parameters(), lr=learning_rate, weight_decay=weight_decay
         )
         
         # 设置损失函数
@@ -188,10 +183,12 @@ class SDFGenerator:
         
         logger.info(f"SDF生成器初始化完成，设备: {self.device}")
     
-    def generate_geometric_sdf(self,
-                              coordinates: np.ndarray,
-                              geometry_type: str = 'sphere',
-                              geometry_params: Dict = None) -> np.ndarray:
+    def generate_geometric_sdf(
+        self,
+        coordinates: np.ndarray,
+        geometry_type: str = 'sphere',
+        geometry_params: Dict = None,
+    )
         """生成几何体的SDF值"""
         if geometry_params is None:
             geometry_params = {}
@@ -255,8 +252,7 @@ class SDFGenerator:
         inside_sdf = np.maximum(radial_distance, axial_distance)
         outside_sdf = np.linalg.norm(
             np.column_stack([
-                np.maximum(radial_distance, 0),
-                np.maximum(axial_distance, 0)
+                np.maximum(radial_distance, 0), np.maximum(axial_distance, 0)
             ]), axis=1
         )
         
@@ -264,14 +260,16 @@ class SDFGenerator:
         
         return sdf
     
-    def train_sdf_network(self,
-                         train_coords: np.ndarray,
-                         train_sdf: np.ndarray,
-                         val_coords: Optional[np.ndarray] = None,
-                         val_sdf: Optional[np.ndarray] = None,
-                         num_epochs: int = 100,
-                         batch_size: int = 1024,
-                         verbose: bool = True) -> Dict[str, List[float]]:
+    def train_sdf_network(
+        self,
+        train_coords: np.ndarray,
+        train_sdf: np.ndarray,
+        val_coords: Optional[np.ndarray] = None,
+        val_sdf: Optional[np.ndarray] = None,
+        num_epochs: int = 100,
+        batch_size: int = 1024,
+        verbose: bool = True,
+    )
         """训练SDF网络"""
         # 创建数据集和数据加载器
         train_dataset = SDFDataset(train_coords, train_sdf)
@@ -301,8 +299,7 @@ class SDFGenerator:
                     logger.info(f"Epoch {epoch+1}/{num_epochs}: Train Loss: {train_loss:.6f}")
         
         return {
-            'train_losses': self.train_losses,
-            'val_losses': self.val_losses
+            'train_losses': self.train_losses, 'val_losses': self.val_losses
         }
     
     def _train_epoch(self, dataloader: DataLoader) -> float:
@@ -360,11 +357,8 @@ class SDFGenerator:
     def save_model(self, path: str):
         """保存模型"""
         torch.save({
-            'model_state_dict': self.model.state_dict(),
-            'optimizer_state_dict': self.optimizer.state_dict(),
-            'model_config': self.model_config,
-            'train_losses': self.train_losses,
-            'val_losses': self.val_losses
+            'model_state_dict': self.model.state_dict(
+            )
         }, path)
         logger.info(f"模型已保存: {path}")
     
@@ -382,17 +376,22 @@ class SDFGenerator:
         
         logger.info(f"模型已加载: {path}")
     
-    def generate_training_data(self,
-                              scene_bounds: Tuple[float, float, float, float, float, float],
-                              geometry_configs: List[Dict],
-                              n_samples: int = 100000,
-                              noise_std: float = 0.01) -> Tuple[np.ndarray, np.ndarray]:
+    def generate_training_data(
+        self,
+        scene_bounds: tuple[float,
+        float,
+        float,
+        float,
+        float,
+        float],
+        geometry_configs: list[Dict],
+        n_samples: int = 100000,
+        noise_std: float = 0.01,
+    )
         """生成SDF训练数据"""
         # 在场景范围内随机采样坐标
         coords = np.random.uniform(
-            low=scene_bounds[:3],
-            high=scene_bounds[3:],
-            size=(n_samples, 3)
+            low=scene_bounds[:3], high=scene_bounds[3:], size=(n_samples, 3)
         )
         
         # 计算每个几何体的SDF

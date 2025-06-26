@@ -21,9 +21,7 @@ def test_imports():
         sys.path.append(os.path.join(os.path.dirname(__file__), '..', '..', 'src'))
         
         from nerfs.pyramid_nerf import (
-            PyNeRF, PyNeRFConfig, PyramidEncoder, PyramidRenderer,
-            PyNeRFDataset, MultiScaleDataset, PyNeRFTrainer,
-            compute_psnr, compute_ssim, create_pyramid_hierarchy
+            PyNeRF, PyNeRFConfig, PyramidEncoder, PyramidRenderer, PyNeRFDataset, MultiScaleDataset, PyNeRFTrainer, compute_psnr, compute_ssim, create_pyramid_hierarchy
         )
         print("✓ All imports successful")
         return True
@@ -44,9 +42,7 @@ def test_config():
         
         # Test custom config
         custom_config = PyNeRFConfig(
-            num_levels=6,
-            base_resolution=32,
-            max_resolution=1024
+            num_levels=6, base_resolution=32, max_resolution=1024
         )
         print(f"✓ Custom config created: {custom_config.num_levels} levels")
         return True
@@ -63,10 +59,7 @@ def test_pyramid_encoder():
         from nerfs.pyramid_nerf import PyramidEncoder
         
         encoder = PyramidEncoder(
-            num_levels=4,
-            base_resolution=16,
-            max_resolution=256,
-            features_per_level=4
+            num_levels=4, base_resolution=16, max_resolution=256, features_per_level=4
         )
         
         # Test forward pass
@@ -92,14 +85,11 @@ def test_model():
         from nerfs.pyramid_nerf import PyNeRF, PyNeRFConfig
         
         config = PyNeRFConfig(
-            num_levels=4,
-            base_resolution=16,
-            max_resolution=256,
-            batch_size=512
+            num_levels=4, base_resolution=16, max_resolution=256, batch_size=512
         )
         
         model = PyNeRF(config)
-        print(f"✓ Model created with {sum(p.numel() for p in model.parameters()):,} parameters")
+        print(f"✓ Model created with {sum(p.numel() for p in model.parameters()):, } parameters")
         
         # Test forward pass
         batch_size = 512
@@ -125,17 +115,13 @@ def test_utilities():
     print("Testing utilities...")
     
     try:
-        from . import (
-            create_pyramid_hierarchy, compute_psnr, compute_ssim,
-            compute_sample_area, get_pyramid_level
+        from nerfs.pyramid_nerf import (
+            create_pyramid_hierarchy, compute_psnr, compute_ssim, compute_sample_area, get_pyramid_level
         )
         
         # Test pyramid hierarchy
         hierarchy = create_pyramid_hierarchy(
-            num_levels=6,
-            base_resolution=16,
-            scale_factor=2.0,
-            max_resolution=512
+            num_levels=6, base_resolution=16, scale_factor=2.0, max_resolution=512
         )
         expected = [16, 32, 64, 128, 256, 512]
         assert hierarchy == expected
@@ -170,7 +156,7 @@ def test_renderer():
     print("Testing pyramid renderer...")
     
     try:
-        from . import PyramidRenderer, PyNeRFConfig
+        from nerfs.pyramid_nerf import PyramidRenderer, PyNeRFConfig
         
         config = PyNeRFConfig()
         renderer = PyramidRenderer(config)
@@ -192,7 +178,9 @@ def test_renderer():
         assert "acc" in outputs
         assert outputs["rgb"].shape == (batch_size, 3)
         
-        print(f"✓ Renderer output shapes: RGB {outputs['rgb'].shape}, Depth {outputs['depth'].shape}")
+        print(f"✓ Renderer output shapes: RGB {
+            outputs['rgb'].shape,
+        }
         return True
     except Exception as e:
         print(f"✗ Renderer test failed: {e}")
@@ -206,12 +194,7 @@ def main():
     print("=" * 50)
     
     tests = [
-        test_imports,
-        test_config,
-        test_pyramid_encoder,
-        test_model,
-        test_utilities,
-        test_renderer
+        test_imports, test_config, test_pyramid_encoder, test_model, test_utilities, test_renderer
     ]
     
     passed = 0

@@ -1,22 +1,23 @@
 """
 Ray utilities for Grid-NeRF.
 
-This module provides utility functions for ray operations, sampling strategies,
-and ray-grid intersection computations specific to Grid-NeRF.
+This module provides utility functions for ray operations, sampling strategies, and ray-grid intersection computations specific to Grid-NeRF.
 """
 
 import torch
 import torch.nn.functional as F
 import numpy as np
-from typing import Tuple, List, Optional, Union, Dict
+from typing import List, Optional, Tuple, Union 
 import math
 
 
-def generate_rays_from_camera(camera_poses: torch.Tensor,
-                             camera_intrinsics: torch.Tensor,
-                             image_height: int,
-                             image_width: int,
-                             device: str = 'cuda') -> Tuple[torch.Tensor, torch.Tensor]:
+def generate_rays_from_camera(
+    camera_poses: torch.Tensor,
+    camera_intrinsics: torch.Tensor,
+    image_height: int,
+    image_width: int,
+    device: str = 'cuda'
+) -> tuple[torch.Tensor, torch.Tensor]:
     """
     Generate rays from camera parameters.
     
@@ -33,9 +34,11 @@ def generate_rays_from_camera(camera_poses: torch.Tensor,
     N = camera_poses.shape[0]
     
     # Create pixel coordinates
-    i, j = torch.meshgrid(torch.arange(image_width, device=device),
-                         torch.arange(image_height, device=device),
-                         indexing='ij')
+    i, j = torch.meshgrid(
+        torch.arange(image_height),
+        torch.arange(image_width),
+        indexing='ij'
+    )
     i = i.t().float()  # [H, W]
     j = j.t().float()  # [H, W]
     
@@ -76,13 +79,15 @@ def generate_rays_from_camera(camera_poses: torch.Tensor,
     return ray_origins, ray_directions
 
 
-def sample_points_along_rays(ray_origins: torch.Tensor,
-                           ray_directions: torch.Tensor,
-                           near: float,
-                           far: float,
-                           num_samples: int,
-                           stratified: bool = True,
-                           perturb: bool = True) -> Tuple[torch.Tensor, torch.Tensor]:
+def sample_points_along_rays(
+    ray_origins: torch.Tensor,
+    ray_directions: torch.Tensor,
+    near: float,
+    far: float,
+    num_samples: int,
+    stratified: bool = True,
+    perturb: bool = True,
+) -> tuple[torch.Tensor, torch.Tensor]:
     """
     Sample points along rays.
     
@@ -128,12 +133,14 @@ def sample_points_along_rays(ray_origins: torch.Tensor,
     return sample_points, t_vals
 
 
-def hierarchical_sampling(ray_origins: torch.Tensor,
-                         ray_directions: torch.Tensor,
-                         t_vals_coarse: torch.Tensor,
-                         weights_coarse: torch.Tensor,
-                         num_fine_samples: int,
-                         perturb: bool = True) -> Tuple[torch.Tensor, torch.Tensor]:
+def hierarchical_sampling(
+    ray_origins: torch.Tensor,
+    ray_directions: torch.Tensor,
+    t_vals_coarse: torch.Tensor,
+    weights_coarse: torch.Tensor,
+    num_fine_samples: int,
+    perturb: bool = True,
+) -> tuple[torch.Tensor, torch.Tensor]:
     """
     Perform hierarchical sampling based on coarse weights.
     
@@ -171,10 +178,12 @@ def hierarchical_sampling(ray_origins: torch.Tensor,
     indices_g = torch.stack([below, above], dim=-1)
     matched_shape = list(indices_g.shape[:-1]) + [cdf.shape[-1]]
     
-    cdf_g = torch.gather(cdf.unsqueeze(-2).expand(matched_shape), dim=-1, 
-                        index=indices_g)
-    bins_g = torch.gather(t_vals_coarse.unsqueeze(-2).expand(matched_shape), dim=-1,
-                         index=indices_g)
+    cdf_g = torch.gather(cdf.unsqueeze(-2).expand(matched_shape), dim=-1, index=indices_g)
+    bins_g = torch.gather(
+        t_vals_coarse.unsqueeze(-2),
+        dim=-1,
+        index=indices.unsqueeze(-1)
+    )
     
     denom = cdf_g[..., 1] - cdf_g[..., 0]
     denom = torch.where(denom < 1e-5, torch.ones_like(denom), denom)
@@ -191,10 +200,12 @@ def hierarchical_sampling(ray_origins: torch.Tensor,
     return fine_points, t_vals_combined
 
 
-def ray_aabb_intersection(ray_origins: torch.Tensor,
-                         ray_directions: torch.Tensor,
-                         aabb_min: torch.Tensor,
-                         aabb_max: torch.Tensor) -> Tuple[torch.Tensor, torch.Tensor]:
+def ray_aabb_intersection(
+    ray_origins: torch.Tensor,
+    ray_directions: torch.Tensor,
+    aabb_min: torch.Tensor,
+    aabb_max: torch.Tensor,
+) -> tuple[torch.Tensor, torch.Tensor]:
     """
     Compute ray-AABB intersection.
     
@@ -222,10 +233,12 @@ def ray_aabb_intersection(ray_origins: torch.Tensor,
     return t_near, t_far
 
 
-def compute_ray_grid_intersections(ray_origins: torch.Tensor,
-                                  ray_directions: torch.Tensor,
-                                  grid_bounds: torch.Tensor,
-                                  grid_resolution: int) -> Dict[str, torch.Tensor]:
+def compute_ray_grid_intersections(
+    ray_origins: torch.Tensor,
+    ray_directions: torch.Tensor,
+    grid_bounds: torch.Tensor,
+    grid_resolution: int,
+) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
     """
     Compute which grid cells each ray intersects.
     
@@ -236,237 +249,230 @@ def compute_ray_grid_intersections(ray_origins: torch.Tensor,
         grid_resolution: Grid resolution
         
     Returns:
-        Dictionary containing intersection information
+        Tuple of (cell_indices, t_starts, t_ends) where:
+        - cell_indices: [..., num_cells, 3] indices of intersected cells
+        - t_starts: [..., num_cells] start distances along rays
+        - t_ends: [..., num_cells] end distances along rays
     """
-    batch_shape = ray_origins.shape[:-1]
-    device = ray_origins.device
+    # Get grid bounds
+    grid_min = grid_bounds[:3]
+    grid_max = grid_bounds[3:]
     
     # Compute ray-grid intersection
-    aabb_min = grid_bounds[:3]
-    aabb_max = grid_bounds[3:]
+    t_near, t_far = ray_aabb_intersection(ray_origins, ray_directions, grid_min, grid_max)
     
-    t_near, t_far = ray_aabb_intersection(ray_origins, ray_directions, aabb_min, aabb_max)
+    # Early exit if no intersection
+    valid_rays = t_far > t_near
+    if not valid_rays.any():
+        return torch.empty(0, 3), torch.empty(0), torch.empty(0)
     
-    # Check if ray intersects grid
-    valid_rays = (t_near <= t_far) & (t_far > 0)
+    # Compute cell size
+    cell_size = (grid_max - grid_min) / grid_resolution
     
-    # Compute entry and exit points
-    t_near = torch.clamp(t_near, min=0)
-    entry_points = ray_origins + t_near.unsqueeze(-1) * ray_directions
-    exit_points = ray_origins + t_far.unsqueeze(-1) * ray_directions
+    # Initialize DDA algorithm
+    pos = ray_origins + t_near.unsqueeze(-1) * ray_directions
+    cell_indices = ((pos - grid_min) / cell_size).long()
+    cell_indices = torch.clamp(cell_indices, 0, grid_resolution - 1)
     
-    # Convert to grid coordinates
-    grid_size = aabb_max - aabb_min
-    entry_grid = (entry_points - aabb_min) / grid_size * (grid_resolution - 1)
-    exit_grid = (exit_points - aabb_min) / grid_size * (grid_resolution - 1)
+    # Compute t values at cell boundaries
+    next_t = torch.zeros_like(t_near)
+    for dim in range(3):
+        cell_boundary = grid_min[dim] + (cell_indices[..., dim] + 1) * cell_size[dim]
+        t = (cell_boundary - ray_origins[..., dim]) / ray_directions[..., dim]
+        next_t = torch.where(t > t_near, t, next_t)
     
-    return {
-        'valid_rays': valid_rays,
-        't_near': t_near,
-        't_far': t_far,
-        'entry_points': entry_points,
-        'exit_points': exit_points,
-        'entry_grid': entry_grid,
-        'exit_grid': exit_grid
-    }
+    return cell_indices, t_near, next_t
 
 
-def voxel_traversal_3d(ray_origins: torch.Tensor,
-                      ray_directions: torch.Tensor,
-                      grid_bounds: torch.Tensor,
-                      grid_resolution: int,
-                      max_steps: int = 1000) -> Dict[str, torch.Tensor]:
+def voxel_traversal_3d(
+    ray_origins: torch.Tensor,
+    ray_directions: torch.Tensor,
+    grid_bounds: torch.Tensor,
+    grid_resolution: int,
+    max_steps: int = 1000,
+) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
     """
-    3D voxel traversal algorithm (3D DDA).
+    Perform 3D voxel traversal using DDA algorithm.
     
     Args:
         ray_origins: Ray origins [..., 3]
         ray_directions: Ray directions [..., 3]
         grid_bounds: Grid bounds [6]
         grid_resolution: Grid resolution
-        max_steps: Maximum traversal steps
+        max_steps: Maximum number of steps
         
     Returns:
-        Dictionary containing traversal information
+        Tuple of (voxel_indices, t_starts, t_ends) where:
+        - voxel_indices: [..., num_steps, 3] indices of traversed voxels
+        - t_starts: [..., num_steps] start distances along rays
+        - t_ends: [..., num_steps] end distances along rays
     """
-    batch_shape = ray_origins.shape[:-1]
-    device = ray_origins.device
+    # Get grid bounds
+    grid_min = grid_bounds[:3]
+    grid_max = grid_bounds[3:]
     
-    # Convert to grid coordinates
-    grid_size = grid_bounds[3:] - grid_bounds[:3]
-    grid_origins = (ray_origins - grid_bounds[:3]) / grid_size * (grid_resolution - 1)
+    # Compute cell size
+    cell_size = (grid_max - grid_min) / grid_resolution
     
-    # Normalize ray directions
-    ray_dirs_norm = ray_directions / torch.norm(ray_directions, dim=-1, keepdim=True)
+    # Initialize DDA
+    t_near, t_far = ray_aabb_intersection(ray_origins, ray_directions, grid_min, grid_max)
+    pos = ray_origins + t_near.unsqueeze(-1) * ray_directions
     
-    # Current voxel indices
-    current_voxel = torch.floor(grid_origins).long()
+    # Get initial voxel
+    voxel = ((pos - grid_min) / cell_size).long()
+    voxel = torch.clamp(voxel, 0, grid_resolution - 1)
     
-    # Direction signs
-    step = torch.sign(ray_dirs_norm).long()
+    # Compute step direction and t_delta
+    step = torch.sign(ray_directions)
+    t_delta = cell_size / (ray_directions + 1e-8)
+    t_delta = torch.abs(t_delta)
     
-    # Distance to next voxel boundary
-    next_boundary = torch.where(step > 0, 
-                               current_voxel + 1, 
-                               current_voxel).float()
+    # Initialize outputs
+    voxel_indices = []
+    t_starts = []
+    t_ends = []
     
-    # Distance along ray to next boundary
-    t_max = (next_boundary - grid_origins) / (ray_dirs_norm + 1e-8)
-    
-    # Distance between voxel boundaries along ray
-    t_delta = torch.abs(1.0 / (ray_dirs_norm + 1e-8))
-    
-    # Initialize traversal
-    traversed_voxels = []
-    t_values = []
-    
+    # Traverse grid
+    t = t_near
     for _ in range(max_steps):
-        # Check bounds
-        valid = ((current_voxel >= 0) & (current_voxel < grid_resolution)).all(dim=-1)
+        voxel_indices.append(voxel)
+        t_starts.append(t)
         
-        if not valid.any():
+        # Compute next intersection
+        t_next = torch.zeros_like(t)
+        next_voxel = voxel.clone()
+        
+        for dim in range(3):
+            if step[..., dim] != 0:
+                t_dim = ((voxel[..., dim] + step[..., dim]) * cell_size[dim] + grid_min[dim] - ray_origins[..., dim]) / ray_directions[..., dim]
+                mask = t_dim < t_next
+                t_next = torch.where(mask, t_dim, t_next)
+                next_voxel = torch.where(mask.unsqueeze(-1), voxel + step * torch.eye(3)[dim], next_voxel)
+        
+        t_ends.append(t_next)
+        
+        # Update current voxel and time
+        voxel = next_voxel
+        t = t_next
+        
+        # Check if we're outside grid
+        outside = (voxel < 0).any(-1) | (voxel >= grid_resolution).any(-1)
+        if outside.all():
             break
-        
-        # Store current voxel
-        traversed_voxels.append(current_voxel.clone())
-        t_values.append(torch.min(t_max, dim=-1)[0])
-        
-        # Find which axis to step along
-        min_axis = torch.argmin(t_max, dim=-1)
-        
-        # Step to next voxel
-        for i in range(3):
-            mask = (min_axis == i)
-            current_voxel[mask, i] += step[mask, i]
-            t_max[mask, i] += t_delta[mask, i]
     
-    return {
-        'traversed_voxels': torch.stack(traversed_voxels, dim=-2) if traversed_voxels else torch.empty(*batch_shape, 0, 3),
-        't_values': torch.stack(t_values, dim=-1) if t_values else torch.empty(*batch_shape, 0)
-    }
+    # Stack outputs
+    voxel_indices = torch.stack(voxel_indices, dim=-2)
+    t_starts = torch.stack(t_starts, dim=-1)
+    t_ends = torch.stack(t_ends, dim=-1)
+    
+    return voxel_indices, t_starts, t_ends
 
 
-def importance_sampling_from_grid(ray_origins: torch.Tensor,
-                                 ray_directions: torch.Tensor,
-                                 grid: torch.Tensor,
-                                 grid_bounds: torch.Tensor,
-                                 num_samples: int,
-                                 near: float = 0.1,
-                                 far: float = 10.0) -> Tuple[torch.Tensor, torch.Tensor]:
+def importance_sampling_from_grid(
+    ray_origins: torch.Tensor,
+    ray_directions: torch.Tensor,
+    grid: torch.Tensor,
+    grid_bounds: torch.Tensor,
+    num_samples: int,
+    near: float = 0.1,
+    far: float = 10.0,
+) -> tuple[torch.Tensor, torch.Tensor]:
     """
-    Perform importance sampling based on grid occupancy.
+    Sample points along rays based on grid importance.
     
     Args:
         ray_origins: Ray origins [..., 3]
         ray_directions: Ray directions [..., 3]
-        grid: Occupancy grid [D, H, W]
+        grid: Importance grid [D, H, W]
         grid_bounds: Grid bounds [6]
-        num_samples: Number of samples
-        near: Near plane
-        far: Far plane
+        num_samples: Number of samples per ray
+        near: Near plane distance
+        far: Far plane distance
         
     Returns:
         Tuple of (sample_points, t_vals)
     """
-    batch_shape = ray_origins.shape[:-1]
-    device = ray_origins.device
+    # Get grid resolution
+    D, H, W = grid.shape
+    grid_resolution = max(D, H, W)
     
-    # Initial uniform sampling
-    t_vals_uniform = torch.linspace(near, far, num_samples * 2, device=device)
-    t_vals_uniform = t_vals_uniform.expand(*batch_shape, num_samples * 2)
+    # Compute ray-grid intersections
+    voxel_indices, t_starts, t_ends = voxel_traversal_3d(
+        ray_origins,
+        ray_directions,
+        grid_bounds,
+        grid_resolution
+    )
     
-    # Sample points
-    sample_points = ray_origins.unsqueeze(-2) + t_vals_uniform.unsqueeze(-1) * ray_directions.unsqueeze(-2)
+    # Get importance values for intersected voxels
+    importance = grid[voxel_indices[..., 0], voxel_indices[..., 1], voxel_indices[..., 2]]
     
-    # Convert to grid coordinates
-    grid_size = grid_bounds[3:] - grid_bounds[:3]
-    grid_coords = (sample_points - grid_bounds[:3]) / grid_size * (grid.shape[0] - 1)
+    # Normalize importance values
+    importance = importance / (importance.sum(-1, keepdim=True) + 1e-8)
     
-    # Sample grid occupancy
-    grid_expanded = grid.unsqueeze(0).unsqueeze(0).float()  # [1, 1, D, H, W]
-    
-    # Normalize coordinates for grid_sample
-    normalized_coords = grid_coords.clone()
-    for i in range(3):
-        normalized_coords[..., i] = (normalized_coords[..., i] / (grid.shape[i] - 1)) * 2 - 1
-    
-    # Sample occupancy
-    occupancy = F.grid_sample(
-        grid_expanded,
-        normalized_coords.unsqueeze(-3),  # Add dimension for grid_sample
-        mode='bilinear',
-        padding_mode='border',
-        align_corners=True
-    ).squeeze(0).squeeze(0).squeeze(-2)
-    
-    # Convert to weights
-    weights = occupancy + 1e-5
-    weights = weights / torch.sum(weights, dim=-1, keepdim=True)
-    
-    # Sample based on importance
-    cdf = torch.cumsum(weights, dim=-1)
+    # Sample points proportional to importance
+    u = torch.rand(*ray_origins.shape[:-1], num_samples, device=ray_origins.device)
+    cdf = torch.cumsum(importance, dim=-1)
     cdf = torch.cat([torch.zeros_like(cdf[..., :1]), cdf], dim=-1)
-    
-    # Random sampling
-    u = torch.rand(*batch_shape, num_samples, device=device)
     
     # Invert CDF
     indices = torch.searchsorted(cdf, u, right=True)
-    indices = torch.clamp(indices, 0, len(t_vals_uniform[0]) - 1)
+    below = torch.clamp(indices - 1, 0, cdf.shape[-1] - 1)
+    above = torch.clamp(indices, 0, cdf.shape[-1] - 1)
     
-    # Get corresponding t values
-    t_vals_sampled = torch.gather(t_vals_uniform, -1, indices)
+    # Sample within selected intervals
+    t_low = torch.gather(t_starts, dim=-1, index=below)
+    t_high = torch.gather(t_ends, dim=-1, index=above)
+    t_vals = t_low + torch.rand_like(t_low) * (t_high - t_low)
     
-    # Compute final sample points
-    final_sample_points = ray_origins.unsqueeze(-2) + t_vals_sampled.unsqueeze(-1) * ray_directions.unsqueeze(-2)
+    # Compute sample points
+    sample_points = ray_origins.unsqueeze(-2) + t_vals.unsqueeze(-1) * ray_directions.unsqueeze(-2)
     
-    return final_sample_points, t_vals_sampled
+    return sample_points, t_vals
 
 
-def compute_ray_weights(densities: torch.Tensor,
-                       t_vals: torch.Tensor,
-                       ray_directions: torch.Tensor) -> torch.Tensor:
+def compute_ray_weights(
+    densities: torch.Tensor,
+    t_vals: torch.Tensor,
+    ray_directions: torch.Tensor,
+) -> tuple[torch.Tensor, torch.Tensor]:
     """
-    Compute volumetric rendering weights from densities.
+    Compute weights for volume rendering.
     
     Args:
-        densities: Density values [..., N_samples]
-        t_vals: t values along rays [..., N_samples]
+        densities: Density values [..., num_samples]
+        t_vals: Sample distances [..., num_samples]
         ray_directions: Ray directions [..., 3]
         
     Returns:
-        Weights [..., N_samples]
+        Tuple of (weights, transmittance)
     """
-    # Compute distances between adjacent samples
+    # Compute delta distances
     dists = t_vals[..., 1:] - t_vals[..., :-1]
+    dists = torch.cat([dists, torch.ones_like(dists[..., :1]) * 1e10], dim=-1)
     
-    # Add distance for last sample
-    last_dist = torch.full_like(dists[..., :1], 1e10)
-    dists = torch.cat([dists, last_dist], dim=-1)
-    
-    # Account for ray direction magnitude
-    dists = dists * torch.norm(ray_directions, dim=-1, keepdim=True)
+    # Scale by ray direction length
+    dists = dists * torch.norm(ray_directions.unsqueeze(-1), dim=-2)
     
     # Compute alpha values
     alpha = 1.0 - torch.exp(-densities * dists)
     
-    # Compute transmittance
+    # Compute transmittance and weights
     transmittance = torch.cumprod(1.0 - alpha + 1e-10, dim=-1)
-    transmittance = torch.cat([torch.ones_like(transmittance[..., :1]), 
-                              transmittance[..., :-1]], dim=-1)
-    
-    # Compute weights
+    transmittance = torch.cat([torch.ones_like(transmittance[..., :1]), transmittance[..., :-1]], dim=-1)
     weights = alpha * transmittance
     
-    return weights
+    return weights, transmittance
 
 
-def sample_stratified_rays(num_rays: int,
-                          image_height: int,
-                          image_width: int,
-                          device: str = 'cuda') -> Tuple[torch.Tensor, torch.Tensor]:
+def sample_stratified_rays(
+    num_rays: int,
+    image_height: int,
+    image_width: int,
+    device: str = 'cuda',
+) -> tuple[torch.Tensor, torch.Tensor]:
     """
-    Sample rays with stratified sampling.
+    Sample stratified rays from image plane.
     
     Args:
         num_rays: Number of rays to sample
@@ -475,17 +481,25 @@ def sample_stratified_rays(num_rays: int,
         device: Device to use
         
     Returns:
-        Tuple of (i_indices, j_indices) for pixel coordinates
+        Tuple of (pixel_x, pixel_y) coordinates
     """
-    # Stratified sampling
-    i_coords = torch.rand(num_rays, device=device) * image_width
-    j_coords = torch.rand(num_rays, device=device) * image_height
+    # Create stratified grid
+    num_h = int(math.sqrt(num_rays * image_height / image_width))
+    num_w = int(num_rays / num_h)
     
-    i_indices = torch.floor(i_coords).long()
-    j_indices = torch.floor(j_coords).long()
+    # Create pixel coordinates
+    pixel_x = torch.linspace(0, image_width - 1, num_w, device=device)
+    pixel_y = torch.linspace(0, image_height - 1, num_h, device=device)
     
-    # Clamp to valid range
-    i_indices = torch.clamp(i_indices, 0, image_width - 1)
-    j_indices = torch.clamp(j_indices, 0, image_height - 1)
+    # Add random offset
+    pixel_x = pixel_x + torch.rand_like(pixel_x)
+    pixel_y = pixel_y + torch.rand_like(pixel_y)
     
-    return i_indices, j_indices 
+    # Create meshgrid
+    pixel_x, pixel_y = torch.meshgrid(pixel_x, pixel_y, indexing='ij')
+    
+    # Reshape to [num_rays, 2]
+    pixel_x = pixel_x.reshape(-1)
+    pixel_y = pixel_y.reshape(-1)
+    
+    return pixel_x, pixel_y 

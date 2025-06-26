@@ -11,7 +11,7 @@ import os
 import json
 from PIL import Image
 import cv2
-from typing import Dict, List, Optional, Tuple, Union
+from typing import Dict, List, Optional, Tuple, Any, Union
 import logging
 
 logger = logging.getLogger(__name__)
@@ -24,14 +24,7 @@ class PyNeRFDataset(data.Dataset):
     """
     
     def __init__(
-        self,
-        data_dir: str,
-        split: str = "train",
-        img_downscale: int = 1,
-        use_cache: bool = True,
-        white_background: bool = False,
-        near_far: Optional[Tuple[float, float]] = None,
-        **kwargs
+        self, data_dir: str, split: str = "train", img_downscale: int = 1, use_cache: bool = True, white_background: bool = False, near_far: Optional[tuple[float, float]] = None, **kwargs
     ):
         super().__init__()
         
@@ -201,7 +194,7 @@ class PyNeRFDataset(data.Dataset):
         self.poses = self.poses[indices]
         self.image_paths = [self.image_paths[i] for i in indices]
     
-    def get_rays(self, idx: int) -> Tuple[torch.Tensor, torch.Tensor]:
+    def get_rays(self, idx: int) -> tuple[torch.Tensor, torch.Tensor]:
         """
         Get rays for a specific image
         
@@ -215,16 +208,12 @@ class PyNeRFDataset(data.Dataset):
         
         # Create pixel coordinates
         i, j = np.meshgrid(
-            np.arange(self.W, dtype=np.float32),
-            np.arange(self.H, dtype=np.float32),
-            indexing='xy'
+            np.arange(self.W, dtype=np.float32), np.arange(self.H, dtype=np.float32), indexing='xy'
         )
         
         # Convert to camera coordinates
         dirs = np.stack([
-            (i - self.W * 0.5) / self.focal,
-            -(j - self.H * 0.5) / self.focal,
-            -np.ones_like(i)
+            (i - self.W * 0.5) / self.focal, -(j - self.H * 0.5) / self.focal, -np.ones_like(i)
         ], axis=-1)
         
         # Transform to world coordinates
@@ -236,7 +225,7 @@ class PyNeRFDataset(data.Dataset):
     def __len__(self):
         return len(self.images)
     
-    def __getitem__(self, idx: int) -> Dict[str, torch.Tensor]:
+    def __getitem__(self, idx: int) -> dict[str, torch.Tensor]:
         """
         Get a single data sample
         
@@ -261,12 +250,7 @@ class PyNeRFDataset(data.Dataset):
         bounds = bounds.expand(rays_o.shape[0], rays_o.shape[1], 2)
         
         return {
-            "image": image,
-            "rays_o": rays_o,
-            "rays_d": rays_d,
-            "pose": pose,
-            "bounds": bounds,
-            "idx": idx
+            "image": image, "rays_o": rays_o, "rays_d": rays_d, "pose": pose, "bounds": bounds, "idx": idx
         }
 
 
@@ -277,11 +261,7 @@ class MultiScaleDataset(PyNeRFDataset):
     """
     
     def __init__(
-        self,
-        data_dir: str,
-        split: str = "train",
-        scales: List[int] = [1, 2, 4, 8],
-        **kwargs
+        self, data_dir: str, split: str = "train", scales: list[int] = [1, 2, 4, 8], **kwargs
     ):
         self.scales = scales
         super().__init__(data_dir, split, **kwargs)
@@ -318,10 +298,8 @@ class MultiScaleDataset(PyNeRFDataset):
                 self.multiscale_focals[scale] = self.focal / scale
     
     def get_rays_multiscale(
-        self, 
-        idx: int, 
-        scale: int = 1
-    ) -> Tuple[torch.Tensor, torch.Tensor]:
+        self, idx: int, scale: int = 1
+    ) -> tuple[torch.Tensor, torch.Tensor]:
         """
         Get rays for a specific image at a given scale
         
@@ -338,16 +316,12 @@ class MultiScaleDataset(PyNeRFDataset):
         
         # Create pixel coordinates
         i, j = np.meshgrid(
-            np.arange(w, dtype=np.float32),
-            np.arange(h, dtype=np.float32),
-            indexing='xy'
+            np.arange(w, dtype=np.float32), np.arange(h, dtype=np.float32), indexing='xy'
         )
         
         # Convert to camera coordinates
         dirs = np.stack([
-            (i - w * 0.5) / focal,
-            -(j - h * 0.5) / focal,
-            -np.ones_like(i)
+            (i - w * 0.5) / focal, -(j - h * 0.5) / focal, -np.ones_like(i)
         ], axis=-1)
         
         # Transform to world coordinates
@@ -356,7 +330,7 @@ class MultiScaleDataset(PyNeRFDataset):
         
         return torch.from_numpy(rays_o), torch.from_numpy(rays_d)
     
-    def __getitem__(self, idx: int) -> Dict[str, torch.Tensor]:
+    def __getitem__(self, idx: int) -> dict[str, torch.Tensor]:
         """
         Get a multi-scale data sample
         
@@ -396,11 +370,7 @@ class MultiScaleDataset(PyNeRFDataset):
 
 
 def create_dataloader(
-    dataset: PyNeRFDataset,
-    batch_size: int = 1,
-    shuffle: bool = True,
-    num_workers: int = 4,
-    **kwargs
+    dataset: PyNeRFDataset, batch_size: int = 1, shuffle: bool = True, num_workers: int = 4, **kwargs
 ) -> DataLoader:
     """
     Create a DataLoader for PyNeRF dataset
@@ -415,16 +385,11 @@ def create_dataloader(
         PyTorch DataLoader
     """
     return DataLoader(
-        dataset,
-        batch_size=batch_size,
-        shuffle=shuffle,
-        num_workers=num_workers,
-        pin_memory=True,
-        **kwargs
+        dataset, batch_size=batch_size, shuffle=shuffle, num_workers=num_workers, pin_memory=True, **kwargs
     )
 
 
-def collate_fn(batch: List[Dict]) -> Dict[str, torch.Tensor]:
+def collate_fn(batch: list[Dict]) -> dict[str, torch.Tensor]:
     """
     Custom collate function for PyNeRF data
     

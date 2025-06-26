@@ -13,7 +13,7 @@ import numpy as np
 import json
 import cv2
 from pathlib import Path
-from typing import Dict, List, Tuple, Optional
+from typing import Dict, List, Optional, Tuple
 from tqdm import tqdm
 import imageio
 
@@ -21,8 +21,7 @@ import imageio
 sys.path.append(str(Path(__file__).parent.parent.parent))
 
 from src.nerfs.mega_nerf import (
-    MegaNeRF, MegaNeRFConfig, VolumetricRenderer, InteractiveRenderer,
-    CameraDataset, create_sample_camera_path
+    MegaNeRF, MegaNeRFConfig, VolumetricRenderer, InteractiveRenderer, CameraDataset, create_sample_camera_path
 )
 
 
@@ -31,10 +30,7 @@ class MegaNeRFRenderer:
     Renderer for Mega-NeRF models
     """
     
-    def __init__(self,
-                 model: MegaNeRF,
-                 config: MegaNeRFConfig,
-                 device: str = 'cuda'):
+    def __init__(self, model: MegaNeRF, config: MegaNeRFConfig, device: str = 'cuda'):
         """
         Initialize renderer
         
@@ -49,27 +45,23 @@ class MegaNeRFRenderer:
         
         # Initialize volumetric renderer
         self.volumetric_renderer = VolumetricRenderer(
-            num_coarse_samples=config.num_coarse,
-            num_fine_samples=config.num_fine,
-            near=config.near,
-            far=config.far,
-            use_hierarchical_sampling=True
+            num_coarse_samples=config.num_coarse, num_fine_samples=config.num_fine, near=config.near, far=config.far, use_hierarchical_sampling=True
         )
         
         # Initialize interactive renderer
         self.interactive_renderer = InteractiveRenderer(
-            model=model,
-            base_renderer=self.volumetric_renderer,
-            cache_size=100
+            model=model, base_renderer=self.volumetric_renderer, cache_size=100
         )
         
         # Set model to eval mode
         self.model.eval()
     
-    def render_single_view(self,
-                          camera_info,
-                          appearance_id: Optional[int] = None,
-                          chunk_size: int = 1024) -> Dict[str, np.ndarray]:
+    def render_single_view(
+        self,
+        camera_info,
+        appearance_id: Optional[int] = None,
+        chunk_size: int = 1024,
+    )
         """
         Render a single view
         
@@ -85,14 +77,16 @@ class MegaNeRFRenderer:
             self.model, camera_info, chunk_size, appearance_id
         )
     
-    def render_path(self,
-                   camera_path: List[np.ndarray],
-                   intrinsics: np.ndarray,
-                   height: int,
-                   width: int,
-                   output_dir: str,
-                   appearance_id: Optional[int] = None,
-                   save_depth: bool = True) -> List[str]:
+    def render_path(
+        self,
+        camera_path: list[np.ndarray],
+        intrinsics: np.ndarray,
+        height: int,
+        width: int,
+        output_dir: str,
+        appearance_id: Optional[int] = None,
+        save_depth: bool = True,
+    )
         """
         Render a camera path
         
@@ -125,12 +119,9 @@ class MegaNeRFRenderer:
         for i, pose in enumerate(tqdm(camera_path, desc="Rendering path")):
             # Create camera info
             camera_info = CameraInfo(
-                transform_matrix=pose,
-                intrinsics=intrinsics,
-                image_path=f"render_{i:04d}.png",
-                image_id=i,
-                width=width,
-                height=height
+                transform_matrix=pose, intrinsics=intrinsics, image_path=f"render_{
+                    i:04d,
+                }
             )
             
             # Render image
@@ -147,8 +138,7 @@ class MegaNeRFRenderer:
                 depth = outputs['depth']
                 depth_normalized = (depth - depth.min()) / (depth.max() - depth.min() + 1e-8)
                 depth_colored = cv2.applyColorMap(
-                    (depth_normalized * 255).astype(np.uint8),
-                    cv2.COLORMAP_PLASMA
+                    (depth_normalized * 255).astype(np.uint8), cv2.COLORMAP_PLASMA
                 )
                 depth_path = depth_dir / f'{i:04d}.png'
                 cv2.imwrite(str(depth_path), depth_colored)
@@ -156,10 +146,7 @@ class MegaNeRFRenderer:
         print(f"Rendered {len(camera_path)} images to {output_dir}")
         return output_files
     
-    def create_video(self,
-                    image_paths: List[str],
-                    output_path: str,
-                    fps: int = 30):
+    def create_video(self, image_paths: list[str], output_path: str, fps: int = 30):
         """Create video from rendered images"""
         if not image_paths:
             print("No images to create video")
@@ -186,59 +173,91 @@ def parse_args():
     parser = argparse.ArgumentParser(description='Render Mega-NeRF')
     
     # Model arguments
-    parser.add_argument('--model_path', type=str, required=True,
-                       help='Path to trained model file')
-    parser.add_argument('--config_path', type=str, default=None,
-                       help='Path to model config (if different from model directory)')
+    parser.add_argument('--model_path', type=str, required=True, help='Path to trained model file')
+    parser.add_argument(
+        '--config_path',
+        type=str,
+        default=None,
+        help='Path to model config,
+    )
     
     # Rendering arguments
-    parser.add_argument('--output_dir', type=str, required=True,
-                       help='Output directory for rendered images')
-    parser.add_argument('--render_type', type=str, default='spiral',
-                       choices=['single', 'path', 'spiral', 'dataset'],
-                       help='Type of rendering')
+    parser.add_argument(
+        '--output_dir',
+        type=str,
+        required=True,
+        help='Output directory for rendered images',
+    )
+    parser.add_argument(
+        '--render_type',
+        type=str,
+        default='spiral',
+        choices=['single',
+        'path',
+        'spiral',
+        'dataset'],
+        help='Type of rendering',
+    )
     
     # Camera arguments
-    parser.add_argument('--height', type=int, default=600,
-                       help='Image height')
-    parser.add_argument('--width', type=int, default=800,
-                       help='Image width')
-    parser.add_argument('--focal', type=float, default=800,
-                       help='Focal length')
+    parser.add_argument('--height', type=int, default=600, help='Image height')
+    parser.add_argument('--width', type=int, default=800, help='Image width')
+    parser.add_argument('--focal', type=float, default=800, help='Focal length')
     
     # Path rendering arguments
-    parser.add_argument('--num_frames', type=int, default=120,
-                       help='Number of frames for path rendering')
-    parser.add_argument('--radius', type=float, default=50.0,
-                       help='Radius for spiral path')
-    parser.add_argument('--center', type=str, default='0,0,20',
-                       help='Center point for spiral path as "x,y,z"')
-    parser.add_argument('--height_variation', type=float, default=10.0,
-                       help='Height variation for spiral path')
+    parser.add_argument(
+        '--num_frames',
+        type=int,
+        default=120,
+        help='Number of frames for path rendering',
+    )
+    parser.add_argument('--radius', type=float, default=50.0, help='Radius for spiral path')
+    parser.add_argument(
+        '--center',
+        type=str,
+        default='0,
+        0,
+        20',
+        help='Center point for spiral path as "x,
+        y,
+        z"',
+    )
+    parser.add_argument(
+        '--height_variation',
+        type=float,
+        default=10.0,
+        help='Height variation for spiral path',
+    )
     
     # Appearance arguments
-    parser.add_argument('--appearance_id', type=int, default=0,
-                       help='Appearance embedding ID')
+    parser.add_argument('--appearance_id', type=int, default=0, help='Appearance embedding ID')
     
     # Output arguments
-    parser.add_argument('--save_depth', action='store_true',
-                       help='Save depth maps')
-    parser.add_argument('--create_video', action='store_true',
-                       help='Create video from rendered images')
-    parser.add_argument('--fps', type=int, default=30,
-                       help='Video frame rate')
+    parser.add_argument('--save_depth', action='store_true', help='Save depth maps')
+    parser.add_argument(
+        '--create_video',
+        action='store_true',
+        help='Create video from rendered images',
+    )
+    parser.add_argument('--fps', type=int, default=30, help='Video frame rate')
     
     # System arguments
-    parser.add_argument('--device', type=str, default='cuda',
-                       help='Device for rendering')
-    parser.add_argument('--chunk_size', type=int, default=1024,
-                       help='Chunk size for ray processing')
+    parser.add_argument('--device', type=str, default='cuda', help='Device for rendering')
+    parser.add_argument(
+        '--chunk_size',
+        type=int,
+        default=1024,
+        help='Chunk size for ray processing',
+    )
     
     # Dataset arguments (for dataset rendering)
-    parser.add_argument('--data_root', type=str, default=None,
-                       help='Dataset root directory (for dataset rendering)')
-    parser.add_argument('--split', type=str, default='test',
-                       help='Dataset split to render')
+    parser.add_argument(
+        '--data_root',
+        type=str,
+        default=None,
+        help='Dataset root directory,
+    )
+    parser.add_argument('--split', type=str, default='test', help='Dataset split to render')
     
     return parser.parse_args()
 
@@ -294,20 +313,20 @@ def load_model_and_config(model_path: str, config_path: Optional[str] = None, de
     return model, config
 
 
-def generate_camera_path(render_type: str,
-                        num_frames: int,
-                        center: np.ndarray,
-                        radius: float,
-                        height_variation: float,
-                        scene_bounds: Tuple[float, ...]) -> List[np.ndarray]:
+def generate_camera_path(
+    render_type: str,
+    num_frames: int,
+    center: np.ndarray,
+    radius: float,
+    height_variation: float,
+    scene_bounds: tuple[float,
+    ...],
+)
     """Generate camera path based on render type"""
     
     if render_type == 'spiral':
         return create_sample_camera_path(
-            center=center,
-            radius=radius,
-            num_frames=num_frames,
-            height_variation=height_variation
+            center=center, radius=radius, num_frames=num_frames, height_variation=height_variation
         )
     
     elif render_type == 'path':
@@ -318,9 +337,7 @@ def generate_camera_path(render_type: str,
         for i in range(num_frames // 2):
             angle = i * 2 * np.pi / (num_frames // 2)
             pos = center + np.array([
-                radius * np.cos(angle),
-                radius * np.sin(angle),
-                height_variation * np.sin(angle * 2)
+                radius * np.cos(angle), radius * np.sin(angle), height_variation * np.sin(angle * 2)
             ])
             
             # Look at center
@@ -393,24 +410,17 @@ def main():
     
     # Setup camera intrinsics
     intrinsics = np.array([
-        [args.focal, 0, args.width / 2],
-        [0, args.focal, args.height / 2],
-        [0, 0, 1]
+        [args.focal, 0, args.width / 2], [0, args.focal, args.height / 2], [0, 0, 1]
     ])
     
     # Generate camera poses based on render type
     if args.render_type in ['spiral', 'path']:
         # Parse center
-        center = np.array([float(x) for x in args.center.split(',')])
+        center = np.array([float(x) for x in args.center.split(', ')])
         
         # Generate camera path
         camera_path = generate_camera_path(
-            render_type=args.render_type,
-            num_frames=args.num_frames,
-            center=center,
-            radius=args.radius,
-            height_variation=args.height_variation,
-            scene_bounds=config.scene_bounds
+            render_type=args.render_type, num_frames=args.num_frames, center=center, radius=args.radius, height_variation=args.height_variation, scene_bounds=config.scene_bounds
         )
         
     elif args.render_type == 'dataset':
@@ -419,10 +429,7 @@ def main():
             raise ValueError("data_root required for dataset rendering")
         
         camera_dataset = CameraDataset(
-            data_root=args.data_root,
-            split=args.split,
-            image_scale=1.0,
-            load_images=False
+            data_root=args.data_root, split=args.split, image_scale=1.0, load_images=False
         )
         
         camera_path = [camera.transform_matrix for camera in camera_dataset.cameras]
@@ -441,13 +448,7 @@ def main():
     # Render
     print(f"Rendering {len(camera_path)} frames...")
     output_files = renderer.render_path(
-        camera_path=camera_path,
-        intrinsics=intrinsics,
-        height=args.height,
-        width=args.width,
-        output_dir=args.output_dir,
-        appearance_id=args.appearance_id,
-        save_depth=args.save_depth
+        camera_path=camera_path, intrinsics=intrinsics, height=args.height, width=args.width, output_dir=args.output_dir, appearance_id=args.appearance_id, save_depth=args.save_depth
     )
     
     # Create video if requested
@@ -457,12 +458,9 @@ def main():
     
     # Save rendering info
     render_info = {
-        'render_type': args.render_type,
-        'num_frames': len(camera_path),
-        'image_size': [args.height, args.width],
-        'appearance_id': args.appearance_id,
-        'model_path': args.model_path,
-        'output_files': output_files
+        'render_type': args.render_type, 'num_frames': len(
+            camera_path,
+        )
     }
     
     with open(Path(args.output_dir) / 'render_info.json', 'w') as f:

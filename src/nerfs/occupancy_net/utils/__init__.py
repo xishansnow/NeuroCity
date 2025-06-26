@@ -9,18 +9,7 @@ from .evaluation_utils import *
 
 __all__ = [
     # Mesh utilities
-    'mesh_to_occupancy',
-    'sample_points_on_mesh',
-    'normalize_mesh',
-    'marching_cubes_extraction',
-    
-    # Visualization utilities
-    'visualize_occupancy_field',
-    'plot_training_curves',
-    'save_mesh_visualization',
-    
-    # Evaluation utilities
-    'compute_iou',
-    'compute_chamfer_distance',
-    'evaluate_mesh_quality'
+    'mesh_to_occupancy', 'sample_points_on_mesh', 'normalize_mesh', 'marching_cubes_extraction', # Visualization utilities
+    'visualize_occupancy_field', 'plot_training_curves', 'save_mesh_visualization', # Evaluation utilities
+    'compute_iou', 'compute_chamfer_distance', 'evaluate_mesh_quality'
 ] 

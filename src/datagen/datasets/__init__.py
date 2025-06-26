@@ -7,7 +7,5 @@
 from .synthetic_datasets import SyntheticVoxelDataset, SDFDataset, OccupancyDataset
 
 __all__ = [
-    'SyntheticVoxelDataset',
-    'SDFDataset', 
-    'OccupancyDataset'
+    'SyntheticVoxelDataset', 'SDFDataset', 'OccupancyDataset'
 ] 

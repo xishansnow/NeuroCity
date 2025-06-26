@@ -54,8 +54,7 @@ class MockMeshAutoencoder(torch.nn.Module):
         in_dim = config.mesh_resolution * 3  # 顶点坐标
         for hidden_dim in config.encoder_layers:
             encoder_layers.extend([
-                torch.nn.Linear(in_dim, hidden_dim),
-                torch.nn.ReLU()
+                torch.nn.Linear(in_dim, hidden_dim), torch.nn.ReLU()
             ])
             in_dim = hidden_dim
         encoder_layers.append(torch.nn.Linear(in_dim, config.latent_dim))
@@ -66,8 +65,7 @@ class MockMeshAutoencoder(torch.nn.Module):
         in_dim = config.latent_dim
         for hidden_dim in config.decoder_layers:
             decoder_layers.extend([
-                torch.nn.Linear(in_dim, hidden_dim),
-                torch.nn.ReLU()
+                torch.nn.Linear(in_dim, hidden_dim), torch.nn.ReLU()
             ])
             in_dim = hidden_dim
         decoder_layers.append(torch.nn.Linear(in_dim, config.mesh_resolution * 3))
@@ -85,13 +83,12 @@ class MockMeshAutoencoder(torch.nn.Module):
         vertices_flat = self.decoder(latent)
         return vertices_flat.view(batch_size, self.config.mesh_resolution, 3)
     
-    def forward(self, vertices: torch.Tensor) -> Dict[str, torch.Tensor]:
+    def forward(self, vertices: torch.Tensor) -> dict[str, torch.Tensor]:
         """自动编码器前向传播"""
         latent = self.encode(vertices)
         reconstructed = self.decode(latent)
         return {
-            'latent': latent,
-            'reconstructed': reconstructed
+            'latent': latent, 'reconstructed': reconstructed
         }
 
 
@@ -108,22 +105,18 @@ class MockDNMPNeRF(torch.nn.Module):
         
         # 纹理网络
         self.texture_network = torch.nn.Sequential(
-            torch.nn.Linear(3 + config.latent_dim, config.texture_dim),
-            torch.nn.ReLU(),
-            torch.nn.Linear(config.texture_dim, config.texture_dim),
-            torch.nn.ReLU(),
-            torch.nn.Linear(config.texture_dim, 3),
-            torch.nn.Sigmoid()
+            torch.nn.Linear(
+                3 + config.latent_dim,
+                config.texture_dim,
+            )
         )
         
         # 几何网络
         self.geometry_network = torch.nn.Sequential(
-            torch.nn.Linear(3, 128),
-            torch.nn.ReLU(),
-            torch.nn.Linear(128, 128),
-            torch.nn.ReLU(),
-            torch.nn.Linear(128, 1),
-            torch.nn.Tanh()  # SDF值
+            torch.nn.Linear(
+                3,
+                128,
+            )
         )
     
     def generate_mesh(self, batch_size: int = 1) -> torch.Tensor:
@@ -133,16 +126,18 @@ class MockDNMPNeRF(torch.nn.Module):
         for i in range(self.config.mesh_resolution):
             theta = 2 * np.pi * i / self.config.mesh_resolution
             vertex = torch.tensor([
-                np.cos(theta),
-                np.sin(theta),
-                0.0
+                np.cos(theta), np.sin(theta), 0.0
             ])
             vertices.append(vertex)
         
         mesh = torch.stack(vertices).unsqueeze(0).repeat(batch_size, 1, 1)
         return mesh
     
-    def forward(self, positions: torch.Tensor, mesh: Optional[torch.Tensor] = None) -> Dict[str, torch.Tensor]:
+    def forward(
+        self,
+        positions: torch.Tensor,
+        mesh: Optional[torch.Tensor] = None,
+    )
         """前向传播"""
         batch_size = positions.shape[0]
         
@@ -167,14 +162,16 @@ class MockDNMPNeRF(torch.nn.Module):
         colors = self.texture_network(texture_input)
         
         return {
-            'sdf': sdf_values.squeeze(-1),
-            'color': colors,
-            'mesh': reconstructed_mesh,
-            'latent': latent
+            'sdf': sdf_values.squeeze(
+                -1,
+            )
         }
 
 
-def create_mesh_dataset(num_meshes: int = 100, mesh_resolution: int = 64) -> Dict[str, torch.Tensor]:
+def create_mesh_dataset(
+    num_meshes: int = 100,
+    mesh_resolution: int = 64,
+)
     """创建网格数据集"""
     print(f"📊 创建网格数据集: {num_meshes}个网格, 分辨率{mesh_resolution}")
     
@@ -194,9 +191,9 @@ def create_mesh_dataset(num_meshes: int = 100, mesh_resolution: int = 64) -> Dic
             radius = 1.0 + 0.3 * np.sin(4 * theta)
             
             vertex = torch.tensor([
-                radius * np.cos(theta) * np.cos(phi),
-                radius * np.sin(theta) * np.cos(phi),
-                radius * np.sin(phi)
+                radius * np.cos(
+                    theta,
+                )
             ])
             
             # 基于位置的颜色
@@ -212,15 +209,18 @@ def create_mesh_dataset(num_meshes: int = 100, mesh_resolution: int = 64) -> Dic
         colors.append(mesh_color.mean(0))  # 平均颜色作为整体颜色
     
     return {
-        'meshes': torch.stack(meshes),
-        'colors': torch.stack(colors),
-        'positions': torch.randn(num_meshes * 100, 3)  # 随机查询点
+        'meshes': torch.stack(
+            meshes,
+        )
     }
 
 
-def train_dnmp_nerf(model: MockDNMPNeRF, 
-                   dataset: Dict[str, torch.Tensor],
-                   num_epochs: int = 200) -> List[Dict]:
+def train_dnmp_nerf(
+    model: MockDNMPNeRF,
+    dataset: dict[str,
+    torch.Tensor],
+    num_epochs: int = 200,
+)
     """训练DNMP NeRF模型"""
     print(f"🚀 开始训练DNMP NeRF模型")
     print(f"📈 训练数据: {len(dataset['meshes'])} 个网格")
@@ -279,12 +279,8 @@ def train_dnmp_nerf(model: MockDNMPNeRF,
                 psnr = -10 * np.log10(mse) if mse > 0 else float('inf')
                 
                 training_history.append({
-                    'epoch': epoch,
-                    'total_loss': total_loss.item(),
-                    'color_loss': color_loss.item(),
-                    'recon_loss': recon_loss.item() if isinstance(recon_loss, torch.Tensor) else recon_loss,
-                    'sdf_loss': sdf_loss.item(),
-                    'psnr': psnr
+                    'epoch': epoch, 'total_loss': total_loss.item(
+                    )
                 })
                 
                 print(f"Epoch {epoch:3d}: Total={total_loss.item():.6f}, "
@@ -316,7 +312,7 @@ def demonstrate_dnmp_nerf():
     # 3. 创建模型
     model = MockDNMPNeRF(config)
     total_params = sum(p.numel() for p in model.parameters())
-    print(f"🧠 模型参数数量: {total_params:,}")
+    print(f"🧠 模型参数数量: {total_params:, }")
     
     # 4. 训练模型
     training_history = train_dnmp_nerf(model, dataset, num_epochs=100)
@@ -333,7 +329,7 @@ def demonstrate_dnmp_nerf():
         print(f"   - 重建损失: {final_metrics['recon_loss']:.6f}")
         print(f"   - SDF损失: {final_metrics['sdf_loss']:.6f}")
     
-    print(f"   - 总参数量: {total_params:,}")
+    print(f"   - 总参数量: {total_params:, }")
     print(f"   - 模型大小: {total_params * 4 / 1024 / 1024:.2f} MB")
     
     print("\n🎉 DNMP NeRF演示完成!")

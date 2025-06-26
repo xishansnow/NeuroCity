@@ -1,8 +1,7 @@
 """
 PyTorch Lightning trainer for Mip-NeRF.
 
-This module provides a Lightning-based training framework for Mip-NeRF models,
-with support for integrated positional encoding and anti-aliased rendering.
+This module provides a Lightning-based training framework for Mip-NeRF models, with support for integrated positional encoding and anti-aliased rendering.
 """
 
 import torch
@@ -12,7 +11,7 @@ from pytorch_lightning.callbacks import ModelCheckpoint, LearningRateMonitor, Ea
 from pytorch_lightning.loggers import TensorBoardLogger, WandbLogger
 from pytorch_lightning.strategies import DDPStrategy
 import torchmetrics
-from typing import Dict, List, Optional, Tuple, Any, Union
+from typing import Dict, List, Optional, Tuple, Any
 from dataclasses import dataclass
 import numpy as np
 import logging
@@ -95,15 +94,21 @@ class MipNeRFLightningModule(pl.LightningModule):
         bg_color = 1.0 if config.white_background else 0.0
         self.register_buffer('background_color', torch.tensor([bg_color, bg_color, bg_color]))
     
-    def forward(self, origins: torch.Tensor, directions: torch.Tensor,
-                viewdirs: torch.Tensor, near: float, far: float,
-                pixel_radius: float = None) -> Dict[str, torch.Tensor]:
+    def forward(
+        self,
+        origins: torch.Tensor,
+        directions: torch.Tensor,
+        viewdirs: torch.Tensor,
+        near: float,
+        far: float,
+        pixel_radius: float = None,
+    )
         """Forward pass through the model."""
         if pixel_radius is None:
             pixel_radius = self.config.pixel_radius
         return self.model(origins, directions, viewdirs, near, far, pixel_radius)
     
-    def training_step(self, batch: Dict[str, torch.Tensor], batch_idx: int) -> torch.Tensor:
+    def training_step(self, batch: dict[str, torch.Tensor], batch_idx: int) -> torch.Tensor:
         """Training step."""
         # Extract batch data
         rays_o = batch['rays_o']  # [N, 3]
@@ -153,7 +158,12 @@ class MipNeRFLightningModule(pl.LightningModule):
         
         return losses['total_loss']
     
-    def validation_step(self, batch: Dict[str, torch.Tensor], batch_idx: int) -> Dict[str, torch.Tensor]:
+    def validation_step(
+        self,
+        batch: dict[str,
+        torch.Tensor],
+        batch_idx: int,
+    )
         """Validation step."""
         # Extract batch data
         rays_o = batch['rays_o']
@@ -192,16 +202,11 @@ class MipNeRFLightningModule(pl.LightningModule):
             ssim = torch.tensor(0.0, device=self.device)
         
         return {
-            'val_loss': losses['total_loss'],
-            'val_coarse_psnr': coarse_psnr,
-            'val_fine_psnr': fine_psnr,
-            'val_ssim': ssim,
-            'pred_rgb': pred_rgb[:100],  # Log first 100 pixels
-            'target_rgb': target_colors[:100],
-            'coarse_rgb': outputs['rgb_coarse'][:100]
+            'val_loss': losses['total_loss'], 'val_coarse_psnr': coarse_psnr, 'val_fine_psnr': fine_psnr, 'val_ssim': ssim, 'pred_rgb': pred_rgb[:100], # Log first 100 pixels
+            'target_rgb': target_colors[:100], 'coarse_rgb': outputs['rgb_coarse'][:100]
         }
     
-    def validation_epoch_end(self, outputs: List[Dict[str, torch.Tensor]]) -> None:
+    def validation_epoch_end(self, outputs: list[dict[str, torch.Tensor]]) -> None:
         """Aggregate validation results."""
         # Average metrics
         avg_loss = torch.stack([x['val_loss'] for x in outputs]).mean()
@@ -219,20 +224,18 @@ class MipNeRFLightningModule(pl.LightningModule):
         if len(outputs) > 0 and self.current_epoch % 5 == 0:
             self._log_sample_images(outputs[0])
     
-    def configure_optimizers(self) -> Dict[str, Any]:
+    def configure_optimizers(self) -> dict[str, Any]:
         """Configure optimizers and schedulers."""
         # Create optimizer
         if self.config.optimizer_type == "adam":
             optimizer = torch.optim.Adam(
-                self.parameters(),
-                lr=self.config.learning_rate,
-                weight_decay=self.config.weight_decay
+                self.parameters(
+                )
             )
         elif self.config.optimizer_type == "adamw":
             optimizer = torch.optim.AdamW(
-                self.parameters(),
-                lr=self.config.learning_rate,
-                weight_decay=self.config.weight_decay
+                self.parameters(
+                )
             )
         else:
             raise ValueError(f"Unsupported optimizer: {self.config.optimizer_type}")
@@ -262,9 +265,16 @@ class MipNeRFLightningModule(pl.LightningModule):
         
         return scheduler_config
     
-    def _process_in_chunks(self, rays_o: torch.Tensor, rays_d: torch.Tensor,
-                          viewdirs: torch.Tensor, near: float, far: float,
-                          chunk_size: int, train: bool = True) -> Dict[str, torch.Tensor]:
+    def _process_in_chunks(
+        self,
+        rays_o: torch.Tensor,
+        rays_d: torch.Tensor,
+        viewdirs: torch.Tensor,
+        near: float,
+        far: float,
+        chunk_size: int,
+        train: bool = True,
+    )
         """Process rays in chunks to avoid memory issues."""
         all_outputs = {}
         
@@ -276,14 +286,12 @@ class MipNeRFLightningModule(pl.LightningModule):
             
             if train:
                 chunk_outputs = self.model(
-                    chunk_rays_o, chunk_rays_d, chunk_viewdirs, 
-                    near, far, self.config.pixel_radius
+                    chunk_rays_o, chunk_rays_d, chunk_viewdirs, near, far, self.config.pixel_radius
                 )
             else:
                 with torch.no_grad():
                     chunk_outputs = self.model(
-                        chunk_rays_o, chunk_rays_d, chunk_viewdirs,
-                        near, far, self.config.pixel_radius
+                        chunk_rays_o, chunk_rays_d, chunk_viewdirs, near, far, self.config.pixel_radius
                     )
             
             # Accumulate outputs
@@ -298,7 +306,7 @@ class MipNeRFLightningModule(pl.LightningModule):
         
         return all_outputs
     
-    def _log_sample_images(self, sample_output: Dict[str, torch.Tensor]):
+    def _log_sample_images(self, sample_output: dict[str, torch.Tensor]):
         """Log sample rendered images to tensorboard."""
         if self.logger is not None and hasattr(self.logger, 'experiment'):
             # Log predicted vs target vs coarse
@@ -325,17 +333,8 @@ class MipNeRFLightningModule(pl.LightningModule):
 
 
 def create_mip_nerf_lightning_trainer(
-    config: MipNeRFLightningConfig,
-    train_dataset,
-    val_dataset = None,
-    max_epochs: int = 200,
-    gpus: Union[int, List[int]] = 1,
-    logger_type: str = "tensorboard",
-    project_name: str = "mip_nerf",
-    experiment_name: str = "default",
-    checkpoint_dir: str = "checkpoints",
-    **trainer_kwargs
-) -> Tuple[MipNeRFLightningModule, pl.Trainer]:
+    config: MipNeRFLightningConfig, train_dataset, val_dataset = None, max_epochs: int = 200, gpus: int | list[int] = 1, logger_type: str = "tensorboard", project_name: str = "mip_nerf", experiment_name: str = "default", checkpoint_dir: str = "checkpoints", **trainer_kwargs
+) -> tuple[MipNeRFLightningModule, pl.Trainer]:
     """
     Create Mip-NeRF Lightning module and trainer.
     
@@ -360,16 +359,11 @@ def create_mip_nerf_lightning_trainer(
     # Setup logger
     if logger_type == "tensorboard":
         logger = TensorBoardLogger(
-            save_dir="logs",
-            name=project_name,
-            version=experiment_name
+            save_dir="logs", name=project_name, version=experiment_name
         )
     elif logger_type == "wandb":
         logger = WandbLogger(
-            project=project_name,
-            name=experiment_name,
-            save_dir="logs",
-            tags=["mip-nerf", "nerf", "anti-aliasing"]
+            project=project_name, name=experiment_name, save_dir="logs", tags=["mip-nerf", "nerf", "anti-aliasing"]
         )
     else:
         logger = None
@@ -377,19 +371,11 @@ def create_mip_nerf_lightning_trainer(
     # Setup callbacks
     callbacks = [
         ModelCheckpoint(
-            dirpath=checkpoint_dir,
-            filename=f"{experiment_name}-{{epoch:02d}}-{{val/fine_psnr:.2f}}",
-            monitor="val/fine_psnr",
-            mode="max",
-            save_top_k=3,
-            save_last=True
-        ),
-        LearningRateMonitor(logging_interval="step"),
-        EarlyStopping(
-            monitor="val/fine_psnr",
-            mode="max",
-            patience=50,
-            verbose=True
+            dirpath=checkpoint_dir, filename=f"{
+                experiment_name,
+            }
+        ), LearningRateMonitor(logging_interval="step"), EarlyStopping(
+            monitor="val/fine_psnr", mode="max", patience=50, verbose=True
         )
     ]
     
@@ -402,28 +388,14 @@ def create_mip_nerf_lightning_trainer(
     
     # Create trainer
     trainer = pl.Trainer(
-        max_epochs=max_epochs,
-        devices=gpus,
-        logger=logger,
-        callbacks=callbacks,
-        strategy=strategy,
-        gradient_clip_val=config.gradient_clip_val if config.gradient_clip_val > 0 else None,
-        gradient_clip_algorithm=config.gradient_clip_algorithm,
-        precision="16-mixed" if config.use_mixed_precision else 32,
-        log_every_n_steps=50,
-        val_check_interval=0.25,
-        **trainer_kwargs
+        max_epochs=max_epochs, devices=gpus, logger=logger, callbacks=callbacks, strategy=strategy, gradient_clip_val=config.gradient_clip_val if config.gradient_clip_val > 0 else None, gradient_clip_algorithm=config.gradient_clip_algorithm, precision="16-mixed" if config.use_mixed_precision else 32, log_every_n_steps=50, val_check_interval=0.25, **trainer_kwargs
     )
     
     return lightning_module, trainer
 
 
 def train_mip_nerf_lightning(
-    model_config: MipNeRFConfig,
-    lightning_config: MipNeRFLightningConfig,
-    train_dataset,
-    val_dataset = None,
-    **trainer_kwargs
+    model_config: MipNeRFConfig, lightning_config: MipNeRFLightningConfig, train_dataset, val_dataset = None, **trainer_kwargs
 ) -> MipNeRFLightningModule:
     """
     Simplified training function for Mip-NeRF using Lightning.
@@ -443,31 +415,20 @@ def train_mip_nerf_lightning(
     
     # Create Lightning module and trainer
     lightning_module, trainer = create_mip_nerf_lightning_trainer(
-        lightning_config,
-        train_dataset,
-        val_dataset,
-        **trainer_kwargs
+        lightning_config, train_dataset, val_dataset, **trainer_kwargs
     )
     
     # Create data loaders
     from torch.utils.data import DataLoader
     
     train_loader = DataLoader(
-        train_dataset,
-        batch_size=lightning_config.ray_batch_size,
-        shuffle=True,
-        num_workers=4,
-        pin_memory=True
+        train_dataset, batch_size=lightning_config.ray_batch_size, shuffle=True, num_workers=4, pin_memory=True
     )
     
     val_loader = None
     if val_dataset is not None:
         val_loader = DataLoader(
-            val_dataset,
-            batch_size=lightning_config.ray_batch_size,
-            shuffle=False,
-            num_workers=2,
-            pin_memory=True
+            val_dataset, batch_size=lightning_config.ray_batch_size, shuffle=False, num_workers=2, pin_memory=True
         )
     
     # Start training

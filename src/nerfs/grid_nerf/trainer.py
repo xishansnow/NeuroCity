@@ -1,18 +1,18 @@
 """
 Grid-NeRF Trainer Module
 
-This module provides comprehensive training functionality for Grid-NeRF models,
-including multi-GPU support, checkpointing, evaluation, and visualization.
+This module provides comprehensive training functionality for Grid-NeRF models, including multi-GPU support, checkpointing, evaluation, and visualization.
 """
 
 import os
+import sys
 import time
 import torch
 import torch.nn as nn
 import torch.distributed as dist
 from torch.nn.parallel import DistributedDataParallel as DDP
 from torch.utils.tensorboard import SummaryWriter
-from typing import Dict, List, Optional, Tuple, Any
+from typing import List, Optional, Tuple, Any
 import numpy as np
 import logging
 from pathlib import Path
@@ -20,11 +20,16 @@ import json
 
 from .core import GridNeRF, GridNeRFConfig, GridNeRFLoss
 from .dataset import create_dataset, create_dataloader
+
+# Import from utils package for metrics and I/O
 from .utils import (
-    compute_psnr, compute_ssim, compute_lpips,
-    save_image, create_video_from_images,
-    setup_logging, get_learning_rate_scheduler
+    compute_psnr, compute_ssim, compute_lpips, save_image, create_video_from_images
 )
+
+# Import directly from utils.py module (not the utils package)
+from . import utils as grid_utils
+setup_logging = grid_utils.setup_logging
+get_learning_rate_scheduler = grid_utils.get_learning_rate_scheduler
 
 
 class GridNeRFTrainer:
@@ -38,13 +43,7 @@ class GridNeRFTrainer:
     """
     
     def __init__(
-        self,
-        config: GridNeRFConfig,
-        output_dir: str,
-        device: torch.device,
-        rank: int = 0,
-        world_size: int = 1,
-        use_tensorboard: bool = True
+        self, config: GridNeRFConfig, output_dir: str, device: torch.device, rank: int = 0, world_size: int = 1, use_tensorboard: bool = True
     ):
         self.config = config
         self.output_dir = Path(output_dir)
@@ -98,8 +97,8 @@ class GridNeRFTrainer:
         trainable_params = sum(p.numel() for p in self.model.parameters() if p.requires_grad)
         
         if self.rank == 0:
-            self.logger.info(f"Model initialized with {total_params:,} total parameters")
-            self.logger.info(f"Trainable parameters: {trainable_params:,}")
+            self.logger.info(f"Model initialized with {total_params:, } total parameters")
+            self.logger.info(f"Trainable parameters: {trainable_params:, }")
     
     def setup_optimizer(self) -> None:
         """Initialize optimizer and learning rate scheduler."""
@@ -107,37 +106,23 @@ class GridNeRFTrainer:
         param_groups = [
             {
                 'params': [p for n, p in self.model.named_parameters() 
-                          if 'grid' in n and p.requires_grad],
-                'lr': self.config.grid_lr,
-                'name': 'grid'
-            },
-            {
+                          if 'grid' in n and p.requires_grad], 'lr': self.config.grid_lr, 'name': 'grid'
+            }, {
                 'params': [p for n, p in self.model.named_parameters() 
-                          if 'mlp' in n and p.requires_grad],
-                'lr': self.config.mlp_lr,
-                'name': 'mlp'
-            },
-            {
+                          if 'mlp' in n and p.requires_grad], 'lr': self.config.mlp_lr, 'name': 'mlp'
+            }, {
                 'params': [p for n, p in self.model.named_parameters() 
-                          if 'grid' not in n and 'mlp' not in n and p.requires_grad],
-                'lr': self.config.mlp_lr,
-                'name': 'other'
+                          if 'grid' not in n and 'mlp' not in n and p.requires_grad], 'lr': self.config.mlp_lr, 'name': 'other'
             }
         ]
         
         self.optimizer = torch.optim.Adam(
-            param_groups,
-            betas=(0.9, 0.999),
-            eps=1e-8,
-            weight_decay=self.config.weight_decay
+            param_groups, betas=(0.9, 0.999), eps=1e-8, weight_decay=self.config.weight_decay
         )
         
         # Setup learning rate scheduler
         self.scheduler = get_learning_rate_scheduler(
-            self.optimizer,
-            scheduler_type=self.config.scheduler_type,
-            max_steps=self.config.max_steps,
-            warmup_steps=self.config.warmup_steps
+            self.optimizer, scheduler_type=self.config.scheduler_type, max_steps=self.config.max_steps, warmup_steps=self.config.warmup_steps
         )
         
         if self.rank == 0:
@@ -178,16 +163,11 @@ class GridNeRFTrainer:
             return
         
         checkpoint = {
-            'epoch': self.current_epoch,
-            'step': self.current_step,
-            'model_state_dict': (
+            'epoch': self.current_epoch, 'step': self.current_step, 'model_state_dict': (
                 self.model.module.state_dict() if self.world_size > 1 
                 else self.model.state_dict()
-            ),
-            'optimizer_state_dict': self.optimizer.state_dict(),
-            'scheduler_state_dict': self.scheduler.state_dict(),
-            'best_psnr': self.best_psnr,
-            'config': self.config.__dict__
+            ), 'optimizer_state_dict': self.optimizer.state_dict(
+            )
         }
         
         # Save latest checkpoint
@@ -205,7 +185,7 @@ class GridNeRFTrainer:
             epoch_path = self.checkpoint_dir / f"epoch_{self.current_epoch:04d}.pth"
             torch.save(checkpoint, epoch_path)
     
-    def train_step(self, batch: Dict[str, torch.Tensor]) -> Dict[str, float]:
+    def train_step(self, batch: dict[str, torch.Tensor]) -> dict[str, float]:
         """Perform a single training step."""
         self.model.train()
         self.optimizer.zero_grad()
@@ -227,8 +207,7 @@ class GridNeRFTrainer:
         # Gradient clipping
         if self.config.grad_clip_norm > 0:
             torch.nn.utils.clip_grad_norm_(
-                self.model.parameters(), 
-                self.config.grad_clip_norm
+                self.model.parameters(), self.config.grad_clip_norm
             )
         
         self.optimizer.step()
@@ -240,7 +219,7 @@ class GridNeRFTrainer:
         
         return loss_dict_cpu
     
-    def validate(self, val_dataloader) -> Dict[str, float]:
+    def validate(self, val_dataloader) -> dict[str, float]:
         """Validate the model on validation set."""
         self.model.eval()
         total_loss = 0.0
@@ -275,9 +254,7 @@ class GridNeRFTrainer:
         avg_ssim = total_ssim / num_batches
         
         return {
-            'val_loss': avg_loss,
-            'val_psnr': avg_psnr,
-            'val_ssim': avg_ssim
+            'val_loss': avg_loss, 'val_psnr': avg_psnr, 'val_ssim': avg_ssim
         }
     
     def render_test_images(self, test_dataset, num_images: int = 8) -> None:
@@ -321,11 +298,7 @@ class GridNeRFTrainer:
         self.logger.info(f"Rendered {num_images} test images to {render_epoch_dir}")
     
     def train(
-        self,
-        train_dataset,
-        val_dataset=None,
-        test_dataset=None,
-        resume_from: Optional[str] = None
+        self, train_dataset, val_dataset=None, test_dataset=None, resume_from: Optional[str] = None
     ) -> None:
         """Main training loop."""
         # Setup model and optimizer
@@ -338,20 +311,14 @@ class GridNeRFTrainer:
         
         # Create data loaders
         train_dataloader = create_dataloader(
-            train_dataset, 
-            batch_size=self.config.batch_size,
-            num_workers=self.config.num_workers,
-            shuffle=True,
-            distributed=(self.world_size > 1)
+            train_dataset, batch_size=self.config.batch_size, num_workers=self.config.num_workers, shuffle=True, distributed=(
+                self.world_size > 1,
+            )
         )
         
         if val_dataset:
             val_dataloader = create_dataloader(
-                val_dataset,
-                batch_size=self.config.eval_batch_size,
-                num_workers=self.config.num_workers,
-                shuffle=False,
-                distributed=False
+                val_dataset, batch_size=self.config.eval_batch_size, num_workers=self.config.num_workers, shuffle=False, distributed=False
             )
         
         if self.rank == 0:
@@ -473,11 +440,7 @@ def setup_distributed_training(rank: int, world_size: int, backend: str = 'nccl'
 
 
 def main_worker(
-    rank: int,
-    world_size: int,
-    config: GridNeRFConfig,
-    output_dir: str,
-    data_config: Dict[str, Any]
+    rank: int, world_size: int, config: GridNeRFConfig, output_dir: str, data_config: dict[str, Any]
 ) -> None:
     """Main worker function for distributed training."""
     # Setup distributed training
@@ -488,46 +451,41 @@ def main_worker(
     
     # Create trainer
     trainer = GridNeRFTrainer(
-        config=config,
-        output_dir=output_dir,
-        device=device,
-        rank=rank,
-        world_size=world_size
+        config=config, output_dir=output_dir, device=device, rank=rank, world_size=world_size
     )
     
     try:
         # Create datasets
         train_dataset = create_dataset(
-            data_config['train_data_path'],
-            split='train',
-            config=config,
-            **data_config.get('train_kwargs', {})
+            data_config['train_data_path'], split='train', config=config, **data_config.get(
+                'train_kwargs',
+                {},
+            )
         )
         
         val_dataset = None
         if 'val_data_path' in data_config:
             val_dataset = create_dataset(
-                data_config['val_data_path'],
-                split='val',
-                config=config,
-                **data_config.get('val_kwargs', {})
+                data_config['val_data_path'], split='val', config=config, **data_config.get(
+                    'val_kwargs',
+                    {},
+                )
             )
         
         test_dataset = None
         if 'test_data_path' in data_config:
             test_dataset = create_dataset(
-                data_config['test_data_path'],
-                split='test',
-                config=config,
-                **data_config.get('test_kwargs', {})
+                data_config['test_data_path'], split='test', config=config, **data_config.get(
+                    'test_kwargs',
+                    {},
+                )
             )
         
         # Start training
         trainer.train(
-            train_dataset=train_dataset,
-            val_dataset=val_dataset,
-            test_dataset=test_dataset,
-            resume_from=data_config.get('resume_from')
+            train_dataset=train_dataset, val_dataset=val_dataset, test_dataset=test_dataset, resume_from=data_config.get(
+                'resume_from',
+            )
         )
         
     finally:

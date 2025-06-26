@@ -15,45 +15,30 @@ Key Features:
 """
 
 from .core import (
-    MegaNeRFPlusConfig,
-    ScalableNeRFModel,
-    HierarchicalSpatialEncoder,
-    MultiResolutionMLP,
-    PhotogrammetricRenderer,
-    MegaNeRFPlus
+    MegaNeRFPlusConfig, ScalableNeRFModel, HierarchicalSpatialEncoder, MultiResolutionMLP, PhotogrammetricRenderer, MegaNeRFPlus
 )
 
 from .spatial_partitioner import (
-    SpatialPartitioner,
-    AdaptiveOctree,
-    HierarchicalGridPartitioner,
-    PhotogrammetricPartitioner
+    SpatialPartitioner, AdaptiveOctreePartitioner, HierarchicalGridPartitioner, PhotogrammetricPartitioner
 )
 
+# Create alias for backward compatibility
+AdaptiveOctree = AdaptiveOctreePartitioner
+
 from .multires_renderer import (
-    MultiResolutionRenderer,
-    AdaptiveLODRenderer,
-    PhotogrammetricVolumetricRenderer
+    MultiResolutionRenderer, AdaptiveLODRenderer, PhotogrammetricVolumetricRenderer
 )
 
 from .dataset import (
-    MegaNeRFPlusDataset,
-    PhotogrammetricDataset,
-    LargeSceneDataset,
-    create_meganerf_plus_dataset,
-    create_photogrammetric_dataloader
+    MegaNeRFPlusDataset, PhotogrammetricDataset, LargeSceneDataset, create_meganerf_plus_dataset, create_photogrammetric_dataloader
 )
 
 from .trainer import (
-    MegaNeRFPlusTrainer,
-    MultiScaleTrainer,
-    DistributedTrainer
+    MegaNeRFPlusTrainer, MultiScaleTrainer, DistributedTrainer
 )
 
 from .memory_manager import (
-    MemoryManager,
-    CacheManager,
-    StreamingDataLoader
+    MemoryManager, CacheManager, StreamingDataLoader
 )
 
 __version__ = "1.0.0"
@@ -62,38 +47,15 @@ __description__ = "Mega-NeRF++: Scalable NeRFs for High-resolution Photogrammetr
 
 __all__ = [
     # Core components
-    "MegaNeRFPlusConfig",
-    "ScalableNeRFModel", 
-    "HierarchicalSpatialEncoder",
-    "MultiResolutionMLP",
-    "PhotogrammetricRenderer",
-    "MegaNeRFPlus",
-    
+    "MegaNeRFPlusConfig", "ScalableNeRFModel", "HierarchicalSpatialEncoder", "MultiResolutionMLP", "PhotogrammetricRenderer", "MegaNeRFPlus",
     # Spatial partitioning
-    "SpatialPartitioner",
-    "AdaptiveOctree",
-    "HierarchicalGridPartitioner", 
-    "PhotogrammetricPartitioner",
-    
+    "SpatialPartitioner", "AdaptiveOctreePartitioner", "AdaptiveOctree", "HierarchicalGridPartitioner", "PhotogrammetricPartitioner",
     # Multi-resolution rendering
-    "MultiResolutionRenderer",
-    "AdaptiveLODRenderer",
-    "PhotogrammetricVolumetricRenderer",
-    
+    "MultiResolutionRenderer", "AdaptiveLODRenderer", "PhotogrammetricVolumetricRenderer",
     # Dataset and data loading
-    "MegaNeRFPlusDataset",
-    "PhotogrammetricDataset",
-    "LargeSceneDataset",
-    "create_meganerf_plus_dataset",
-    "create_photogrammetric_dataloader",
-    
+    "MegaNeRFPlusDataset", "PhotogrammetricDataset", "LargeSceneDataset", "create_meganerf_plus_dataset", "create_photogrammetric_dataloader",
     # Training
-    "MegaNeRFPlusTrainer",
-    "MultiScaleTrainer",
-    "DistributedTrainer",
-    
+    "MegaNeRFPlusTrainer", "MultiScaleTrainer", "DistributedTrainer",
     # Memory management
-    "MemoryManager",
-    "CacheManager", 
-    "StreamingDataLoader"
-] 
+    "MemoryManager", "CacheManager", "StreamingDataLoader"
+]

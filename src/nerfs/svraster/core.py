@@ -9,9 +9,10 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 import numpy as np
-from typing import Dict, List, Optional, Tuple, Union
+from typing import List, Optional, Tuple, Any, Dict, Union, Callable, Iterable, Iterator, Generator, TypeVar, Generic, Optional, Sequence, Mapping, Container, Collection, Set, FrozenSet, Deque, ByteString, Text, Pattern, Match, Reversible, SupportsInt, SupportsFloat, SupportsComplex, SupportsIndex, SupportsAbs, SupportsRound, SupportsBytes, SupportsFloat, SupportsComplex, SupportsAbs, SupportsRound, SupportsBytes, SupportsFloat, SupportsComplex, SupportsAbs, SupportsRound, SupportsBytes, SupportsFloat, SupportsComplex, SupportsAbs, SupportsRound, SupportsBytes, SupportsFloat, SupportsComplex, SupportsAbs, SupportsRound, SupportsBytes, SupportsFloat, SupportsComplex, SupportsAbs, SupportsRound, SupportsBytes, SupportsFloat, SupportsComplex, SupportsAbs, SupportsRound, SupportsBytes, SupportsFloat, SupportsComplex, SupportsAbs, SupportsRound, SupportsBytes, SupportsFloat, SupportsComplex, SupportsAbs, SupportsRound, SupportsBytes, SupportsFloat, SupportsComplex, SupportsAbs, SupportsRound, SupportsBytes, SupportsFloat, SupportsComplex, SupportsAbs, SupportsRound, SupportsBytes, SupportsFloat, SupportsComplex, SupportsAbs, SupportsRound, SupportsBytes, SupportsFloat, SupportsComplex, SupportsAbs, SupportsRound, SupportsBytes, SupportsFloat, SupportsComplex, SupportsAbs
 from dataclasses import dataclass
 import logging
+import os
 
 logger = logging.getLogger(__name__)
 
@@ -23,7 +24,14 @@ class SVRasterConfig:
     # Scene representation
     max_octree_levels: int = 16  # Maximum octree levels (65536^3 resolution)
     base_resolution: int = 64    # Base grid resolution
-    scene_bounds: Tuple[float, float, float, float, float, float] = (-1.0, -1.0, -1.0, 1.0, 1.0, 1.0)
+    scene_bounds: tuple[float, float, float, float, float, float] = (
+        -1.0,
+        -1.0,
+        -1.0,
+        1.0,
+        1.0,
+        1.0,
+    )
     
     # Voxel properties
     density_activation: str = "exp"     # Density activation function
@@ -41,7 +49,7 @@ class SVRasterConfig:
     morton_ordering: bool = True         # Use Morton ordering for depth sorting
     
     # Rendering
-    background_color: Tuple[float, float, float] = (0.0, 0.0, 0.0)
+    background_color: tuple[float, float, float] = (0.0, 0.0, 0.0)
     near_plane: float = 0.1
     far_plane: float = 100.0
     
@@ -102,7 +110,7 @@ class AdaptiveSparseVoxels(nn.Module):
         voxel_size = self.scene_size.max() / base_res
         
         self.voxel_positions.append(nn.Parameter(positions))
-        self.voxel_sizes.append(nn.Parameter(torch.full((num_voxels,), voxel_size)))
+        self.voxel_sizes.append(nn.Parameter(torch.full((num_voxels, ), voxel_size)))
         self.voxel_densities.append(nn.Parameter(torch.randn(num_voxels) * 0.1))
         
         # Initialize SH coefficients (RGB + SH)
@@ -161,8 +169,7 @@ class AdaptiveSparseVoxels(nn.Module):
         
         # Child offsets (8 corners of cube)
         offsets = torch.tensor([
-            [-1, -1, -1], [1, -1, -1], [-1, 1, -1], [1, 1, -1],
-            [-1, -1, 1], [1, -1, 1], [-1, 1, 1], [1, 1, 1]
+            [-1, -1, -1], [1, -1, -1], [-1, 1, -1], [1, 1, -1], [-1, -1, 1], [1, -1, 1], [-1, 1, 1], [1, 1, 1]
         ], dtype=torch.float32, device=parent_positions.device) * 0.25
         
         # Generate child positions
@@ -196,7 +203,7 @@ class AdaptiveSparseVoxels(nn.Module):
             self.voxel_sizes.append(nn.Parameter(child_sizes_tensor))
             self.voxel_densities.append(nn.Parameter(child_densities_tensor))
             self.voxel_colors.append(nn.Parameter(child_colors_tensor))
-            self.voxel_levels.append(torch.full((child_positions.shape[0],), new_level))
+            self.voxel_levels.append(torch.full((child_positions.shape[0], ), new_level))
             self.voxel_morton_codes.append(self._compute_morton_codes(child_positions, new_level))
         else:
             # Append to existing level
@@ -207,14 +214,20 @@ class AdaptiveSparseVoxels(nn.Module):
             
             self.voxel_positions[new_level].data = torch.cat([old_positions, child_positions])
             self.voxel_sizes[new_level].data = torch.cat([old_sizes, child_sizes_tensor])
-            self.voxel_densities[new_level].data = torch.cat([old_densities, child_densities_tensor])
+            self.voxel_densities[new_level].data = torch.cat(
+                [old_densities,
+                child_densities_tensor],
+            )
             self.voxel_colors[new_level].data = torch.cat([old_colors, child_colors_tensor])
             
             # Update levels and Morton codes
-            new_levels = torch.full((child_positions.shape[0],), new_level)
+            new_levels = torch.full((child_positions.shape[0], ), new_level)
             self.voxel_levels[new_level] = torch.cat([self.voxel_levels[new_level], new_levels])
             new_morton = self._compute_morton_codes(child_positions, new_level)
-            self.voxel_morton_codes[new_level] = torch.cat([self.voxel_morton_codes[new_level], new_morton])
+            self.voxel_morton_codes[new_level] = torch.cat(
+                [self.voxel_morton_codes[new_level],
+                new_morton],
+            )
         
         # Remove subdivided parent voxels
         keep_mask = ~subdivision_mask
@@ -246,8 +259,8 @@ class AdaptiveSparseVoxels(nn.Module):
                 self.voxel_levels[level_idx] = self.voxel_levels[level_idx][keep_mask]
                 self.voxel_morton_codes[level_idx] = self.voxel_morton_codes[level_idx][keep_mask]
     
-    def get_all_voxels(self) -> Dict[str, torch.Tensor]:
-        """Get all voxels from all levels."""
+    def get_all_voxels(self) -> dict[str, torch.Tensor]:
+        """Get all voxels across all levels."""
         all_positions = []
         all_sizes = []
         all_densities = []
@@ -256,25 +269,12 @@ class AdaptiveSparseVoxels(nn.Module):
         all_morton_codes = []
         
         for level_idx in range(len(self.voxel_positions)):
-            if self.voxel_positions[level_idx].shape[0] > 0:
-                all_positions.append(self.voxel_positions[level_idx])
-                all_sizes.append(self.voxel_sizes[level_idx])
-                all_densities.append(self.voxel_densities[level_idx])
-                all_colors.append(self.voxel_colors[level_idx])
-                all_levels.append(self.voxel_levels[level_idx])
-                all_morton_codes.append(self.voxel_morton_codes[level_idx])
-        
-        if not all_positions:
-            # Return empty tensors
-            device = next(self.parameters()).device
-            return {
-                'positions': torch.empty(0, 3, device=device),
-                'sizes': torch.empty(0, device=device),
-                'densities': torch.empty(0, device=device),
-                'colors': torch.empty(0, 3 * self.num_sh_coeffs, device=device),
-                'levels': torch.empty(0, dtype=torch.int, device=device),
-                'morton_codes': torch.empty(0, dtype=torch.long, device=device)
-            }
+            all_positions.append(self.voxel_positions[level_idx].data)
+            all_sizes.append(self.voxel_sizes[level_idx].data)
+            all_densities.append(self.voxel_densities[level_idx].data)
+            all_colors.append(self.voxel_colors[level_idx].data)
+            all_levels.append(self.voxel_levels[level_idx])
+            all_morton_codes.append(self.voxel_morton_codes[level_idx])
         
         return {
             'positions': torch.cat(all_positions),
@@ -287,10 +287,7 @@ class AdaptiveSparseVoxels(nn.Module):
     
     def get_total_voxel_count(self) -> int:
         """Get total number of voxels across all levels."""
-        total = 0
-        for level_idx in range(len(self.voxel_positions)):
-            total += self.voxel_positions[level_idx].shape[0]
-        return total
+        return sum(pos.shape[0] for pos in self.voxel_positions)
 
 
 class VoxelRasterizer(nn.Module):
@@ -305,172 +302,169 @@ class VoxelRasterizer(nn.Module):
         super().__init__()
         self.config = config
     
-    def forward(self, 
-                voxels: Dict[str, torch.Tensor],
-                ray_origins: torch.Tensor,
-                ray_directions: torch.Tensor,
-                camera_params: Optional[Dict[str, torch.Tensor]] = None) -> Dict[str, torch.Tensor]:
-        """
-        Rasterize sparse voxels along rays.
-        
-        Args:
-            voxels: Dictionary containing voxel data
-            ray_origins: Ray origin points [N, 3]
-            ray_directions: Ray direction vectors [N, 3]
-            camera_params: Optional camera parameters
-            
-        Returns:
-            Dictionary with rendered outputs
-        """
-        num_rays = ray_origins.shape[0]
+    def forward(
+        self,
+        voxels: dict[str, torch.Tensor],
+        ray_origins: torch.Tensor,
+        ray_directions: torch.Tensor,
+        camera_params: Optional[dict[str, torch.Tensor]] = None,
+    ) -> dict[str, torch.Tensor]:
+        """Forward pass for voxel rasterization."""
+        batch_size = ray_origins.shape[0]
         device = ray_origins.device
         
-        # Initialize output
-        rgb = torch.zeros(num_rays, 3, device=device)
-        depth = torch.zeros(num_rays, device=device)
-        alpha = torch.zeros(num_rays, device=device)
+        # Sort voxels by mean ray direction for better depth ordering
+        mean_ray_direction = ray_directions.mean(dim=0)
+        sorted_voxels = self._sort_voxels_by_ray_direction(voxels, mean_ray_direction)
         
-        if voxels['positions'].shape[0] == 0:
-            return {'rgb': rgb, 'depth': depth, 'alpha': alpha}
+        # Process each ray
+        rgb_list = []
+        depth_list = []
+        weights_list = []
         
-        # Sort voxels by ray direction-dependent Morton order
-        sorted_voxels = self._sort_voxels_by_ray_direction(voxels, ray_directions.mean(dim=0))
+        for i in range(batch_size):
+            ray_o = ray_origins[i]
+            ray_d = ray_directions[i]
+            
+            # Find ray-voxel intersections
+            intersections = self._ray_voxel_intersections(ray_o, ray_d, sorted_voxels)
+            
+            # Render ray through intersected voxels
+            rgb, depth, weights = self._render_ray(ray_o, ray_d, intersections, sorted_voxels)
+            
+            rgb_list.append(rgb)
+            depth_list.append(depth)
+            weights_list.append(weights)
         
-        # Perform ray-voxel intersection and rendering
-        for ray_idx in range(num_rays):
-            ray_o = ray_origins[ray_idx]
-            ray_d = ray_directions[ray_idx]
-            
-            # Find intersecting voxels
-            intersections = self._ray_voxel_intersections(
-                ray_o, ray_d, sorted_voxels
-            )
-            
-            if len(intersections) == 0:
-                continue
-            
-            # Render along ray
-            ray_rgb, ray_depth, ray_alpha = self._render_ray(
-                ray_o, ray_d, intersections, sorted_voxels
-            )
-            
-            rgb[ray_idx] = ray_rgb
-            depth[ray_idx] = ray_depth
-            alpha[ray_idx] = ray_alpha
+        # Stack results
+        rgb = torch.stack(rgb_list)
+        depth = torch.stack(depth_list)
+        weights = torch.stack(weights_list)
         
-        return {'rgb': rgb, 'depth': depth, 'alpha': alpha}
+        return {
+            'rgb': rgb,
+            'depth': depth,
+            'weights': weights
+        }
     
-    def _sort_voxels_by_ray_direction(self, 
-                                     voxels: Dict[str, torch.Tensor],
-                                     mean_ray_direction: torch.Tensor) -> Dict[str, torch.Tensor]:
-        """Sort voxels using ray direction-dependent Morton ordering."""
+    def _sort_voxels_by_ray_direction(
+        self,
+        voxels: dict[str, torch.Tensor],
+        mean_ray_direction: torch.Tensor,
+    ) -> dict[str, torch.Tensor]:
+        """Sort voxels based on mean ray direction for better depth ordering."""
+        if not self.config.morton_ordering:
+            return voxels
+        
+        # Project voxel centers onto mean ray direction
         positions = voxels['positions']
-        morton_codes = voxels['morton_codes']
+        proj_dist = torch.sum(positions * mean_ray_direction, dim=-1)
         
-        # Compute dot product with mean ray direction for secondary sorting
-        dots = torch.sum(positions * mean_ray_direction, dim=1)
+        # Sort by projection distance
+        sorted_indices = torch.argsort(proj_dist)
         
-        # Primary sort by Morton code, secondary by ray direction
-        # This ensures correct depth order while maintaining spatial coherence
-        sort_keys = morton_codes.float() + dots * 1e-6
-        sort_indices = torch.argsort(sort_keys)
-        
-        # Apply sorting to all voxel data
+        # Sort all voxel attributes
         sorted_voxels = {}
         for key, value in voxels.items():
-            sorted_voxels[key] = value[sort_indices]
+            sorted_voxels[key] = value[sorted_indices]
         
         return sorted_voxels
     
-    def _ray_voxel_intersections(self,
-                               ray_o: torch.Tensor,
-                               ray_d: torch.Tensor,
-                               voxels: Dict[str, torch.Tensor]) -> List[Tuple[int, float, float]]:
-        """Find ray-voxel intersections and return (voxel_idx, t_near, t_far)."""
+    def _ray_voxel_intersections(
+        self,
+        ray_o: torch.Tensor,
+        ray_d: torch.Tensor,
+        voxels: dict[str, torch.Tensor],
+    ) -> list[tuple[int, float, float]]:
+        """Find intersections between ray and voxels."""
         positions = voxels['positions']
         sizes = voxels['sizes']
         
-        # Compute ray-box intersections for all voxels
-        half_sizes = sizes.unsqueeze(1) * 0.5  # [N, 1]
-        box_min = positions - half_sizes
-        box_max = positions + half_sizes
-        
-        # Ray-box intersection
-        inv_dir = 1.0 / (ray_d + 1e-8)
-        t1 = (box_min - ray_o) * inv_dir
-        t2 = (box_max - ray_o) * inv_dir
-        
-        t_near = torch.max(torch.min(t1, t2), dim=1)[0]
-        t_far = torch.min(torch.max(t1, t2), dim=1)[0]
-        
-        # Valid intersections
-        valid_mask = (t_near <= t_far) & (t_far > 0)
-        
         intersections = []
-        valid_indices = torch.where(valid_mask)[0]
+        for i in range(positions.shape[0]):
+            pos = positions[i]
+            size = sizes[i]
+            
+            # Ray-AABB intersection
+            half_size = size / 2
+            box_min = pos - half_size
+            box_max = pos + half_size
+            
+            t_min = (box_min - ray_o) / ray_d
+            t_max = (box_max - ray_o) / ray_d
+            
+            t1 = torch.min(t_min, t_max)
+            t2 = torch.max(t_min, t_max)
+            
+            t_near = torch.max(t1)
+            t_far = torch.min(t2)
+            
+            if t_far > t_near and t_far > 0:
+                intersections.append((i, t_near.item(), t_far.item()))
         
-        for idx in valid_indices:
-            intersections.append((
-                idx.item(),
-                max(t_near[idx].item(), 0.0),
-                t_far[idx].item()
-            ))
-        
-        # Sort by t_near for front-to-back rendering
+        # Sort by t_near
         intersections.sort(key=lambda x: x[1])
-        
         return intersections
     
-    def _render_ray(self,
-                   ray_o: torch.Tensor,
-                   ray_d: torch.Tensor,
-                   intersections: List[Tuple[int, float, float]],
-                   voxels: Dict[str, torch.Tensor]) -> Tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
-        """Render a single ray through intersecting voxels."""
-        device = ray_o.device
-        rgb = torch.zeros(3, device=device)
-        depth = torch.tensor(0.0, device=device)
-        transmittance = torch.tensor(1.0, device=device)
+    def _render_ray(
+        self,
+        ray_o: torch.Tensor,
+        ray_d: torch.Tensor,
+        intersections: list[tuple[int, float, float]],
+        voxels: dict[str, torch.Tensor],
+    ) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
+        """Render a single ray through intersected voxels."""
+        if not intersections:
+            return (
+                torch.tensor(self.config.background_color, device=ray_o.device),
+                torch.tensor(self.config.far_plane, device=ray_o.device),
+                torch.zeros(1, device=ray_o.device)
+            )
+        
+        # Sample points along ray within each voxel
+        rgb_acc = torch.zeros(3, device=ray_o.device)
+        depth_acc = torch.zeros(1, device=ray_o.device)
+        weight_acc = torch.zeros(1, device=ray_o.device)
+        transmittance = 1.0
         
         for voxel_idx, t_near, t_far in intersections:
-            if transmittance < 1e-4:  # Early termination
-                break
-            
-            # Sample points along ray within voxel
-            t_samples = torch.linspace(t_near, t_far, self.config.ray_samples_per_voxel, device=device)
-            dt = (t_far - t_near) / self.config.ray_samples_per_voxel
+            # Sample points within voxel
+            t_samples = torch.linspace(
+                t_near,
+                t_far,
+                self.config.ray_samples_per_voxel,
+                device=ray_o.device
+            )
+            sample_points = ray_o + ray_d * t_samples.unsqueeze(-1)
             
             # Get voxel properties
-            voxel_density = voxels['densities'][voxel_idx]
-            voxel_color = voxels['colors'][voxel_idx]
-            
-            # Apply density activation
-            if self.config.density_activation == "exp":
-                density = torch.exp(voxel_density)
-            else:
-                density = torch.relu(voxel_density)
+            density = voxels['densities'][voxel_idx]
+            color = voxels['colors'][voxel_idx]
             
             # Compute opacity
-            opacity = 1.0 - torch.exp(-density * dt)
-            
-            # Extract RGB from SH coefficients (DC component)
-            color_dim = 3 * self.num_sh_coeffs if hasattr(self, 'num_sh_coeffs') else voxel_color.shape[0]
-            dc_coeffs = voxel_color[:3]  # DC component
-            
-            if self.config.color_activation == "sigmoid":
-                color = torch.sigmoid(dc_coeffs)
+            delta_t = (t_far - t_near) / (self.config.ray_samples_per_voxel - 1)
+            if self.config.density_activation == "exp":
+                opacity = 1 - torch.exp(-torch.exp(density) * delta_t)
             else:
-                color = torch.clamp(dc_coeffs, 0, 1)
+                opacity = 1 - torch.exp(-F.relu(density) * delta_t)
             
-            # Volume rendering
-            weight = transmittance * opacity
-            rgb += weight * color
-            depth += weight * t_samples.mean()
-            transmittance *= (1.0 - opacity)
+            # Accumulate color and depth
+            weight = opacity * transmittance
+            rgb_acc += weight * color[:3]  # Use only base color for now
+            depth_acc += weight * t_near
+            weight_acc += weight
+            
+            transmittance *= (1 - opacity)
+            
+            if transmittance < 0.01:
+                break
         
-        alpha = 1.0 - transmittance
+        # Add background contribution
+        if transmittance > 0:
+            bg_color = torch.tensor(self.config.background_color, device=ray_o.device)
+            rgb_acc += transmittance * bg_color
         
-        return rgb, depth, alpha
+        return rgb_acc, depth_acc, weight_acc
 
 
 class SVRasterModel(nn.Module):
@@ -489,52 +483,64 @@ class SVRasterModel(nn.Module):
         # Background color
         self.register_buffer('background_color', torch.tensor(config.background_color))
     
-    def forward(self,
-                ray_origins: torch.Tensor,
-                ray_directions: torch.Tensor,
-                camera_params: Optional[Dict[str, torch.Tensor]] = None) -> Dict[str, torch.Tensor]:
-        """
-        Forward pass of SVRaster model.
-        
-        Args:
-            ray_origins: Ray origin points [N, 3]
-            ray_directions: Ray direction vectors [N, 3]
-            camera_params: Optional camera parameters
-            
-        Returns:
-            Dictionary with rendered outputs
-        """
-        # Get all voxels
+    def forward(
+        self,
+        ray_origins: torch.Tensor,
+        ray_directions: torch.Tensor,
+        camera_params: Optional[dict[str, torch.Tensor]] = None,
+    ) -> dict[str, torch.Tensor]:
+        """Forward pass for SVRaster model."""
+        # Get current voxel representation
         voxels = self.sparse_voxels.get_all_voxels()
         
         # Rasterize voxels
-        outputs = self.rasterizer(voxels, ray_origins, ray_directions, camera_params)
+        render_output = self.rasterizer(
+            voxels,
+            ray_origins,
+            ray_directions,
+            camera_params
+        )
         
-        # Apply background color
-        alpha = outputs['alpha'].unsqueeze(-1)
-        rgb = outputs['rgb'] * alpha + self.background_color * (1 - alpha)
-        
-        outputs['rgb'] = rgb
-        return outputs
+        return render_output
     
-    def adaptive_subdivision(self, subdivision_criteria: torch.Tensor):
-        """Perform adaptive subdivision based on criteria."""
-        # This would be called during training based on gradient information
-        # or other subdivision criteria
-        pass
+    def adaptive_subdivision(self, subdivision_criteria: torch.Tensor) -> None:
+        """Adaptively subdivide voxels based on criteria."""
+        for level_idx in range(len(self.sparse_voxels.voxel_positions)):
+            if level_idx >= self.config.max_octree_levels - 1:
+                break
+            
+            # Apply subdivision
+            self.sparse_voxels.subdivide_voxels(subdivision_criteria[level_idx], level_idx)
     
-    def get_voxel_statistics(self) -> Dict[str, int]:
+    def get_voxel_statistics(self) -> dict[str, int]:
         """Get statistics about voxel distribution."""
-        stats = {}
-        total_voxels = 0
+        stats = {
+            'total_voxels': self.sparse_voxels.get_total_voxel_count(),
+            'num_levels': len(self.sparse_voxels.voxel_positions)
+        }
         
         for level_idx in range(len(self.sparse_voxels.voxel_positions)):
-            count = self.sparse_voxels.voxel_positions[level_idx].shape[0]
-            stats[f'level_{level_idx}'] = count
-            total_voxels += count
+            stats[f'level_{level_idx}_voxels'] = self.sparse_voxels.voxel_positions[level_idx].shape[0]
         
-        stats['total_voxels'] = total_voxels
         return stats
+
+    def visualize_structure(self, output_dir: str) -> None:
+        """Visualize octree structure."""
+        os.makedirs(output_dir, exist_ok=True)
+        
+        # Save voxel positions and sizes for each level
+        for level_idx in range(len(self.sparse_voxels.voxel_positions)):
+            positions = self.sparse_voxels.voxel_positions[level_idx].data.cpu().numpy()
+            sizes = self.sparse_voxels.voxel_sizes[level_idx].data.cpu().numpy()
+            
+            np.save(
+                os.path.join(output_dir, f'level_{level_idx}_positions.npy'),
+                positions
+            )
+            np.save(
+                os.path.join(output_dir, f'level_{level_idx}_sizes.npy'),
+                sizes
+            )
 
 
 class SVRasterLoss(nn.Module):
@@ -544,46 +550,33 @@ class SVRasterLoss(nn.Module):
         super().__init__()
         self.config = config
     
-    def forward(self,
-                outputs: Dict[str, torch.Tensor],
-                targets: Dict[str, torch.Tensor],
-                model: SVRasterModel) -> Dict[str, torch.Tensor]:
-        """
-        Compute SVRaster losses.
-        
-        Args:
-            outputs: Model outputs
-            targets: Ground truth targets
-            model: SVRaster model for regularization
-            
-        Returns:
-            Dictionary of losses
-        """
-        losses = {}
+    def forward(
+        self,
+        outputs: dict[str, torch.Tensor],
+        targets: dict[str, torch.Tensor],
+        model: SVRasterModel,
+    ) -> dict[str, torch.Tensor]:
+        """Forward pass for SVRaster loss."""
+        loss_dict = {}
         
         # RGB reconstruction loss
-        if 'rgb' in outputs and 'colors' in targets:
-            losses['rgb_loss'] = F.mse_loss(outputs['rgb'], targets['colors'])
+        rgb_loss = F.mse_loss(outputs['rgb'], targets['rgb'])
+        loss_dict['rgb_loss'] = rgb_loss
         
-        # Depth loss (if available)
-        if 'depth' in outputs and 'depth' in targets:
-            losses['depth_loss'] = F.l1_loss(outputs['depth'], targets['depth'])
-        
-        # Opacity regularization
+        # Optional opacity regularization
         if self.config.use_opacity_regularization:
-            voxels = model.sparse_voxels.get_all_voxels()
-            if voxels['densities'].numel() > 0:
+            opacity_reg = 0
+            for level_idx in range(len(model.sparse_voxels.voxel_densities)):
+                densities = model.sparse_voxels.voxel_densities[level_idx]
                 if self.config.density_activation == "exp":
-                    densities = torch.exp(voxels['densities'])
+                    opacity = torch.exp(densities)
                 else:
-                    densities = torch.relu(voxels['densities'])
-                
-                # Encourage sparsity
-                opacity_reg = torch.mean(densities)
-                losses['opacity_reg'] = self.config.opacity_reg_weight * opacity_reg
+                    opacity = F.relu(densities)
+                opacity_reg += torch.mean(opacity)
+            
+            loss_dict['opacity_reg'] = opacity_reg * self.config.opacity_reg_weight
+            loss_dict['total_loss'] = rgb_loss + loss_dict['opacity_reg']
+        else:
+            loss_dict['total_loss'] = rgb_loss
         
-        # Total loss
-        total_loss = sum(losses.values())
-        losses['total_loss'] = total_loss
-        
-        return losses 
+        return loss_dict 

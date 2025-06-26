@@ -38,11 +38,9 @@ class MockPyramidNeRF(torch.nn.Module):
         self.networks = torch.nn.ModuleDict()
         for level in range(config.num_levels):
             network = torch.nn.Sequential(
-                torch.nn.Linear(63, config.hidden_dim),  # 位置编码后
-                torch.nn.ReLU(),
-                torch.nn.Linear(config.hidden_dim, config.hidden_dim),
-                torch.nn.ReLU(),
-                torch.nn.Linear(config.hidden_dim, 4)  # density + color
+                torch.nn.Linear(63, config.hidden_dim), # 位置编码后
+                torch.nn.ReLU(
+                )
             )
             self.networks[f'level_{level}'] = network
     
@@ -54,7 +52,11 @@ class MockPyramidNeRF(torch.nn.Module):
                 encoded.append(fn(2.**i * x))
         return torch.cat(encoded, dim=-1)
     
-    def forward(self, positions: torch.Tensor, max_level: Optional[int] = None) -> Dict[str, torch.Tensor]:
+    def forward(
+        self,
+        positions: torch.Tensor,
+        max_level: Optional[int] = None,
+    )
         """前向传播"""
         if max_level is None:
             max_level = self.config.num_levels - 1
@@ -79,9 +81,7 @@ class MockPyramidNeRF(torch.nn.Module):
             total_color += weight * color
         
         return {
-            'density': total_density,
-            'color': total_color,
-            'max_level': max_level
+            'density': total_density, 'color': total_color, 'max_level': max_level
         }
 
 def demonstrate_pyramid_nerf():
@@ -100,7 +100,7 @@ def demonstrate_pyramid_nerf():
     print(f"   - 级联系数: {config.cascade_alpha}")
     
     total_params = sum(p.numel() for p in model.parameters())
-    print(f"🧠 模型参数数量: {total_params:,}")
+    print(f"🧠 模型参数数量: {total_params:, }")
     
     print("\n🎉 Pyramid NeRF演示完成!")
     print("\n📋 Pyramid NeRF特点:")

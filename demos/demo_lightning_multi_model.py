@@ -1,8 +1,7 @@
 """
 Comprehensive example demonstrating PyTorch Lightning usage with multiple NeRF models.
 
-This script shows how to train different NeRF variants using PyTorch Lightning,
-including SVRaster, Grid-NeRF, Instant-NGP, and MIP-NeRF.
+This script shows how to train different NeRF variants using PyTorch Lightning, including SVRaster, Grid-NeRF, Instant-NGP, and MIP-NeRF.
 """
 
 import sys
@@ -18,39 +17,31 @@ from pytorch_lightning.loggers import TensorBoardLogger, WandbLogger
 from pathlib import Path
 import argparse
 import yaml
-from typing import Dict, Any, Optional
+from typing import Dict, Optional, Any
 
 # Import different NeRF models and their Lightning trainers
 from src.nerfs.svraster.core import SVRasterConfig
 from src.nerfs.svraster.lightning_trainer import (
-    SVRasterLightningConfig, 
-    SVRasterLightningModule,
-    train_svraster_lightning
+    SVRasterLightningConfig, SVRasterLightningModule, train_svraster_lightning
 )
 
 from src.nerfs.grid_nerf.core import GridNeRFConfig
 from src.nerfs.grid_nerf.lightning_trainer import (
-    GridNeRFLightningConfig,
-    GridNeRFLightningModule,
-    train_grid_nerf_lightning
+    GridNeRFLightningConfig, GridNeRFLightningModule, train_grid_nerf_lightning
 )
 
 from src.nerfs.instant_ngp.core import InstantNGPConfig
 from src.nerfs.instant_ngp.lightning_trainer import (
-    InstantNGPLightningConfig,
-    InstantNGPLightningModule,
-    train_instant_ngp_lightning
+    InstantNGPLightningConfig, InstantNGPLightningModule, train_instant_ngp_lightning
 )
 
 from src.nerfs.mip_nerf.core import MipNeRFConfig
 from src.nerfs.mip_nerf.lightning_trainer import (
-    MipNeRFLightningConfig,
-    MipNeRFLightningModule,
-    train_mip_nerf_lightning
+    MipNeRFLightningConfig, MipNeRFLightningModule, train_mip_nerf_lightning
 )
 
 
-def create_mock_dataset(model_type: str, size: int = 1000):
+def create_mock_dataset(model_type: str, size: int = 1000) -> torch.utils.data.Dataset:
     """Create a mock dataset for testing different models."""
     class MockDataset(torch.utils.data.Dataset):
         def __init__(self, size: int):
@@ -67,12 +58,7 @@ def create_mock_dataset(model_type: str, size: int = 1000):
             colors = torch.rand(3)
             
             data = {
-                'rays_o': rays_o,
-                'rays_d': rays_d,
-                'colors': colors,
-                'near': 0.1,
-                'far': 100.0,
-            }
+                'rays_o': rays_o, 'rays_d': rays_d, 'colors': colors, 'near': 0.1, 'far': 100.0, }
             
             # Add model-specific data
             if model_type == "grid_nerf":
@@ -94,18 +80,11 @@ def train_svraster_example():
     
     # Create configurations
     model_config = SVRasterConfig(
-        max_octree_levels=12,
-        base_resolution=32,
-        ray_samples_per_voxel=4
+        max_octree_levels=12, base_resolution=32, ray_samples_per_voxel=4
     )
     
     lightning_config = SVRasterLightningConfig(
-        model_config=model_config,
-        learning_rate=5e-4,
-        ray_batch_size=2048,
-        use_ema=True,
-        enable_subdivision=True,
-        enable_pruning=True
+        model_config=model_config, learning_rate=5e-4, ray_batch_size=2048, use_ema=True, enable_subdivision=True, enable_pruning=True
     )
     
     # Create datasets
@@ -114,17 +93,12 @@ def train_svraster_example():
     
     # Train model
     trained_model = train_svraster_lightning(
-        model_config=model_config,
-        lightning_config=lightning_config,
-        train_dataset=train_dataset,
-        val_dataset=val_dataset,
-        max_epochs=10,
-        gpus=1,
-        logger_type="tensorboard",
-        experiment_name="svraster_example"
+        model_config=model_config, lightning_config=lightning_config, train_dataset=train_dataset, val_dataset=val_dataset, max_epochs=10, gpus=1, logger_type="tensorboard", experiment_name="svraster_example"
     )
     
-    print(f"✅ SVRaster training completed. Final validation PSNR: {trained_model.val_psnr.compute():.2f}")
+    print(f"✅ SVRaster training completed. Final validation PSNR: {
+        trained_model.val_psnr.compute():.2f,
+    }
     return trained_model
 
 
@@ -134,18 +108,11 @@ def train_grid_nerf_example():
     
     # Create configurations
     model_config = GridNeRFConfig(
-        base_grid_resolution=32,
-        max_grid_resolution=256,
-        num_grid_levels=3,
-        grid_feature_dim=16
+        base_grid_resolution=32, max_grid_resolution=256, num_grid_levels=3, grid_feature_dim=16
     )
     
     lightning_config = GridNeRFLightningConfig(
-        model_config=model_config,
-        learning_rate=5e-4,
-        grid_lr=1e-3,
-        ray_batch_size=2048,
-        enable_grid_pruning=True
+        model_config=model_config, learning_rate=5e-4, grid_lr=1e-3, ray_batch_size=2048, enable_grid_pruning=True
     )
     
     # Create datasets
@@ -154,17 +121,12 @@ def train_grid_nerf_example():
     
     # Train model
     trained_model = train_grid_nerf_lightning(
-        model_config=model_config,
-        lightning_config=lightning_config,
-        train_dataset=train_dataset,
-        val_dataset=val_dataset,
-        max_epochs=10,
-        gpus=1,
-        logger_type="tensorboard",
-        experiment_name="grid_nerf_example"
+        model_config=model_config, lightning_config=lightning_config, train_dataset=train_dataset, val_dataset=val_dataset, max_epochs=10, gpus=1, logger_type="tensorboard", experiment_name="grid_nerf_example"
     )
     
-    print(f"✅ Grid-NeRF training completed. Final validation PSNR: {trained_model.val_psnr.compute():.2f}")
+    print(f"✅ Grid-NeRF training completed. Final validation PSNR: {
+        trained_model.val_psnr.compute():.2f,
+    }
     return trained_model
 
 
@@ -174,20 +136,11 @@ def train_instant_ngp_example():
     
     # Create configurations
     model_config = InstantNGPConfig(
-        num_levels=12,
-        level_dim=2,
-        base_resolution=16,
-        log2_hashmap_size=18,
-        hidden_dim=64
+        num_levels=12, level_dim=2, base_resolution=16, log2_hashmap_size=18, hidden_dim=64
     )
     
     lightning_config = InstantNGPLightningConfig(
-        model_config=model_config,
-        learning_rate=1e-2,
-        hash_lr_factor=1.0,
-        network_lr_factor=0.1,
-        ray_batch_size=2048,
-        use_mixed_precision=True
+        model_config=model_config, learning_rate=1e-2, hash_lr_factor=1.0, network_lr_factor=0.1, ray_batch_size=2048, use_mixed_precision=True
     )
     
     # Create datasets
@@ -196,17 +149,12 @@ def train_instant_ngp_example():
     
     # Train model
     trained_model = train_instant_ngp_lightning(
-        model_config=model_config,
-        lightning_config=lightning_config,
-        train_dataset=train_dataset,
-        val_dataset=val_dataset,
-        max_epochs=10,
-        gpus=1,
-        logger_type="tensorboard",
-        experiment_name="instant_ngp_example"
+        model_config=model_config, lightning_config=lightning_config, train_dataset=train_dataset, val_dataset=val_dataset, max_epochs=10, gpus=1, logger_type="tensorboard", experiment_name="instant_ngp_example"
     )
     
-    print(f"✅ Instant-NGP training completed. Final validation PSNR: {trained_model.val_psnr.compute():.2f}")
+    print(f"✅ Instant-NGP training completed. Final validation PSNR: {
+        trained_model.val_psnr.compute():.2f,
+    }
     return trained_model
 
 
@@ -216,21 +164,11 @@ def train_mip_nerf_example():
     
     # Create configurations
     model_config = MipNeRFConfig(
-        netdepth=6,
-        netwidth=128,
-        num_samples=32,
-        num_importance=64,
-        multires=8,
-        use_viewdirs=True
+        netdepth=6, netwidth=128, num_samples=32, num_importance=64, multires=8, use_viewdirs=True
     )
     
     lightning_config = MipNeRFLightningConfig(
-        model_config=model_config,
-        learning_rate=5e-4,
-        final_learning_rate=5e-6,
-        ray_batch_size=1024,
-        use_hierarchical_sampling=True,
-        pixel_radius=1.0
+        model_config=model_config, learning_rate=5e-4, final_learning_rate=5e-6, ray_batch_size=1024, use_hierarchical_sampling=True, pixel_radius=1.0
     )
     
     # Create datasets
@@ -239,17 +177,12 @@ def train_mip_nerf_example():
     
     # Train model
     trained_model = train_mip_nerf_lightning(
-        model_config=model_config,
-        lightning_config=lightning_config,
-        train_dataset=train_dataset,
-        val_dataset=val_dataset,
-        max_epochs=10,
-        gpus=1,
-        logger_type="tensorboard",
-        experiment_name="mip_nerf_example"
+        model_config=model_config, lightning_config=lightning_config, train_dataset=train_dataset, val_dataset=val_dataset, max_epochs=10, gpus=1, logger_type="tensorboard", experiment_name="mip_nerf_example"
     )
     
-    print(f"✅ MIP-NeRF training completed. Final validation PSNR: {trained_model.val_psnr.compute():.2f}")
+    print(f"✅ MIP-NeRF training completed. Final validation PSNR: {
+        trained_model.val_psnr.compute():.2f,
+    }
     return trained_model
 
 
@@ -261,10 +194,7 @@ def compare_models():
     
     # Train all models
     models = {
-        'SVRaster': train_svraster_example,
-        'Grid-NeRF': train_grid_nerf_example,
-        'Instant-NGP': train_instant_ngp_example,
-        'MIP-NeRF': train_mip_nerf_example
+        'SVRaster': train_svraster_example, 'Grid-NeRF': train_grid_nerf_example, 'Instant-NGP': train_instant_ngp_example, 'MIP-NeRF': train_mip_nerf_example
     }
     
     for model_name, train_func in models.items():
@@ -275,8 +205,7 @@ def compare_models():
             
             trained_model = train_func()
             results[model_name] = {
-                'model': trained_model,
-                'final_psnr': trained_model.val_psnr.compute().item()
+                'model': trained_model, 'final_psnr': trained_model.val_psnr.compute().item()
             }
             
         except Exception as e:
@@ -304,10 +233,7 @@ def advanced_lightning_features_demo():
     # Create a more advanced trainer configuration
     model_config = SVRasterConfig()
     lightning_config = SVRasterLightningConfig(
-        model_config=model_config,
-        learning_rate=5e-4,
-        use_ema=True,
-        enable_subdivision=True
+        model_config=model_config, learning_rate=5e-4, use_ema=True, enable_subdivision=True
     )
     
     # Create Lightning module
@@ -316,48 +242,24 @@ def advanced_lightning_features_demo():
     # Advanced logger with multiple backends
     loggers = [
         TensorBoardLogger(
-            save_dir="logs",
-            name="advanced_demo",
-            version="tensorboard"
+            save_dir="logs", name="advanced_demo", version="tensorboard"
         )
     ]
     
     # Advanced callbacks
     callbacks = [
         ModelCheckpoint(
-            dirpath="checkpoints/advanced_demo",
-            filename="best-{epoch:02d}-{val/psnr:.2f}",
-            monitor="val/psnr",
-            mode="max",
-            save_top_k=3,
-            save_last=True
-        ),
-        EarlyStopping(
-            monitor="val/psnr",
-            mode="max",
-            patience=20,
-            verbose=True
-        ),
-        LearningRateMonitor(logging_interval="step"),
-    ]
+            dirpath="checkpoints/advanced_demo", filename="best-{
+                epoch:02d,
+            }
+        ), EarlyStopping(
+            monitor="val/psnr", mode="max", patience=20, verbose=True
+        ), LearningRateMonitor(logging_interval="step"), ]
     
     # Advanced trainer with multiple features
     trainer = pl.Trainer(
-        max_epochs=20,
-        devices=1,
-        accelerator="auto",
-        logger=loggers,
-        callbacks=callbacks,
-        precision="16-mixed",
-        gradient_clip_val=1.0,
-        gradient_clip_algorithm="norm",
-        log_every_n_steps=10,
-        val_check_interval=0.5,
-        enable_checkpointing=True,
-        enable_progress_bar=True,
-        enable_model_summary=True,
-        detect_anomaly=False,  # Set to True for debugging
-        profiler="simple",  # Can use "advanced" or "pytorch" for detailed profiling
+        max_epochs=20, devices=1, accelerator="auto", logger=loggers, callbacks=callbacks, precision="16-mixed", gradient_clip_val=1.0, gradient_clip_algorithm="norm", log_every_n_steps=10, val_check_interval=0.5, enable_checkpointing=True, enable_progress_bar=True, enable_model_summary=True, detect_anomaly=False, # Set to True for debugging
+        profiler="simple", # Can use "advanced" or "pytorch" for detailed profiling
     )
     
     # Create datasets
@@ -393,10 +295,18 @@ def advanced_lightning_features_demo():
 def main():
     """Main function to run different examples."""
     parser = argparse.ArgumentParser(description="PyTorch Lightning NeRF Examples")
-    parser.add_argument("--mode", type=str, default="compare",
-                       choices=["svraster", "grid_nerf", "instant_ngp", "mip_nerf", 
-                               "compare", "advanced"],
-                       help="Training mode")
+    parser.add_argument(
+        "--mode",
+        type=str,
+        default="compare",
+        choices=["svraster",
+        "grid_nerf",
+        "instant_ngp",
+        "mip_nerf",
+        "compare",
+        "advanced"],
+        help="Training mode",
+    )
     parser.add_argument("--gpus", type=int, default=1, help="Number of GPUs to use")
     parser.add_argument("--epochs", type=int, default=10, help="Number of training epochs")
     

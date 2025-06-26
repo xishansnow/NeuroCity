@@ -8,7 +8,7 @@ import torch.nn as nn
 import torch.optim as optim
 from torch.utils.data import DataLoader
 from torch.utils.tensorboard import SummaryWriter
-from typing import Dict, List, Optional, Tuple, Union
+from typing import Dict, List, Optional, Tuple, Any, Union 
 import numpy as np
 import os
 import time
@@ -18,13 +18,7 @@ from tqdm import tqdm
 from .core import BungeeNeRF, BungeeNeRFConfig, BungeeNeRFLoss
 from .dataset import BungeeNeRFDataset, MultiScaleDataset
 from .utils import (
-    compute_multiscale_loss,
-    compute_psnr,
-    compute_ssim,
-    save_bungee_model,
-    load_bungee_model,
-    create_progressive_schedule,
-    apply_progressive_schedule
+    compute_multiscale_loss, compute_psnr, compute_ssim, save_bungee_model, load_bungee_model, create_progressive_schedule, apply_progressive_schedule
 )
 
 logger = logging.getLogger(__name__)
@@ -36,12 +30,7 @@ class BungeeNeRFTrainer:
     """
     
     def __init__(
-        self,
-        model: BungeeNeRF,
-        config: BungeeNeRFConfig,
-        train_dataset: BungeeNeRFDataset,
-        val_dataset: Optional[BungeeNeRFDataset] = None,
-        device: str = "cuda"
+        self, model: BungeeNeRF, config: BungeeNeRFConfig, train_dataset: BungeeNeRFDataset, val_dataset: Optional[BungeeNeRFDataset] = None, device: str = "cuda"
     ):
         self.model = model.to(device)
         self.config = config
@@ -54,16 +43,12 @@ class BungeeNeRFTrainer:
         
         # Optimizer
         self.optimizer = optim.Adam(
-            self.model.parameters(),
-            lr=config.learning_rate,
-            betas=(0.9, 0.999),
-            eps=1e-8
+            self.model.parameters(), lr=config.learning_rate, betas=(0.9, 0.999), eps=1e-8
         )
         
         # Learning rate scheduler
         self.scheduler = optim.lr_scheduler.ExponentialLR(
-            self.optimizer,
-            gamma=0.1 ** (1.0 / config.max_steps)
+            self.optimizer, gamma=0.1 ** (1.0 / config.max_steps)
         )
         
         # Training state
@@ -86,7 +71,7 @@ class BungeeNeRFTrainer:
         self.writer = SummaryWriter(log_dir)
         logger.info(f"Logging setup at {log_dir}")
     
-    def train_step(self, batch: Dict[str, torch.Tensor]) -> Dict[str, float]:
+    def train_step(self, batch: dict[str, torch.Tensor]) -> dict[str, float]:
         """
         Single training step
         
@@ -136,7 +121,7 @@ class BungeeNeRFTrainer:
         
         return loss_dict
     
-    def validate(self) -> Dict[str, float]:
+    def validate(self) -> dict[str, float]:
         """
         Validation step
         
@@ -188,21 +173,15 @@ class BungeeNeRFTrainer:
                 val_ssims.append(ssim)
         
         metrics = {
-            "val_loss": np.mean(val_losses),
-            "val_psnr": np.mean(val_psnrs),
-            "val_ssim": np.mean(val_ssims)
+            "val_loss": np.mean(
+                val_losses,
+            )
         }
         
         return metrics
     
     def train(
-        self,
-        num_epochs: int,
-        batch_size: int = 1,
-        log_interval: int = 100,
-        val_interval: int = 1000,
-        save_interval: int = 5000,
-        save_dir: str = "./checkpoints"
+        self, num_epochs: int, batch_size: int = 1, log_interval: int = 100, val_interval: int = 1000, save_interval: int = 5000, save_dir: str = "./checkpoints"
     ):
         """
         Train the model
@@ -219,11 +198,7 @@ class BungeeNeRFTrainer:
         
         # Create data loader
         train_loader = DataLoader(
-            self.train_dataset,
-            batch_size=batch_size,
-            shuffle=True,
-            num_workers=4,
-            pin_memory=True
+            self.train_dataset, batch_size=batch_size, shuffle=True, num_workers=4, pin_memory=True
         )
         
         logger.info(f"Starting training for {num_epochs} epochs")
@@ -245,9 +220,7 @@ class BungeeNeRFTrainer:
                 
                 # Update progress bar
                 pbar.set_postfix({
-                    "loss": f"{loss_dict['total_loss']:.4f}",
-                    "stage": self.current_stage,
-                    "lr": f"{self.optimizer.param_groups[0]['lr']:.2e}"
+                    "loss": f"{loss_dict['total_loss']:.4f}"
                 })
                 
                 # Logging
@@ -278,19 +251,21 @@ class BungeeNeRFTrainer:
         
         logger.info("Training completed")
     
-    def _log_training(self, loss_dict: Dict[str, float]):
+    def _log_training(self, loss_dict: dict[str, float]):
         """Log training metrics"""
         if self.writer is not None:
             for key, value in loss_dict.items():
                 self.writer.add_scalar(f"train/{key}", value, self.current_step)
             
-            self.writer.add_scalar("train/learning_rate", 
-                                 self.optimizer.param_groups[0]['lr'], 
-                                 self.current_step)
+            self.writer.add_scalar(
+                "train/learning_rate",
+                self.optimizer.param_groups[0]['lr'],
+                self.current_step,
+            )
             
             self.writer.add_scalar("train/stage", self.current_stage, self.current_step)
     
-    def _log_validation(self, val_metrics: Dict[str, float]):
+    def _log_validation(self, val_metrics: dict[str, float]):
         """Log validation metrics"""
         if self.writer is not None and val_metrics:
             for key, value in val_metrics.items():
@@ -304,12 +279,8 @@ class BungeeNeRFTrainer:
         save_path = os.path.join(save_dir, f"{name}.pth")
         
         save_bungee_model(
-            self.model,
-            self.config.__dict__,
-            save_path,
-            stage=self.current_stage,
-            epoch=self.current_epoch,
-            optimizer_state=self.optimizer.state_dict()
+            self.model, self.config.__dict__, save_path, stage=self.current_stage, epoch=self.current_epoch, optimizer_state=self.optimizer.state_dict(
+            )
         )
     
     def load_checkpoint(self, checkpoint_path: str):
@@ -337,21 +308,14 @@ class ProgressiveTrainer(BungeeNeRFTrainer):
     """
     
     def __init__(
-        self,
-        model: BungeeNeRF,
-        config: BungeeNeRFConfig,
-        train_dataset: MultiScaleDataset,
-        val_dataset: Optional[BungeeNeRFDataset] = None,
-        device: str = "cuda",
-        progressive_schedule: Optional[Dict] = None
+        self, model: BungeeNeRF, config: BungeeNeRFConfig, train_dataset: MultiScaleDataset, val_dataset: Optional[BungeeNeRFDataset] = None, device: str = "cuda", progressive_schedule: Optional[Dict] = None
     ):
         super().__init__(model, config, train_dataset, val_dataset, device)
         
         # Progressive training schedule
         if progressive_schedule is None:
             progressive_schedule = create_progressive_schedule(
-                num_stages=config.num_stages,
-                steps_per_stage=config.max_steps // config.num_stages
+                num_stages=config.num_stages, steps_per_stage=config.max_steps // config.num_stages
             )
         
         self.progressive_schedule = progressive_schedule
@@ -371,14 +335,14 @@ class ProgressiveTrainer(BungeeNeRFTrainer):
             for param_group in self.optimizer.param_groups:
                 param_group['lr'] *= 0.8  # Reduce learning rate for new stage
     
-    def get_stage_data(self) -> List[int]:
+    def get_stage_data(self) -> list[int]:
         """Get training data indices for current stage"""
         if hasattr(self.train_dataset, 'get_progressive_data'):
             return self.train_dataset.get_progressive_data(self.current_stage)
         else:
             return list(range(len(self.train_dataset)))
     
-    def train_step(self, batch: Dict[str, torch.Tensor]) -> Dict[str, float]:
+    def train_step(self, batch: dict[str, torch.Tensor]) -> dict[str, float]:
         """
         Progressive training step
         
@@ -395,13 +359,7 @@ class ProgressiveTrainer(BungeeNeRFTrainer):
         return super().train_step(batch)
     
     def train(
-        self,
-        num_epochs: int,
-        batch_size: int = 1,
-        log_interval: int = 100,
-        val_interval: int = 1000,
-        save_interval: int = 5000,
-        save_dir: str = "./checkpoints"
+        self, num_epochs: int, batch_size: int = 1, log_interval: int = 100, val_interval: int = 1000, save_interval: int = 5000, save_dir: str = "./checkpoints"
     ):
         """
         Progressive training with stage-based data selection
@@ -422,17 +380,16 @@ class ProgressiveTrainer(BungeeNeRFTrainer):
             
             # Create data loader
             train_loader = DataLoader(
-                stage_dataset,
-                batch_size=batch_size,
-                shuffle=True,
-                num_workers=4,
-                pin_memory=True
+                stage_dataset, batch_size=batch_size, shuffle=True, num_workers=4, pin_memory=True
             )
             
             # Training loop
             epoch_losses = []
             
-            pbar = tqdm(train_loader, desc=f"Epoch {epoch+1}/{num_epochs} (Stage {self.current_stage})")
+            pbar = tqdm(
+                train_loader,
+                desc=f"Epoch {epoch+1}/{num_epochs}"
+            )
             
             for batch_idx, batch in enumerate(pbar):
                 # Training step
@@ -443,10 +400,7 @@ class ProgressiveTrainer(BungeeNeRFTrainer):
                 
                 # Update progress bar
                 pbar.set_postfix({
-                    "loss": f"{loss_dict['total_loss']:.4f}",
-                    "stage": self.current_stage,
-                    "lr": f"{self.optimizer.param_groups[0]['lr']:.2e}",
-                    "stage_data": len(stage_indices)
+                    "loss": f"{loss_dict['total_loss']:.4f}"
                 })
                 
                 # Logging
@@ -470,7 +424,7 @@ class ProgressiveTrainer(BungeeNeRFTrainer):
             
             # End of epoch logging
             avg_loss = np.mean(epoch_losses)
-            logger.info(f"Epoch {epoch+1} completed. Average loss: {avg_loss:.4f}, Stage: {self.current_stage}")
+            logger.info(f"Epoch {epoch+1}")
             
             # Save epoch checkpoint
             self._save_checkpoint(save_dir, f"epoch_{epoch+1}")
@@ -484,13 +438,7 @@ class MultiScaleTrainer(ProgressiveTrainer):
     """
     
     def __init__(
-        self,
-        model: BungeeNeRF,
-        config: BungeeNeRFConfig,
-        train_dataset: MultiScaleDataset,
-        val_dataset: Optional[BungeeNeRFDataset] = None,
-        device: str = "cuda",
-        scale_weights: Optional[List[float]] = None
+        self, model: BungeeNeRF, config: BungeeNeRFConfig, train_dataset: MultiScaleDataset, val_dataset: Optional[BungeeNeRFDataset] = None, device: str = "cuda", scale_weights: Optional[list[float]] = None
     ):
         super().__init__(model, config, train_dataset, val_dataset, device)
         
@@ -503,11 +451,8 @@ class MultiScaleTrainer(ProgressiveTrainer):
         logger.info("Multi-scale trainer initialized")
     
     def compute_scale_weighted_loss(
-        self,
-        outputs: Dict[str, torch.Tensor],
-        targets: Dict[str, torch.Tensor],
-        distances: torch.Tensor
-    ) -> Dict[str, torch.Tensor]:
+        self, outputs: dict[str, torch.Tensor], targets: dict[str, torch.Tensor], distances: torch.Tensor
+    ) -> dict[str, torch.Tensor]:
         """
         Compute scale-weighted loss
         
@@ -524,7 +469,7 @@ class MultiScaleTrainer(ProgressiveTrainer):
             outputs, targets, distances, self.current_stage, self.config
         )
     
-    def train_step(self, batch: Dict[str, torch.Tensor]) -> Dict[str, float]:
+    def train_step(self, batch: dict[str, torch.Tensor]) -> dict[str, float]:
         """
         Multi-scale training step
         

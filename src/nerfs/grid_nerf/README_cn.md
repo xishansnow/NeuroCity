@@ -4,7 +4,7 @@
 
 ## 概述
 
-Grid-NeRF通过以下方式解决大规模城市场景渲染的挑战：
+Grid-NeRF 通过以下方式解决大规模城市场景渲染的挑战：
 - 使用分层体素网格组织场景几何
 - 采用多分辨率网格结构进行高效采样
 - 使用网格引导特征优化神经网络
@@ -13,11 +13,11 @@ Grid-NeRF通过以下方式解决大规模城市场景渲染的挑战：
 ## 关键特性
 
 - **分层网格结构**：具有递增分辨率的多级体素网格
-- **网格引导神经网络**：利用网格特征进行高效渲染的MLP
+- **网格引导神经网络**：利用网格特征进行高效渲染的 MLP
 - **可扩展训练**：支持分布式训练的大规模城市数据集
 - **快速渲染**：基于网格采样的高效体积渲染
-- **多数据集支持**：内置支持KITTI-360和自定义数据集
-- **综合评估**：包括PSNR、SSIM和LPIPS等指标
+- **多数据集支持**：内置支持 KITTI-360 和自定义数据集
+- **综合评估**：包括 PSNR、SSIM 和 LPIPS 等指标
 
 ## 安装
 
@@ -25,7 +25,7 @@ Grid-NeRF通过以下方式解决大规模城市场景渲染的挑战：
 
 - Python 3.8+
 - PyTorch 1.12+
-- CUDA 11.0+（用于GPU加速）
+- CUDA 11.0+（用于 GPU 加速）
 
 ### 安装依赖
 
@@ -33,7 +33,7 @@ Grid-NeRF通过以下方式解决大规模城市场景渲染的挑战：
 pip install torch torchvision torchaudio
 pip install opencv-python matplotlib numpy
 pip install pyyaml tqdm tensorboard
-pip install lpips  # 可选，用于LPIPS指标
+pip install lpips  # 可选，用于 LPIPS 指标
 ```
 
 ### 包安装
@@ -111,11 +111,11 @@ model = GridNeRF(config)
 
 每个级别存储特征向量，这些向量被结合起来引导神经网络。
 
-### 网格引导MLP
+### 网格引导 MLP
 
 神经网络包含：
 - **密度网络**：从网格特征和位置预测体积密度
-- **颜色网络**：从网格特征、位置和视角方向预测RGB颜色
+- **颜色网络**：从网格特征、位置和视角方向预测 RGB 颜色
 - **位置编码**：空间坐标的正弦编码
 - **方向编码**：视角方向的编码
 
@@ -125,11 +125,11 @@ model = GridNeRF(config)
 1. **光线采样**：沿相机光线采样点
 2. **网格采样**：从分层网格提取特征
 3. **网络评估**：在采样点预测密度和颜色
-4. **体积积分**：使用alpha混合合成最终像素颜色
+4. **体积积分**：使用 alpha 混合合成最终像素颜色
 
 ## 训练
 
-### 单GPU训练
+### 单 GPU 训练
 
 ```python
 from src.grid_nerf import GridNeRFTrainer, GridNeRFConfig
@@ -161,14 +161,14 @@ train_dataset = create_dataset(
 trainer.train(train_dataset=train_dataset)
 ```
 
-### 多GPU训练
+### 多 GPU 训练
 
 ```python
 import torch.multiprocessing as mp
 from src.grid_nerf.trainer import main_worker
 
 # 配置
-config = GridNeRFConfig(batch_size=2048)  # 为多GPU扩展
+config = GridNeRFConfig(batch_size=2048)  # 为多 GPU 扩展
 data_config = {
     'train_data_path': 'path/to/data',
     'train_kwargs': {}
@@ -202,7 +202,7 @@ data/
 └── scene_bounds.npy  # 场景边界[x_min, y_min, z_min, x_max, y_max, z_max]
 ```
 
-### KITTI-360数据集
+### KITTI-360 数据集
 
 ```python
 from src.grid_nerf.dataset import KITTI360GridDataset
@@ -264,11 +264,11 @@ config = GridNeRFConfig(
     num_epochs=300,              # 训练轮数
     src/nerfs/dnmp_nerf
     grid_lr=5e-3,                # 网格特征学习率
-    mlp_lr=1e-3,                 # MLP网络学习率
+    mlp_lr=1e-3,                 # MLP 网络学习率
     
     # 采样
     num_samples=64,              # 每光线采样数
-    num_importance=0,            # 重要性采样数（0表示不使用）
+    num_importance=0,            # 重要性采样数（0 表示不使用）
     
     # 正则化
     sparsity_loss_weight=1e-4,   # 稀疏性损失权重
@@ -460,7 +460,7 @@ def parallel_grid_query(positions, grid_features, num_workers=4):
 ### 城市场景基准
 
 ```python
-# KITTI-360基准测试
+# KITTI-360 基准测试
 def run_kitti360_benchmark():
     config = GridNeRFConfig(
         scene_bounds=(-100, -100, -5, 100, 100, 15),
@@ -508,7 +508,7 @@ def profile_training_performance():
     start_time = time.time()
     start_memory = psutil.virtual_memory().used
     
-    # 训练一个epoch
+    # 训练一个 epoch
     trainer.train_epoch(train_dataset)
     
     end_time = time.time()
@@ -600,7 +600,7 @@ simulation_data = generate_simulation_views(driving_model)
 
 ## 许可证
 
-MIT许可证
+MIT 许可证
 
 ## 引用
 
@@ -617,15 +617,15 @@ MIT许可证
 
 欢迎贡献！请遵循以下步骤：
 
-1. Fork项目
+1. Fork 项目
 2. 创建功能分支 (`git checkout -b feature/AmazingFeature`)
 3. 提交更改 (`git commit -m 'Add some AmazingFeature'`)
 4. 推送到分支 (`git push origin feature/AmazingFeature`)
-5. 打开Pull Request
+5. 打开 Pull Request
 
 ## 支持
 
 如有问题或需要支持，请：
-- 创建GitHub Issue
+- 创建 GitHub Issue
 - 查看文档：https://grid-nerf.readthedocs.io
 - 联系开发团队：grid-nerf@example.com 

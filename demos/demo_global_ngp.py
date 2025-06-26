@@ -19,7 +19,7 @@ import json
 import os
 import hashlib
 import pickle
-from typing import List, Tuple, Dict, Optional, Union, Any
+from typing import Dict, List, Optional, Tuple, Any
 import matplotlib.pyplot as plt
 from tqdm import tqdm
 import logging
@@ -48,7 +48,7 @@ class GlobalHashConfig:
     total_feature_dim: int = 32             # 总特征维度
     
     # 地理参数
-    global_bounds: Tuple[float, float, float, float] = (-180, -90, 180, 90)  # 全球边界
+    global_bounds: tuple[float, float, float, float] = (-180, -90, 180, 90)  # 全球边界
     tile_size: int = 256                    # 瓦片大小
     max_zoom: int = 18                      # 最大缩放级别
     
@@ -80,11 +80,10 @@ class MultiResolutionHashEncoding(nn.Module):
         
         # 创建输出网络
         self.output_network = nn.Sequential(
-            nn.Linear(config.total_feature_dim, 256),
-            nn.ReLU(),
-            nn.Linear(256, 128),
-            nn.ReLU(),
-            nn.Linear(128, 64)
+            nn.Linear(
+                config.total_feature_dim,
+                256,
+            )
         )
     
     def spatial_hash(self, coords: torch.Tensor, level: int) -> torch.Tensor:
@@ -153,13 +152,7 @@ class GlobalFeatureDatabase:
         # 创建特征表
         cursor.execute('''
             CREATE TABLE IF NOT EXISTS features (
-                tile_id TEXT PRIMARY KEY,
-                zoom_level INTEGER,
-                x INTEGER,
-                y INTEGER,
-                features BLOB,
-                metadata TEXT,
-                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                tile_id TEXT PRIMARY KEY, zoom_level INTEGER, x INTEGER, y INTEGER, features BLOB, metadata TEXT, created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
             )
         ''')
         
@@ -173,12 +166,17 @@ class GlobalFeatureDatabase:
         conn.close()
         logger.info(f"数据库初始化完成: {self.db_path}")
     
-    def lat_lon_to_tile(self, lat: float, lon: float, zoom: int) -> Tuple[int, int]:
+    def lat_lon_to_tile(self, lat: float, lon: float, zoom: int) -> tuple[int, int]:
         """将经纬度转换为瓦片坐标"""
         tile = mercantile.tile(lon, lat, zoom)
         return tile.x, tile.y
     
-    def tile_to_lat_lon_bounds(self, x: int, y: int, zoom: int) -> Tuple[float, float, float, float]:
+    def tile_to_lat_lon_bounds(
+        self,
+        x: int,
+        y: int,
+        zoom: int,
+    )
         """将瓦片坐标转换为经纬度边界"""
         bounds = mercantile.bounds(x, y, zoom)
         return bounds.west, bounds.south, bounds.east, bounds.north
@@ -187,7 +185,14 @@ class GlobalFeatureDatabase:
         """生成瓦片ID"""
         return f"{zoom}_{x}_{y}"
     
-    def store_features(self, x: int, y: int, zoom: int, features: np.ndarray, metadata: Dict = None):
+    def store_features(
+        self,
+        x: int,
+        y: int,
+        zoom: int,
+        features: np.ndarray,
+        metadata: Dict = None,
+    )
         """存储特征"""
         tile_id = self.get_tile_id(x, y, zoom)
         
@@ -230,7 +235,7 @@ class GlobalFeatureDatabase:
         cursor.execute('''
             SELECT features FROM features 
             WHERE tile_id = ?
-        ''', (tile_id,))
+        ''', (tile_id, ))
         
         result = cursor.fetchone()
         conn.close()
@@ -285,16 +290,18 @@ class GlobalFeatureDatabase:
             
             # 存储特征
             metadata = {
-                'lat': lat,
-                'lon': lon,
-                'zoom': zoom,
-                'generated': True
+                'lat': lat, 'lon': lon, 'zoom': zoom, 'generated': True
             }
             self.store_features(x, y, zoom, features, metadata)
         
         return features
     
-    def batch_query_features(self, coords: List[Tuple[float, float]], zoom: int) -> List[np.ndarray]:
+    def batch_query_features(
+        self,
+        coords: list[tuple[float,
+        float]],
+        zoom: int,
+    )
         """批量查询特征"""
         features_list = []
         
@@ -304,7 +311,7 @@ class GlobalFeatureDatabase:
         
         return features_list
     
-    def get_database_stats(self) -> Dict[str, Any]:
+    def get_database_stats(self) -> dict[str, Any]:
         """获取数据库统计信息"""
         conn = sqlite3.connect(self.db_path)
         cursor = conn.cursor()
@@ -329,10 +336,9 @@ class GlobalFeatureDatabase:
         conn.close()
         
         return {
-            'total_tiles': total_tiles,
-            'zoom_levels': zoom_stats,
-            'total_size_mb': total_size / (1024 * 1024),
-            'cache_size': len(self.cache)
+            'total_tiles': total_tiles, 'zoom_levels': zoom_stats, 'total_size_mb': total_size / (
+                1024 * 1024,
+            )
         }
 
 class GlobalFeatureLibrary:
@@ -346,8 +352,14 @@ class GlobalFeatureLibrary:
         self.is_trained = False
         self.training_history = []
     
-    def train_on_global_data(self, training_data: List[Tuple[float, float, np.ndarray]], 
-                           num_epochs: int = 100, learning_rate: float = 1e-3):
+    def train_on_global_data(
+        self,
+        training_data: list[tuple[float,
+        float,
+        np.ndarray]],
+        num_epochs: int = 100,
+        learning_rate: float = 1e-3,
+    )
         """在全局数据上训练"""
         logger.info("开始训练全球特征库...")
         
@@ -393,8 +405,14 @@ class GlobalFeatureLibrary:
             return np.mean(features, axis=0)
         return None
     
-    def get_region_features(self, bounds: Tuple[float, float, float, float], 
-                          zoom: int = 10) -> Dict[str, np.ndarray]:
+    def get_region_features(
+        self,
+        bounds: tuple[float,
+        float,
+        float,
+        float],
+        zoom: int = 10,
+    )
         """获取区域特征"""
         west, south, east, north = bounds
         
@@ -404,8 +422,8 @@ class GlobalFeatureLibrary:
         region_features = {}
         for tile in tiles:
             features = self.database.query_features(
-                mercantile.lnglat(tile.x, tile.y)[1],  # lat
-                mercantile.lnglat(tile.x, tile.y)[0],  # lon
+                mercantile.lnglat(tile.x, tile.y)[1], # lat
+                mercantile.lnglat(tile.x, tile.y)[0], # lon
                 zoom
             )
             if features is not None:
@@ -417,10 +435,8 @@ class GlobalFeatureLibrary:
     def save_model(self, path: str):
         """保存模型"""
         torch.save({
-            'hash_encoder_state_dict': self.database.hash_encoder.state_dict(),
-            'config': self.config,
-            'training_history': self.training_history,
-            'is_trained': self.is_trained
+            'hash_encoder_state_dict': self.database.hash_encoder.state_dict(
+            )
         }, path)
         logger.info(f"模型已保存到: {path}")
     
@@ -466,7 +482,7 @@ class SDFDataset(Dataset):
         data = np.load(npy_path)  # shape: (N, 4)
         self.coords = data[:, :3].astype(np.float32)
         self.sdf = data[:, 3].astype(np.float32)
-        # 归一化到[0,1]
+        # 归一化到[0, 1]
         self.coords = (self.coords - self.coords.min(0)) / (self.coords.max(0) - self.coords.min(0))
 
     def __len__(self):
@@ -481,12 +497,7 @@ def main():
     
     # 创建配置
     config = GlobalHashConfig(
-        num_levels=16,
-        max_hash=2**14,
-        base_resolution=16,
-        finest_resolution=512,
-        feature_dim=2,
-        db_path="global_features_demo.db"
+        num_levels=16, max_hash=2**14, base_resolution=16, finest_resolution=512, feature_dim=2, db_path="global_features_demo.db"
     )
     
     # 创建全球特征库
@@ -494,17 +505,19 @@ def main():
     
     # 演示查询特征
     test_coords = [
-        (39.9042, 116.4074),  # 北京
-        (31.2304, 121.4737),  # 上海
-        (23.1291, 113.2644),  # 广州
-        (40.7128, -74.0060),  # 纽约
-        (51.5074, -0.1278),   # 伦敦
+        (39.9042, 116.4074), # 北京
+        (31.2304, 121.4737), # 上海
+        (23.1291, 113.2644), # 广州
+        (40.7128, -74.0060), # 纽约
+        (51.5074, -0.1278), # 伦敦
     ]
     
     logger.info("查询全球城市特征...")
     for lat, lon in test_coords:
         features = global_library.get_feature_vector(lat, lon, zoom=10)
-        logger.info(f"位置 ({lat:.4f}, {lon:.4f}): 特征维度 {features.shape if features is not None else 'None'}")
+        logger.info(f"位置 ({
+            lat:.4f,
+        }
     
     # 获取数据库统计信息
     stats = global_library.database.get_database_stats()
@@ -516,7 +529,7 @@ def main():
     # 推理
     model.eval()
     with torch.no_grad():
-        test_coords = torch.rand(10000, 3)  # 归一化到[0,1]
+        test_coords = torch.rand(10000, 3)  # 归一化到[0, 1]
         sdf_pred = model(test_coords)
 
     # 导出mesh（Marching Cubes等，需第三方库如 skimage.measure.marching_cubes）

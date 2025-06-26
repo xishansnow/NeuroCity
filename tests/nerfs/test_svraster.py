@@ -11,14 +11,18 @@ import numpy as np
 import tempfile
 import os
 from pathlib import Path
+import sys
 
-from .core import SVRasterConfig, AdaptiveSparseVoxels, VoxelRasterizer, SVRasterModel, SVRasterLoss
-from .dataset import SVRasterDatasetConfig, SVRasterDataset
-from .trainer import SVRasterTrainerConfig, SVRasterTrainer
-from .utils.morton_utils import morton_encode_3d, morton_decode_3d
-from .utils.octree_utils import octree_subdivision, octree_pruning
-from .utils.rendering_utils import ray_direction_dependent_ordering, depth_peeling
-from .utils.voxel_utils import voxel_pruning, compute_voxel_bounds
+# Add src to path for imports
+sys.path.append(os.path.join(os.path.dirname(__file__), '..', '..', 'src'))
+
+from nerfs.svraster.core import SVRasterConfig, AdaptiveSparseVoxels, VoxelRasterizer, SVRasterModel, SVRasterLoss
+from nerfs.svraster.dataset import SVRasterDatasetConfig, SVRasterDataset
+from nerfs.svraster.trainer import SVRasterTrainerConfig, SVRasterTrainer
+from nerfs.svraster.utils.morton_utils import morton_encode_3d, morton_decode_3d
+from nerfs.svraster.utils.octree_utils import octree_subdivision, octree_pruning
+from nerfs.svraster.utils.rendering_utils import ray_direction_dependent_ordering, depth_peeling
+from nerfs.svraster.utils.voxel_utils import voxel_pruning, compute_voxel_bounds
 
 
 class TestSVRasterCore(unittest.TestCase):
@@ -27,9 +31,7 @@ class TestSVRasterCore(unittest.TestCase):
     def setUp(self):
         """Set up test fixtures."""
         self.config = SVRasterConfig(
-            max_octree_levels=8,
-            base_resolution=32,
-            scene_bounds=(-1.0, -1.0, -1.0, 1.0, 1.0, 1.0)
+            max_octree_levels=8, base_resolution=32, scene_bounds=(-1.0, -1.0, -1.0, 1.0, 1.0, 1.0)
         )
         self.device = torch.device('cpu')
     
@@ -67,12 +69,14 @@ class TestSVRasterCore(unittest.TestCase):
         # Create dummy voxel data
         num_voxels = 100
         voxels = {
-            'positions': torch.randn(num_voxels, 3),
-            'sizes': torch.ones(num_voxels) * 0.1,
-            'densities': torch.randn(num_voxels),
-            'colors': torch.randn(num_voxels, 12),  # 3 * (2+1)^2 for SH degree 2
-            'levels': torch.zeros(num_voxels, dtype=torch.int),
-            'morton_codes': torch.randint(0, 1000, (num_voxels,))
+            'positions': torch.randn(
+                num_voxels,
+                3,
+            )
+            'levels': torch.zeros(
+                num_voxels,
+                dtype=torch.int,
+            )
         }
         
         # Create dummy rays
@@ -88,8 +92,8 @@ class TestSVRasterCore(unittest.TestCase):
         self.assertIn('depth', outputs)
         self.assertIn('alpha', outputs)
         self.assertEqual(outputs['rgb'].shape, (num_rays, 3))
-        self.assertEqual(outputs['depth'].shape, (num_rays,))
-        self.assertEqual(outputs['alpha'].shape, (num_rays,))
+        self.assertEqual(outputs['depth'].shape, (num_rays, ))
+        self.assertEqual(outputs['alpha'].shape, (num_rays, ))
     
     def test_svraster_model(self):
         """Test complete SVRaster model."""
@@ -115,19 +119,23 @@ class TestSVRasterCore(unittest.TestCase):
         """Test SVRaster loss function."""
         loss_fn = SVRasterLoss(self.config)
         
+        # Create mock model
+        model = SVRasterModel(self.config)
+        
         # Create dummy outputs and targets
         num_rays = 50
         outputs = {
-            'rgb': torch.rand(num_rays, 3),
-            'depth': torch.rand(num_rays),
-            'alpha': torch.rand(num_rays)
+            'rgb': torch.rand(
+                num_rays,
+                3,
+            )
         }
         targets = {
             'colors': torch.rand(num_rays, 3)
         }
         
         # Compute losses
-        losses = loss_fn(outputs, targets)
+        losses = loss_fn(outputs, targets, model)
         
         self.assertIn('rgb_loss', losses)
         self.assertIn('total_loss', losses)
@@ -207,13 +215,7 @@ class TestSVRasterDataset(unittest.TestCase):
         """Set up test dataset."""
         self.temp_dir = tempfile.mkdtemp()
         self.config = SVRasterDatasetConfig(
-            data_dir=self.temp_dir,
-            dataset_type="colmap",
-            image_height=64,
-            image_width=64,
-            train_split=0.8,
-            val_split=0.1,
-            test_split=0.1
+            data_dir=self.temp_dir, dataset_type="blender", image_height=64, image_width=64, train_split=0.8, val_split=0.1, test_split=0.1
         )
     
     def tearDown(self):
@@ -223,14 +225,31 @@ class TestSVRasterDataset(unittest.TestCase):
     
     def create_dummy_dataset(self):
         """Create dummy dataset files."""
-        images_dir = os.path.join(self.temp_dir, "images")
-        os.makedirs(images_dir, exist_ok=True)
-        
         # Create dummy images
         from PIL import Image
+        import json
+        
         for i in range(10):
             img = Image.new('RGB', (64, 64), color=(i*25, i*25, i*25))
-            img.save(os.path.join(images_dir, f"image_{i:04d}.png"))
+            img.save(os.path.join(self.temp_dir, f"image_{i:04d}.png"))
+        
+        # Create transforms_train.json for blender format
+        transforms = {
+            "camera_angle_x": 0.6911112070083618, "frames": []
+        }
+        
+        for i in range(10):
+            # Create identity transform matrix
+            transform_matrix = [
+                [1.0, 0.0, 0.0, 0.0], [0.0, 1.0, 0.0, 0.0], [0.0, 0.0, 1.0, 2.0], [0.0, 0.0, 0.0, 1.0]
+            ]
+            
+            transforms["frames"].append({
+                "file_path": f"image_{i:04d}", "transform_matrix": transform_matrix
+            })
+        
+        with open(os.path.join(self.temp_dir, "transforms_train.json"), 'w') as f:
+            json.dump(transforms, f)
     
     def test_dataset_creation(self):
         """Test dataset creation and loading."""
@@ -258,23 +277,16 @@ class TestSVRasterTrainer(unittest.TestCase):
     def setUp(self):
         """Set up test trainer."""
         self.model_config = SVRasterConfig(
-            max_octree_levels=4,
-            base_resolution=16
+            max_octree_levels=4, base_resolution=16
         )
         self.trainer_config = SVRasterTrainerConfig(
-            num_epochs=2,
-            batch_size=1,
-            learning_rate=1e-3,
-            device="cpu"
+            num_epochs=2, batch_size=1, learning_rate=1e-3, device="cpu"
         )
         
         # Create dummy dataset
         self.temp_dir = tempfile.mkdtemp()
         self.dataset_config = SVRasterDatasetConfig(
-            data_dir=self.temp_dir,
-            dataset_type="colmap",
-            image_height=32,
-            image_width=32
+            data_dir=self.temp_dir, dataset_type="blender", image_height=32, image_width=32
         )
     
     def tearDown(self):
@@ -284,13 +296,29 @@ class TestSVRasterTrainer(unittest.TestCase):
     
     def create_dummy_dataset(self):
         """Create dummy dataset for training."""
-        images_dir = os.path.join(self.temp_dir, "images")
-        os.makedirs(images_dir, exist_ok=True)
-        
         from PIL import Image
+        import json
+        
         for i in range(5):
             img = Image.new('RGB', (32, 32), color=(50, 100, 150))
-            img.save(os.path.join(images_dir, f"image_{i:04d}.png"))
+            img.save(os.path.join(self.temp_dir, f"image_{i:04d}.png"))
+        
+        # Create transforms_train.json
+        transforms = {
+            "camera_angle_x": 0.6911112070083618, "frames": []
+        }
+        
+        for i in range(5):
+            transform_matrix = [
+                [1.0, 0.0, 0.0, 0.0], [0.0, 1.0, 0.0, 0.0], [0.0, 0.0, 1.0, 2.0], [0.0, 0.0, 0.0, 1.0]
+            ]
+            
+            transforms["frames"].append({
+                "file_path": f"image_{i:04d}", "transform_matrix": transform_matrix
+            })
+        
+        with open(os.path.join(self.temp_dir, "transforms_train.json"), 'w') as f:
+            json.dump(transforms, f)
     
     def test_trainer_creation(self):
         """Test trainer creation."""

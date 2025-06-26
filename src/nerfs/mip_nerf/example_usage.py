@@ -18,32 +18,17 @@ def train_mip_nerf_example():
     
     # Configuration
     config = MipNeRFConfig(
-        netdepth=8,
-        netwidth=256,
-        num_samples=64,
-        num_importance=128,
-        use_viewdirs=True,
-        lr_init=5e-4,
-        lr_final=5e-6,
-        lr_decay=250
+        netdepth=8, netwidth=256, num_samples=64, num_importance=128, use_viewdirs=True, lr_init=5e-4, lr_final=5e-6, lr_decay=250
     )
     
     # Create datasets
     data_dir = "path/to/blender/dataset"  # Replace with actual path
     train_dataset = create_mip_nerf_dataset(
-        data_dir, 
-        dataset_type='blender', 
-        split='train',
-        white_bkgd=True,
-        half_res=True
+        data_dir, dataset_type='blender', split='train', white_bkgd=True, half_res=True
     )
     
     val_dataset = create_mip_nerf_dataset(
-        data_dir,
-        dataset_type='blender',
-        split='val',
-        white_bkgd=True,
-        half_res=True
+        data_dir, dataset_type='blender', split='val', white_bkgd=True, half_res=True
     )
     
     # Create model
@@ -52,20 +37,12 @@ def train_mip_nerf_example():
     # Create trainer
     device = 'cuda' if torch.cuda.is_available() else 'cpu'
     trainer = MipNeRFTrainer(
-        config=config,
-        model=model,
-        train_dataset=train_dataset,
-        val_dataset=val_dataset,
-        device=device,
-        log_dir='./logs/mip_nerf_experiment'
+        config=config, model=model, train_dataset=train_dataset, val_dataset=val_dataset, device=device, log_dir='./logs/mip_nerf_experiment'
     )
     
     # Train
     trainer.train(
-        num_epochs=100,
-        save_freq=1000,
-        val_freq=500,
-        log_freq=100
+        num_epochs=100, save_freq=1000, val_freq=500, log_freq=100
     )
     
     print("Training completed!")
@@ -101,12 +78,7 @@ def inference_example():
     # Render
     with torch.no_grad():
         results = model(
-            origins=rays_o,
-            directions=rays_d,
-            viewdirs=viewdirs,
-            near=2.0,
-            far=6.0,
-            pixel_radius=0.001
+            origins=rays_o, directions=rays_d, viewdirs=viewdirs, near=2.0, far=6.0, pixel_radius=0.001
         )
     
     # Extract results
@@ -140,9 +112,7 @@ def render_novel_views_example():
             
             # Camera position
             cam_pos = np.array([
-                radius * np.cos(angle),
-                0.0,
-                radius * np.sin(angle)
+                radius * np.cos(angle), 0.0, radius * np.sin(angle)
             ])
             
             # Look at origin

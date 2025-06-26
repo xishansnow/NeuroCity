@@ -1,8 +1,7 @@
 """
 Rasterization module for DNMP-NeRF.
 
-This module implements mesh rasterization for deformable neural mesh primitives,
-including vertex interpolation and depth testing.
+This module implements mesh rasterization for deformable neural mesh primitives, including vertex interpolation and depth testing.
 """
 
 import torch
@@ -45,11 +44,13 @@ class VertexInterpolator(nn.Module):
     def __init__(self):
         super().__init__()
     
-    def forward(self, 
-                vertex_features: torch.Tensor,
-                faces: torch.Tensor,
-                barycentric_coords: torch.Tensor,
-                face_ids: torch.Tensor) -> torch.Tensor:
+    def forward(
+        self,
+        vertex_features: torch.Tensor,
+        faces: torch.Tensor,
+        barycentric_coords: torch.Tensor,
+        face_ids: torch.Tensor
+    ):
         """
         Interpolate vertex features using barycentric coordinates.
         
@@ -86,10 +87,12 @@ class MeshRasterizer(nn.Module):
         self.config = config
         self.vertex_interpolator = VertexInterpolator()
         
-    def project_vertices(self, 
-                        vertices: torch.Tensor,
-                        camera_matrix: torch.Tensor,
-                        view_matrix: torch.Tensor) -> torch.Tensor:
+    def project_vertices(
+        self,
+        vertices: torch.Tensor,
+        camera_matrix: torch.Tensor,
+        view_matrix: torch.Tensor
+    ):
         """
         Project 3D vertices to 2D screen coordinates.
         
@@ -118,9 +121,11 @@ class MeshRasterizer(nn.Module):
         
         return screen_coords
     
-    def compute_barycentric_coords(self,
-                                  pixel_coords: torch.Tensor,
-                                  triangle_vertices: torch.Tensor) -> torch.Tensor:
+    def compute_barycentric_coords(
+        self,
+        pixel_coords: torch.Tensor,
+        triangle_vertices: torch.Tensor
+    ):
         """
         Compute barycentric coordinates for pixels inside triangles.
         
@@ -155,10 +160,13 @@ class MeshRasterizer(nn.Module):
         
         return torch.stack([w, u, v], dim=1)
     
-    def depth_test(self,
-                   fragments: Dict[str, torch.Tensor],
-                   new_depths: torch.Tensor,
-                   new_face_ids: torch.Tensor) -> Dict[str, torch.Tensor]:
+    def depth_test(
+        self,
+        fragments: dict[str,
+        torch.Tensor],
+        new_depths: torch.Tensor,
+        new_face_ids: torch.Tensor
+    ):
         """
         Perform depth testing and update fragment buffer.
         
@@ -186,12 +194,14 @@ class MeshRasterizer(nn.Module):
         
         return fragments
     
-    def rasterize_mesh(self,
-                      vertices: torch.Tensor,
-                      faces: torch.Tensor,
-                      vertex_features: torch.Tensor,
-                      camera_matrix: torch.Tensor,
-                      view_matrix: torch.Tensor) -> Dict[str, torch.Tensor]:
+    def rasterize_mesh(
+        self,
+        vertices: torch.Tensor,
+        faces: torch.Tensor,
+        vertex_features: torch.Tensor,
+        camera_matrix: torch.Tensor,
+        view_matrix: torch.Tensor
+    ):
         """
         Rasterize mesh to produce fragments.
         
@@ -215,9 +225,11 @@ class MeshRasterizer(nn.Module):
         
         # Create pixel grid
         y_coords, x_coords = torch.meshgrid(
-            torch.arange(self.config.image_height, device=device, dtype=torch.float32),
-            torch.arange(self.config.image_width, device=device, dtype=torch.float32),
-            indexing='ij'
+            torch.arange(
+                self.config.image_height,
+                device=device,
+                dtype=torch.float32,
+            )
         )
         pixel_coords = torch.stack([x_coords.flatten(), y_coords.flatten()], dim=1)
         
@@ -239,14 +251,16 @@ class MeshRasterizer(nn.Module):
             max_coords = triangle_vertices.max(dim=0)[0]
             
             # Clip to screen bounds
-            min_coords = torch.clamp(min_coords, 0, 
-                                   torch.tensor([self.config.image_width - 1, 
-                                               self.config.image_height - 1], 
-                                               device=device, dtype=torch.float32))
-            max_coords = torch.clamp(max_coords, 0,
-                                   torch.tensor([self.config.image_width - 1,
-                                               self.config.image_height - 1],
-                                               device=device, dtype=torch.float32))
+            min_coords = torch.clamp(
+                min_coords,
+                0,
+                torch.tensor,
+            )
+            max_coords = torch.clamp(
+                max_coords,
+                0,
+                torch.tensor,
+            )
             
             # Skip if triangle is outside screen bounds
             if (max_coords[0] < min_coords[0]) or (max_coords[1] < min_coords[1]):
@@ -261,9 +275,12 @@ class MeshRasterizer(nn.Module):
             
             # Create pixel coordinates for this triangle
             yy, xx = torch.meshgrid(
-                torch.arange(y_min, y_max, device=device, dtype=torch.float32),
-                torch.arange(x_min, x_max, device=device, dtype=torch.float32),
-                indexing='ij'
+                torch.arange(
+                    y_min,
+                    y_max,
+                    device=device,
+                    dtype=torch.float32,
+                )
             )
             local_pixel_coords = torch.stack([xx.flatten(), yy.flatten()], dim=1)
             
@@ -288,7 +305,8 @@ class MeshRasterizer(nn.Module):
             pixel_depths = torch.sum(inside_barycentric * triangle_depths.unsqueeze(0), dim=1)
             
             # Create face IDs
-            face_ids = torch.full((inside_pixels.shape[0],), face_idx, device=device, dtype=torch.long)
+            face_ids = torch.full(
+            )
             
             # Convert pixel coordinates to linear indices
             pixel_indices = (inside_pixels[:, 1].long() * self.config.image_width + 
@@ -311,8 +329,10 @@ class MeshRasterizer(nn.Module):
                 sorted_indices = torch.argsort(all_indices * 1000000 + all_depths)
                 
                 # Keep only closest fragment per pixel
-                unique_indices, first_occurrence = torch.unique(all_indices[sorted_indices], 
-                                                              return_inverse=True)
+                unique_indices, first_occurrence = torch.unique(
+                    all_indices[sorted_indices],
+                    return_inverse=True,
+                )
                 
                 fragments['pixel_indices'] = unique_indices
                 fragments['depths'] = all_depths[sorted_indices][first_occurrence]
@@ -335,10 +355,12 @@ class DNMPRasterizer(nn.Module):
         self.config = config
         self.mesh_rasterizer = MeshRasterizer(config)
     
-    def forward(self,
-                primitives: List,
-                camera_matrix: torch.Tensor,
-                view_matrix: torch.Tensor) -> Dict[str, torch.Tensor]:
+    def forward(
+        self,
+        primitives: List,
+        camera_matrix: torch.Tensor,
+        view_matrix: torch.Tensor
+    ):
         """
         Rasterize all DNMP primitives.
         
@@ -367,12 +389,11 @@ class DNMPRasterizer(nn.Module):
         if not all_fragments:
             # Return empty fragments
             return {
-                'pixel_indices': torch.empty(0, device=device, dtype=torch.long),
-                'depths': torch.empty(0, device=device),
-                'face_ids': torch.empty(0, device=device, dtype=torch.long),
-                'primitive_ids': torch.empty(0, device=device, dtype=torch.long),
-                'barycentric_coords': torch.empty(0, 3, device=device),
-                'interpolated_features': torch.empty(0, 0, device=device)
+                'pixel_indices': torch.empty(
+                    0,
+                    device=device,
+                    dtype=torch.long,
+                )
             }
         
         # Combine all fragments
@@ -417,8 +438,7 @@ class DNMPRasterizer(nn.Module):
             
             # Keep only closest fragment per pixel
             unique_pixels, first_occurrence = torch.unique(
-                combined_fragments['pixel_indices'][sorted_indices],
-                return_inverse=True
+                combined_fragments['pixel_indices'][sorted_indices], return_inverse=True
             )
             
             # Filter to unique pixels
@@ -427,9 +447,12 @@ class DNMPRasterizer(nn.Module):
         
         return combined_fragments
     
-    def render_fragments_to_image(self,
-                                 fragments: Dict[str, torch.Tensor],
-                                 image_features: torch.Tensor) -> torch.Tensor:
+    def render_fragments_to_image(
+        self,
+        fragments: dict[str,
+        torch.Tensor],
+        image_features: torch.Tensor
+    ):
         """
         Render fragments to final image.
         

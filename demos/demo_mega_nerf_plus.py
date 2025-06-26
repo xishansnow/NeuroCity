@@ -40,33 +40,14 @@ def create_demo_config() -> MegaNeRFPlusConfig:
     
     return MegaNeRFPlusConfig(
         # Small network for demo
-        num_levels=4,
-        base_resolution=16,
-        max_resolution=128,
-        netdepth=4,
-        netwidth=64,
-        
-        # Demo training parameters
-        batch_size=512,
-        lr_init=1e-3,
-        lr_final=1e-4,
-        lr_decay_steps=5000,
-        
-        # Rendering parameters
-        num_samples=32,
-        num_importance=64,
-        
-        # Memory settings
-        max_memory_gb=4.0,
-        use_mixed_precision=True,
-        
-        # Multi-resolution
-        num_lods=3,
-        progressive_upsampling=False,  # Disable for demo
+        num_levels=4, base_resolution=16, max_resolution=128, netdepth=4, netwidth=64, # Demo training parameters
+        batch_size=512, lr_init=1e-3, lr_final=1e-4, lr_decay_steps=5000, # Rendering parameters
+        num_samples=32, num_importance=64, # Memory settings
+        max_memory_gb=4.0, use_mixed_precision=True, # Multi-resolution
+        num_lods=3, progressive_upsampling=False, # Disable for demo
         
         # Photogrammetric
-        max_image_resolution=512,
-        downsample_factor=2
+        max_image_resolution=512, downsample_factor=2
     )
 
 
@@ -113,10 +94,7 @@ def generate_synthetic_scene():
     scene_bounds = torch.tensor([[-2, -2, -2], [2, 2, 2]], dtype=torch.float32)
     
     return {
-        'camera_positions': camera_positions,
-        'camera_orientations': camera_orientations,
-        'scene_bounds': scene_bounds,
-        'num_cameras': num_cameras
+        'camera_positions': camera_positions, 'camera_orientations': camera_orientations, 'scene_bounds': scene_bounds, 'num_cameras': num_cameras
     }
 
 
@@ -169,9 +147,7 @@ def create_synthetic_dataset(scene_data, config):
     print(f"Generated {len(rays)} ray samples")
     
     return {
-        'rays': rays,
-        'rgbs': rgbs,
-        'scene_bounds': scene_data['scene_bounds']
+        'rays': rays, 'rgbs': rgbs, 'scene_bounds': scene_data['scene_bounds']
     }
 
 
@@ -182,17 +158,13 @@ def generate_camera_rays(cam_pos, cam_rot, image_size, rgb_function):
     
     # Generate pixel coordinates
     i_coords, j_coords = torch.meshgrid(
-        torch.linspace(-1, 1, w),
-        torch.linspace(-1, 1, h),
-        indexing='xy'
+        torch.linspace(-1, 1, w), torch.linspace(-1, 1, h), indexing='xy'
     )
     
     # Convert to ray directions (simplified pinhole camera)
     focal_length = 1.0
     dirs = torch.stack([
-        i_coords / focal_length,
-        -j_coords / focal_length,
-        -torch.ones_like(i_coords)
+        i_coords / focal_length, -j_coords / focal_length, -torch.ones_like(i_coords)
     ], dim=-1)
     
     # Transform to world coordinates
@@ -234,12 +206,11 @@ class SyntheticDataset(torch.utils.data.Dataset):
     
     def __getitem__(self, idx):
         return {
-            'rays': self.rays[idx],
-            'rgbs': self.rgbs[idx]
+            'rays': self.rays[idx], 'rgbs': self.rgbs[idx]
         }
 
 
-def demo_basic_functionality():
+def demo_basic_functionality() -> tuple[MegaNeRFPlus, MegaNeRFPlusConfig]:
     """Demonstrate basic Mega-NeRF++ functionality"""
     
     print("\n" + "="*60)
@@ -261,7 +232,7 @@ def demo_basic_functionality():
     model = MegaNeRFPlus(config).to(device)
     
     total_params = sum(p.numel() for p in model.parameters())
-    print(f"   Total parameters: {total_params:,}")
+    print(f"   Total parameters: {total_params:, }")
     
     # 3. Test forward pass
     print("\n3. Testing forward pass...")
@@ -276,7 +247,9 @@ def demo_basic_functionality():
     
     print(f"   Rendered {batch_size} rays in {(end_time - start_time)*1000:.1f}ms")
     print(f"   Output shape: {results['coarse']['rgb'].shape}")
-    print(f"   RGB range: [{results['coarse']['rgb'].min():.3f}, {results['coarse']['rgb'].max():.3f}]")
+    print(f"   RGB range: [{
+        results['coarse']['rgb'].min():.3f,
+    }
     
     return model, config
 
@@ -293,9 +266,7 @@ def demo_spatial_partitioning():
     
     # Create partitioner
     partition_config = PartitionConfig(
-        max_partition_size=128,
-        min_partition_size=32,
-        max_depth=3
+        max_partition_size=128, min_partition_size=32, max_depth=3
     )
     
     partitioner = AdaptiveOctree(partition_config)
@@ -303,8 +274,7 @@ def demo_spatial_partitioning():
     # Partition scene
     print(f"\nPartitioning scene with {scene_data['num_cameras']} cameras...")
     partitions = partitioner.partition_scene(
-        scene_data['scene_bounds'],
-        scene_data['camera_positions']
+        scene_data['scene_bounds'], scene_data['camera_positions']
     )
     
     print(f"Created {len(partitions)} partitions")
@@ -451,17 +421,18 @@ def demo_inference():
     
     # Pixel coordinates
     i_coords, j_coords = torch.meshgrid(
-        torch.linspace(-1, 1, w, device=device),
-        torch.linspace(-1, 1, h, device=device),
-        indexing='xy'
+        torch.linspace(
+            -1,
+            1,
+            w,
+            device=device,
+        )
     )
     
     # Ray directions
     focal_length = 1.0
     dirs = torch.stack([
-        i_coords / focal_length,
-        -j_coords / focal_length,
-        -torch.ones_like(i_coords, device=device)
+        i_coords / focal_length, -j_coords / focal_length, -torch.ones_like(i_coords, device=device)
     ], dim=-1)
     
     # Transform to world coordinates
@@ -561,10 +532,12 @@ def main():
     """Main demo function"""
     
     parser = argparse.ArgumentParser(description='Mega-NeRF++ Demo')
-    parser.add_argument('--quick', action='store_true', 
-                       help='Run quick demo (skip training and benchmarks)')
-    parser.add_argument('--no-cuda', action='store_true',
-                       help='Force CPU usage')
+    parser.add_argument(
+        '--quick',
+        action='store_true',
+        help='Run quick demo,
+    )
+    parser.add_argument('--no-cuda', action='store_true', help='Force CPU usage')
     
     args = parser.parse_args()
     

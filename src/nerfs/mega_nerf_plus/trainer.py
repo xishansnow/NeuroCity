@@ -18,7 +18,7 @@ import numpy as np
 import time
 import os
 from pathlib import Path
-from typing import Dict, List, Optional, Any, Tuple, Union
+from typing import Dict, List, Optional, Tuple, Any, Union
 import logging
 import wandb
 from tqdm import tqdm
@@ -34,13 +34,16 @@ class MegaNeRFPlusTrainer:
     Main trainer for Mega-NeRF++ with photogrammetric optimizations
     """
     
-    def __init__(self, config: MegaNeRFPlusConfig, 
-                 model: MegaNeRFPlus,
-                 train_dataset,
-                 val_dataset=None,
-                 device='cuda',
-                 log_dir='./logs',
-                 checkpoint_dir='./checkpoints'):
+    def __init__(
+        self,
+        config: MegaNeRFPlusConfig,
+        model: MegaNeRFPlus,
+        train_dataset,
+        val_dataset=None,
+        device='cuda',
+        log_dir='./logs',
+        checkpoint_dir='./checkpoints',
+    ) -> None:
         """
         Args:
             config: Training configuration
@@ -98,11 +101,8 @@ class MegaNeRFPlusTrainer:
     def _setup_logging(self):
         """Setup logging configuration"""
         logging.basicConfig(
-            level=logging.INFO,
-            format='%(asctime)s - %(levelname)s - %(message)s',
-            handlers=[
-                logging.FileHandler(self.log_dir / 'training.log'),
-                logging.StreamHandler()
+            level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s', handlers=[
+                logging.FileHandler(self.log_dir / 'training.log'), logging.StreamHandler()
             ]
         )
         self.logger = logging.getLogger(__name__)
@@ -110,9 +110,7 @@ class MegaNeRFPlusTrainer:
         # Initialize wandb if available
         try:
             wandb.init(
-                project="mega_nerf_plus",
-                config=self.config.__dict__,
-                dir=str(self.log_dir)
+                project="mega_nerf_plus", config=self.config.__dict__, dir=str(self.log_dir)
             )
             self.use_wandb = True
         except Exception as e:
@@ -132,8 +130,7 @@ class MegaNeRFPlusTrainer:
         
         if spatial_params:
             param_groups.append({
-                'params': spatial_params,
-                'lr': self.config.lr_init * 2.0,  # Higher lr for spatial encoding
+                'params': spatial_params, 'lr': self.config.lr_init * 2.0, # Higher lr for spatial encoding
                 'name': 'spatial_encoder'
             })
         
@@ -144,9 +141,7 @@ class MegaNeRFPlusTrainer:
         
         if mlp_params:
             param_groups.append({
-                'params': mlp_params,
-                'lr': self.config.lr_init,
-                'name': 'nerf_mlp'
+                'params': mlp_params, 'lr': self.config.lr_init, 'name': 'nerf_mlp'
             })
         
         # Fallback: all parameters
@@ -158,11 +153,12 @@ class MegaNeRFPlusTrainer:
     def _create_scheduler(self):
         """Create learning rate scheduler"""
         return torch.optim.lr_scheduler.ExponentialLR(
-            self.optimizer, 
-            gamma=(self.config.lr_final / self.config.lr_init) ** (1.0 / self.config.lr_decay_steps)
+            self.optimizer, gamma=(
+                self.config.lr_final / self.config.lr_init,
+            )
         )
     
-    def _create_resolution_schedule(self) -> List[Tuple[int, int]]:
+    def _create_resolution_schedule(self) -> list[tuple[int, int]]:
         """Create progressive resolution training schedule"""
         
         if not self.config.progressive_upsampling:
@@ -190,7 +186,7 @@ class MegaNeRFPlusTrainer:
         
         self.logger.info(f"Starting training for {num_epochs} epochs")
         self.logger.info(f"Training on device: {self.device}")
-        self.logger.info(f"Model parameters: {sum(p.numel() for p in self.model.parameters()):,}")
+        self.logger.info(f"Model parameters: {sum(p.numel() for p in self.model.parameters()):, }")
         
         start_time = time.time()
         
@@ -229,7 +225,7 @@ class MegaNeRFPlusTrainer:
         # Save final model
         self._save_checkpoint('final_model.pth')
     
-    def _train_epoch(self) -> Dict[str, float]:
+    def _train_epoch(self) -> dict[str, float]:
         """Train for one epoch"""
         
         self.model.train()
@@ -287,9 +283,7 @@ class MegaNeRFPlusTrainer:
             
             # Update progress bar
             progress_bar.set_postfix({
-                'loss': f'{total_batch_loss.item():.4f}',
-                'lr': f'{self.optimizer.param_groups[0]["lr"]:.2e}',
-                'res': f'{self.resolution_schedule[self.current_resolution_level][0]}'
+                'loss': f'{total_batch_loss.item():.4f}'
             })
             
             # Log frequently during first epoch
@@ -297,14 +291,10 @@ class MegaNeRFPlusTrainer:
                 self._log_step_metrics(loss_dict, batch_idx)
         
         return {
-            'total_loss': total_loss / num_batches,
-            'rgb_loss': rgb_loss / num_batches,
-            'depth_loss': depth_loss / num_batches,
-            'semantic_loss': semantic_loss / num_batches,
-            'distortion_loss': distortion_loss / num_batches
+            'total_loss': total_loss / num_batches, 'rgb_loss': rgb_loss / num_batches, 'depth_loss': depth_loss / num_batches, 'semantic_loss': semantic_loss / num_batches, 'distortion_loss': distortion_loss / num_batches
         }
     
-    def _forward_pass(self, batch: Dict[str, torch.Tensor]) -> Dict[str, torch.Tensor]:
+    def _forward_pass(self, batch: dict[str, torch.Tensor]) -> dict[str, torch.Tensor]:
         """Forward pass and loss computation"""
         
         rays = batch['rays']  # [B, 6] (origin + direction)
@@ -315,11 +305,7 @@ class MegaNeRFPlusTrainer:
         
         # Render rays
         render_results = self.model.render_rays(
-            rays_o, rays_d,
-            near=self.train_dataset.near,
-            far=self.train_dataset.far,
-            lod=self.current_resolution_level,
-            white_bkgd=True
+            rays_o, rays_d, near=self.train_dataset.near, far=self.train_dataset.far, lod=self.current_resolution_level, white_bkgd=True
         )
         
         # Compute losses
@@ -327,9 +313,14 @@ class MegaNeRFPlusTrainer:
         
         return loss_dict
     
-    def _compute_losses(self, render_results: Dict[str, torch.Tensor],
-                       target_rgb: torch.Tensor,
-                       batch: Dict[str, torch.Tensor]) -> Dict[str, torch.Tensor]:
+    def _compute_losses(
+        self,
+        render_results: dict[str,
+        torch.Tensor],
+        target_rgb: torch.Tensor,
+        batch: dict[str,
+        torch.Tensor],
+    ) -> dict[str, torch.Tensor]:
         """Compute all loss components"""
         
         losses = {}
@@ -416,7 +407,7 @@ class MegaNeRFPlusTrainer:
         
         return torch.mean(variance)
     
-    def _validate(self) -> Dict[str, float]:
+    def _validate(self) -> dict[str, float]:
         """Validation loop"""
         
         self.model.eval()
@@ -454,30 +445,34 @@ class MegaNeRFPlusTrainer:
             avg_ssim = 0.0
         
         return {
-            'psnr': avg_psnr,
-            'ssim': avg_ssim
+            'psnr': avg_psnr, 'ssim': avg_ssim
         }
     
-    def _render_full_image(self, pose: torch.Tensor, intrinsic: torch.Tensor,
-                          image_size: Tuple[int, int]) -> torch.Tensor:
+    def _render_full_image(
+        self,
+        pose: torch.Tensor,
+        intrinsic: torch.Tensor,
+        image_size: tuple[int,
+        int],
+    ) -> torch.Tensor:
         """Render a full image"""
         
         h, w = image_size
         
         # Generate rays for full image
         i_coords, j_coords = torch.meshgrid(
-            torch.arange(w, dtype=torch.float32, device=self.device),
-            torch.arange(h, dtype=torch.float32, device=self.device),
-            indexing='xy'
+            torch.arange(
+                w,
+                dtype=torch.float32,
+                device=self.device,
+            )
         )
         
         fx, fy = intrinsic[0, 0], intrinsic[1, 1]
         cx, cy = intrinsic[0, 2], intrinsic[1, 2]
         
         dirs = torch.stack([
-            (i_coords - cx) / fx,
-            -(j_coords - cy) / fy,
-            -torch.ones_like(i_coords)
+            (i_coords - cx) / fx, -(j_coords - cy) / fy, -torch.ones_like(i_coords)
         ], dim=-1)
         
         dirs = torch.sum(dirs[..., None, :] * pose[:3, :3], dim=-1)
@@ -495,10 +490,7 @@ class MegaNeRFPlusTrainer:
             chunk_rays_d = rays_d_flat[i:i+chunk_size]
             
             chunk_results = self.model.render_rays(
-                chunk_rays_o, chunk_rays_d,
-                near=self.train_dataset.near,
-                far=self.train_dataset.far,
-                lod=0,  # Use highest quality for validation
+                chunk_rays_o, chunk_rays_d, near=self.train_dataset.near, far=self.train_dataset.far, lod=0, # Use highest quality for validation
                 white_bkgd=True
             )
             
@@ -564,11 +556,7 @@ class MegaNeRFPlusTrainer:
         if not hasattr(self.train_dataset, 'set_resolution'):
             # Simple dataloader if resolution control not supported
             return torch.utils.data.DataLoader(
-                self.train_dataset,
-                batch_size=self.config.batch_size,
-                shuffle=True,
-                num_workers=4,
-                pin_memory=True
+                self.train_dataset, batch_size=self.config.batch_size, shuffle=True, num_workers=4, pin_memory=True
             )
         
         # Set dataset resolution
@@ -576,14 +564,10 @@ class MegaNeRFPlusTrainer:
         self.train_dataset.set_resolution(current_resolution)
         
         return torch.utils.data.DataLoader(
-            self.train_dataset,
-            batch_size=self.config.batch_size,
-            shuffle=True,
-            num_workers=4,
-            pin_memory=True
+            self.train_dataset, batch_size=self.config.batch_size, shuffle=True, num_workers=4, pin_memory=True
         )
     
-    def _batch_to_device(self, batch: Dict[str, torch.Tensor]) -> Dict[str, torch.Tensor]:
+    def _batch_to_device(self, batch: dict[str, torch.Tensor]) -> dict[str, torch.Tensor]:
         """Move batch to training device"""
         device_batch = {}
         for key, value in batch.items():
@@ -593,8 +577,14 @@ class MegaNeRFPlusTrainer:
                 device_batch[key] = value
         return device_batch
     
-    def _log_metrics(self, train_metrics: Dict[str, float], 
-                    val_metrics: Dict[str, float], epoch: int):
+    def _log_metrics(
+        self,
+        train_metrics: dict[str,
+        float],
+        val_metrics: dict[str,
+        float],
+        epoch: int,
+    ) -> None:
         """Log training metrics"""
         
         # Console logging
@@ -611,30 +601,23 @@ class MegaNeRFPlusTrainer:
         # Wandb logging
         if self.use_wandb:
             wandb_dict = {
-                'epoch': epoch,
-                'global_step': self.global_step,
-                'train_loss': train_metrics['total_loss'],
-                'train_rgb_loss': train_metrics['rgb_loss'],
-                'learning_rate': self.optimizer.param_groups[0]['lr'],
-                'resolution_level': self.current_resolution_level
+                'epoch': epoch, 'global_step': self.global_step, 'train_loss': train_metrics['total_loss'], 'train_rgb_loss': train_metrics['rgb_loss'], 'learning_rate': self.optimizer.param_groups[0]['lr'], 'resolution_level': self.current_resolution_level
             }
             
             if val_metrics:
                 wandb_dict.update({
-                    'val_psnr': val_metrics['psnr'],
-                    'val_ssim': val_metrics['ssim']
+                    'val_psnr': val_metrics['psnr'], 'val_ssim': val_metrics['ssim']
                 })
             
             wandb.log(wandb_dict)
     
-    def _log_step_metrics(self, loss_dict: Dict[str, torch.Tensor], step: int):
+    def _log_step_metrics(self, loss_dict: dict[str, torch.Tensor], step: int):
         """Log step-level metrics"""
         
         if self.use_wandb and step % 100 == 0:
             wandb_dict = {
-                'step_loss': loss_dict['total_loss'].item(),
-                'step_rgb_loss': loss_dict.get('rgb_loss', 0.0),
-                'global_step': self.global_step
+                'step_loss': loss_dict['total_loss'].item(
+                )
             }
             wandb.log(wandb_dict)
     
@@ -642,14 +625,8 @@ class MegaNeRFPlusTrainer:
         """Save training checkpoint"""
         
         checkpoint = {
-            'epoch': self.epoch,
-            'global_step': self.global_step,
-            'model_state_dict': self.model.state_dict(),
-            'optimizer_state_dict': self.optimizer.state_dict(),
-            'scheduler_state_dict': self.scheduler.state_dict(),
-            'config': self.config,
-            'best_val_psnr': self.best_val_psnr,
-            'current_resolution_level': self.current_resolution_level
+            'epoch': self.epoch, 'global_step': self.global_step, 'model_state_dict': self.model.state_dict(
+            )
         }
         
         if self.scaler is not None:
@@ -700,7 +677,7 @@ class MultiScaleTrainer(MegaNeRFPlusTrainer):
         self.current_scale_idx = 0
         self.steps_per_scale = self.config.lr_decay_steps // len(self.scale_factors)
     
-    def _create_resolution_schedule(self) -> List[Tuple[int, int]]:
+    def _create_resolution_schedule(self) -> list[tuple[int, int]]:
         """Create multi-scale resolution schedule"""
         
         schedules = []
@@ -739,9 +716,7 @@ class DistributedTrainer(MegaNeRFPlusTrainer):
         
         # Wrap model with DDP
         self.model = DDP(
-            self.model, 
-            device_ids=[self.local_rank],
-            find_unused_parameters=True
+            self.model, device_ids=[self.local_rank], find_unused_parameters=True
         )
     
     def _init_distributed(self):
@@ -754,9 +729,7 @@ class DistributedTrainer(MegaNeRFPlusTrainer):
             os.environ['MASTER_ADDR'] = 'localhost'
             os.environ['MASTER_PORT'] = '12345'
             dist.init_process_group(
-                backend='nccl',
-                rank=0,
-                world_size=1
+                backend='nccl', rank=0, world_size=1
             )
     
     def _create_dataloader_for_resolution(self):
@@ -764,22 +737,21 @@ class DistributedTrainer(MegaNeRFPlusTrainer):
         
         # Create distributed sampler
         sampler = torch.utils.data.distributed.DistributedSampler(
-            self.train_dataset,
-            num_replicas=self.world_size,
-            rank=self.rank,
-            shuffle=True
+            self.train_dataset, num_replicas=self.world_size, rank=self.rank, shuffle=True
         )
         
         return torch.utils.data.DataLoader(
-            self.train_dataset,
-            batch_size=self.config.batch_size // self.world_size,
-            sampler=sampler,
-            num_workers=4,
-            pin_memory=True
+            self.train_dataset, batch_size=self.config.batch_size // self.world_size, sampler=sampler, num_workers=4, pin_memory=True
         )
     
-    def _log_metrics(self, train_metrics: Dict[str, float], 
-                    val_metrics: Dict[str, float], epoch: int):
+    def _log_metrics(
+        self,
+        train_metrics: dict[str,
+        float],
+        val_metrics: dict[str,
+        float],
+        epoch: int,
+    ) -> None:
         """Log metrics only on rank 0"""
         
         if self.rank == 0:
@@ -791,14 +763,8 @@ class DistributedTrainer(MegaNeRFPlusTrainer):
         if self.rank == 0:
             # Use module.state_dict() for DDP models
             checkpoint = {
-                'epoch': self.epoch,
-                'global_step': self.global_step,
-                'model_state_dict': self.model.module.state_dict(),
-                'optimizer_state_dict': self.optimizer.state_dict(),
-                'scheduler_state_dict': self.scheduler.state_dict(),
-                'config': self.config,
-                'best_val_psnr': self.best_val_psnr,
-                'current_resolution_level': self.current_resolution_level
+                'epoch': self.epoch, 'global_step': self.global_step, 'model_state_dict': self.model.module.state_dict(
+                )
             }
             
             checkpoint_path = self.checkpoint_dir / filename

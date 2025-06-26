@@ -1,8 +1,7 @@
 """
 PyTorch Lightning trainer for Instant-NGP.
 
-This module provides a Lightning-based training framework for Instant-NGP models,
-optimized for fast neural radiance field training.
+This module provides a Lightning-based training framework for Instant-NGP models, optimized for fast neural radiance field training.
 """
 
 import torch
@@ -12,7 +11,7 @@ from pytorch_lightning.callbacks import ModelCheckpoint, LearningRateMonitor, Ea
 from pytorch_lightning.loggers import TensorBoardLogger, WandbLogger
 from pytorch_lightning.strategies import DDPStrategy
 import torchmetrics
-from typing import Dict, List, Optional, Tuple, Any, Union
+from typing import Dict, List, Optional, Tuple, Any
 from dataclasses import dataclass
 import numpy as np
 import logging
@@ -97,15 +96,14 @@ class InstantNGPLightningModule(pl.LightningModule):
         
         # Ray sampling statistics
         self.ray_sampling_stats = {
-            'total_rays': 0,
-            'high_error_rays': 0
+            'total_rays': 0, 'high_error_rays': 0
         }
     
-    def forward(self, positions: torch.Tensor, directions: torch.Tensor) -> Dict[str, torch.Tensor]:
+    def forward(self, positions: torch.Tensor, directions: torch.Tensor) -> dict[str, torch.Tensor]:
         """Forward pass through the model."""
         return self.model(positions, directions)
     
-    def training_step(self, batch: Dict[str, torch.Tensor], batch_idx: int) -> torch.Tensor:
+    def training_step(self, batch: dict[str, torch.Tensor], batch_idx: int) -> torch.Tensor:
         """Training step."""
         # Extract batch data
         rays_o = batch['rays_o']  # [N, 3]
@@ -123,8 +121,7 @@ class InstantNGPLightningModule(pl.LightningModule):
         
         # Render rays
         outputs = self.renderer.render_rays(
-            self.model, rays_o, rays_d, near, far, 
-            num_samples=self.config.num_samples
+            self.model, rays_o, rays_d, near, far, num_samples=self.config.num_samples
         )
         
         pred_colors = outputs['rgb']
@@ -160,7 +157,12 @@ class InstantNGPLightningModule(pl.LightningModule):
         
         return losses['total_loss']
     
-    def validation_step(self, batch: Dict[str, torch.Tensor], batch_idx: int) -> Dict[str, torch.Tensor]:
+    def validation_step(
+        self,
+        batch: dict[str,
+        torch.Tensor],
+        batch_idx: int,
+    )
         """Validation step."""
         # Extract batch data
         rays_o = batch['rays_o']
@@ -181,8 +183,7 @@ class InstantNGPLightningModule(pl.LightningModule):
                 chunk_rays_d = rays_d[i:end_i]
                 
                 chunk_outputs = self.renderer.render_rays(
-                    self.model, chunk_rays_o, chunk_rays_d, near, far,
-                    num_samples=self.config.num_samples
+                    self.model, chunk_rays_o, chunk_rays_d, near, far, num_samples=self.config.num_samples
                 )
                 
                 all_rgb.append(chunk_outputs['rgb'])
@@ -211,14 +212,11 @@ class InstantNGPLightningModule(pl.LightningModule):
             ssim = torch.tensor(0.0, device=self.device)
         
         return {
-            'val_loss': losses['total_loss'],
-            'val_psnr': psnr,
-            'val_ssim': ssim,
-            'pred_rgb': pred_rgb[:100],  # Log first 100 pixels
+            'val_loss': losses['total_loss'], 'val_psnr': psnr, 'val_ssim': ssim, 'pred_rgb': pred_rgb[:100], # Log first 100 pixels
             'target_rgb': target_colors[:100]
         }
     
-    def validation_epoch_end(self, outputs: List[Dict[str, torch.Tensor]]) -> None:
+    def validation_epoch_end(self, outputs: list[dict[str, torch.Tensor]]) -> None:
         """Aggregate validation results."""
         # Average metrics
         avg_loss = torch.stack([x['val_loss'] for x in outputs]).mean()
@@ -237,7 +235,7 @@ class InstantNGPLightningModule(pl.LightningModule):
         if self.config.adaptive_ray_sampling:
             self._log_ray_sampling_stats()
     
-    def configure_optimizers(self) -> Dict[str, Any]:
+    def configure_optimizers(self) -> dict[str, Any]:
         """Configure optimizers and schedulers."""
         # Group parameters with different learning rates
         hash_params = []
@@ -251,14 +249,9 @@ class InstantNGPLightningModule(pl.LightningModule):
         
         param_groups = [
             {
-                'params': hash_params,
-                'lr': self.config.learning_rate * self.config.hash_lr_factor,
-                'name': 'hash_encoding'
-            },
-            {
-                'params': network_params,
-                'lr': self.config.learning_rate * self.config.network_lr_factor,
-                'name': 'networks'
+                'params': hash_params, 'lr': self.config.learning_rate * self.config.hash_lr_factor, 'name': 'hash_encoding'
+            }, {
+                'params': network_params, 'lr': self.config.learning_rate * self.config.network_lr_factor, 'name': 'networks'
             }
         ]
         
@@ -268,23 +261,22 @@ class InstantNGPLightningModule(pl.LightningModule):
         elif self.config.optimizer_type == "adamw":
             optimizer = torch.optim.AdamW(param_groups, weight_decay=self.config.weight_decay)
         elif self.config.optimizer_type == "sgd":
-            optimizer = torch.optim.SGD(param_groups, momentum=0.9, 
-                                      weight_decay=self.config.weight_decay)
+            optimizer = torch.optim.SGD(
+                param_groups,
+                momentum=0.9,
+                weight_decay=self.config.weight_decay,
+            )
         else:
             raise ValueError(f"Unsupported optimizer: {self.config.optimizer_type}")
         
         # Configure scheduler with exponential decay
         scheduler = torch.optim.lr_scheduler.ExponentialLR(
-            optimizer, 
-            gamma=self.config.lr_decay_factor ** (1.0 / self.config.lr_decay_steps)
+            optimizer, gamma=self.config.lr_decay_factor ** (1.0 / self.config.lr_decay_steps)
         )
         
         return {
-            "optimizer": optimizer,
-            "lr_scheduler": {
-                "scheduler": scheduler,
-                "interval": "step",
-                "frequency": 1
+            "optimizer": optimizer, "lr_scheduler": {
+                "scheduler": scheduler, "interval": "step", "frequency": 1
             }
         }
     
@@ -297,8 +289,7 @@ class InstantNGPLightningModule(pl.LightningModule):
         # Reset ray sampling statistics
         if self.config.adaptive_ray_sampling:
             self.ray_sampling_stats = {
-                'total_rays': 0,
-                'high_error_rays': 0
+                'total_rays': 0, 'high_error_rays': 0
             }
     
     def _update_ray_sampling_stats(self, pred_colors: torch.Tensor, target_colors: torch.Tensor):
@@ -349,17 +340,8 @@ class InstantNGPLightningModule(pl.LightningModule):
 
 
 def create_instant_ngp_lightning_trainer(
-    config: InstantNGPLightningConfig,
-    train_dataset,
-    val_dataset = None,
-    max_epochs: int = 100,
-    gpus: Union[int, List[int]] = 1,
-    logger_type: str = "tensorboard",
-    project_name: str = "instant_ngp",
-    experiment_name: str = "default",
-    checkpoint_dir: str = "checkpoints",
-    **trainer_kwargs
-) -> Tuple[InstantNGPLightningModule, pl.Trainer]:
+    config: InstantNGPLightningConfig, train_dataset: InstantNGPDataset, val_dataset: Optional[InstantNGPDataset] = None, max_epochs: int = 100, gpus: int | list[int] = 1, logger_type: str = "tensorboard", project_name: str = "instant_ngp", experiment_name: str = "default", checkpoint_dir: str = "checkpoints", **trainer_kwargs
+) -> tuple[InstantNGPLightningModule, pl.Trainer]:
     """
     Create Instant-NGP Lightning module and trainer.
     
@@ -384,16 +366,11 @@ def create_instant_ngp_lightning_trainer(
     # Setup logger
     if logger_type == "tensorboard":
         logger = TensorBoardLogger(
-            save_dir="logs",
-            name=project_name,
-            version=experiment_name
+            save_dir="logs", name=project_name, version=experiment_name
         )
     elif logger_type == "wandb":
         logger = WandbLogger(
-            project=project_name,
-            name=experiment_name,
-            save_dir="logs",
-            tags=["instant-ngp", "nerf", "hash-encoding"]
+            project=project_name, name=experiment_name, save_dir="logs", tags=["instant-ngp", "nerf", "hash-encoding"]
         )
     else:
         logger = None
@@ -401,18 +378,11 @@ def create_instant_ngp_lightning_trainer(
     # Setup callbacks
     callbacks = [
         ModelCheckpoint(
-            dirpath=checkpoint_dir,
-            filename=f"{experiment_name}-{{epoch:02d}}-{{val/psnr:.2f}}",
-            monitor="val/psnr",
-            mode="max",
-            save_top_k=3,
-            save_last=True
-        ),
-        LearningRateMonitor(logging_interval="step"),
-        EarlyStopping(
-            monitor="val/psnr",
-            mode="max",
-            patience=50,  # Longer patience for Instant-NGP
+            dirpath=checkpoint_dir, filename=f"{
+                experiment_name,
+            }
+        ), LearningRateMonitor(logging_interval="step"), EarlyStopping(
+            monitor="val/psnr", mode="max", patience=50, # Longer patience for Instant-NGP
             verbose=True
         )
     ]
@@ -426,27 +396,14 @@ def create_instant_ngp_lightning_trainer(
     
     # Create trainer
     trainer = pl.Trainer(
-        max_epochs=max_epochs,
-        devices=gpus,
-        logger=logger,
-        callbacks=callbacks,
-        strategy=strategy,
-        gradient_clip_val=config.gradient_clip_val,
-        precision="16-mixed" if config.use_mixed_precision else 32,
-        log_every_n_steps=25,
-        val_check_interval=0.5,
-        **trainer_kwargs
+        max_epochs=max_epochs, devices=gpus, logger=logger, callbacks=callbacks, strategy=strategy, gradient_clip_val=config.gradient_clip_val, precision="16-mixed" if config.use_mixed_precision else 32, log_every_n_steps=25, val_check_interval=0.5, **trainer_kwargs
     )
     
     return lightning_module, trainer
 
 
 def train_instant_ngp_lightning(
-    model_config: InstantNGPConfig,
-    lightning_config: InstantNGPLightningConfig,
-    train_dataset,
-    val_dataset = None,
-    **trainer_kwargs
+    model_config: InstantNGPConfig, lightning_config: InstantNGPLightningConfig, train_dataset, val_dataset = None, **trainer_kwargs
 ) -> InstantNGPLightningModule:
     """
     Simplified training function for Instant-NGP using Lightning.
@@ -466,31 +423,20 @@ def train_instant_ngp_lightning(
     
     # Create Lightning module and trainer
     lightning_module, trainer = create_instant_ngp_lightning_trainer(
-        lightning_config,
-        train_dataset,
-        val_dataset,
-        **trainer_kwargs
+        lightning_config, train_dataset, val_dataset, **trainer_kwargs
     )
     
     # Create data loaders
     from torch.utils.data import DataLoader
     
     train_loader = DataLoader(
-        train_dataset,
-        batch_size=lightning_config.ray_batch_size,
-        shuffle=True,
-        num_workers=4,
-        pin_memory=True
+        train_dataset, batch_size=lightning_config.ray_batch_size, shuffle=True, num_workers=4, pin_memory=True
     )
     
     val_loader = None
     if val_dataset is not None:
         val_loader = DataLoader(
-            val_dataset,
-            batch_size=lightning_config.val_ray_batch_size,
-            shuffle=False,
-            num_workers=2,
-            pin_memory=True
+            val_dataset, batch_size=lightning_config.val_ray_batch_size, shuffle=False, num_workers=2, pin_memory=True
         )
     
     # Start training

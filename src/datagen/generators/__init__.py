@@ -9,7 +9,5 @@ from .occupancy_generator import OccupancyGenerator
 from .synthetic_scene_generator import SyntheticSceneGenerator
 
 __all__ = [
-    'SDFGenerator',
-    'OccupancyGenerator', 
-    'SyntheticSceneGenerator'
+    'SDFGenerator', 'OccupancyGenerator', 'SyntheticSceneGenerator'
 ] 

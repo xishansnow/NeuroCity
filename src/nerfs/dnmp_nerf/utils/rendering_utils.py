@@ -1,19 +1,20 @@
 """
 Rendering utilities for DNMP.
 
-This module provides functions for camera operations, ray generation,
-and rendering-related computations.
+This module provides functions for camera operations, ray generation, and rendering-related computations.
 """
 
 import torch
 import torch.nn.functional as F
 import numpy as np
-from typing import Tuple, List, Optional, Dict, Union
+from typing import Dict, List, Optional, Tuple, Union
 
 
-def generate_camera_rays(camera_matrix: torch.Tensor,
-                        view_matrix: torch.Tensor,
-                        image_size: Tuple[int, int]) -> Tuple[torch.Tensor, torch.Tensor]:
+def generate_camera_rays(
+    camera_matrix: torch.Tensor,
+    view_matrix: torch.Tensor,
+    image_size: tuple[int, int]
+):
     """
     Generate camera rays for given camera parameters.
     
@@ -31,16 +32,19 @@ def generate_camera_rays(camera_matrix: torch.Tensor,
     
     # Generate pixel coordinates
     i, j = torch.meshgrid(
-        torch.arange(width, device=device, dtype=torch.float32),
-        torch.arange(height, device=device, dtype=torch.float32),
-        indexing='xy'
+        torch.arange(
+            width,
+            device=device,
+            dtype=torch.float32,
+        )
     )
     
     # Convert to normalized device coordinates
     dirs = torch.stack([
-        (i - camera_matrix[0, 2]) / camera_matrix[0, 0],
-        (j - camera_matrix[1, 2]) / camera_matrix[1, 1],
-        torch.ones_like(i)
+        (
+            i - camera_matrix[0,
+            2],
+        )
     ], dim=-1)
     
     # Transform ray directions to world coordinates
@@ -58,11 +62,13 @@ def generate_camera_rays(camera_matrix: torch.Tensor,
     return ray_origins, ray_directions
 
 
-def sample_rays_from_image(ray_origins: torch.Tensor,
-                          ray_directions: torch.Tensor,
-                          image: torch.Tensor,
-                          num_rays: int,
-                          device: torch.device = None) -> Dict[str, torch.Tensor]:
+def sample_rays_from_image(
+    ray_origins: torch.Tensor,
+    ray_directions: torch.Tensor,
+    image: torch.Tensor,
+    num_rays: int,
+    device: torch.device = None
+):
     """
     Sample rays from image for training.
     
@@ -80,7 +86,7 @@ def sample_rays_from_image(ray_origins: torch.Tensor,
     height, width = ray_origins.shape[:2]
     
     # Generate random pixel indices
-    pixel_indices = torch.randint(0, height * width, (num_rays,), device=device)
+    pixel_indices = torch.randint(0, height * width, (num_rays, ), device=device)
     
     # Convert to 2D coordinates
     pixel_y = pixel_indices // width
@@ -92,18 +98,20 @@ def sample_rays_from_image(ray_origins: torch.Tensor,
     sampled_colors = image[pixel_y, pixel_x]  # [num_rays, 3]
     
     return {
-        'ray_origins': sampled_origins,
-        'ray_directions': sampled_directions,
-        'target_colors': sampled_colors,
-        'pixel_indices': pixel_indices,
-        'pixel_coords': torch.stack([pixel_x, pixel_y], dim=1)
+        'ray_origins': sampled_origins, 'ray_directions': sampled_directions, 'target_colors': sampled_colors, 'pixel_indices': pixel_indices, 'pixel_coords': torch.stack(
+            [pixel_x,
+            pixel_y],
+            dim=1,
+        )
     }
 
 
-def volume_rendering(colors: torch.Tensor,
-                    densities: torch.Tensor,
-                    distances: torch.Tensor,
-                    background_color: Optional[torch.Tensor] = None) -> Dict[str, torch.Tensor]:
+def volume_rendering(
+    colors: torch.Tensor,
+    densities: torch.Tensor,
+    distances: torch.Tensor,
+    background_color: Optional[torch.Tensor] = None
+):
     """
     Perform volume rendering using alpha compositing.
     
@@ -148,20 +156,19 @@ def volume_rendering(colors: torch.Tensor,
     opacity = weights.sum(dim=-1)
     
     return {
-        'rgb': rendered_colors,
-        'depth': rendered_depth,
-        'opacity': opacity,
-        'weights': weights
+        'rgb': rendered_colors, 'depth': rendered_depth, 'opacity': opacity, 'weights': weights
     }
 
 
-def hierarchical_sampling(ray_origins: torch.Tensor,
-                         ray_directions: torch.Tensor,
-                         near: float,
-                         far: float,
-                         num_coarse: int,
-                         num_fine: int,
-                         coarse_weights: Optional[torch.Tensor] = None) -> Dict[str, torch.Tensor]:
+def hierarchical_sampling(
+    ray_origins: torch.Tensor,
+    ray_directions: torch.Tensor,
+    near: float,
+    far: float,
+    num_coarse: int,
+    num_fine: int,
+    coarse_weights: Optional[torch.Tensor] = None
+):
     """
     Perform hierarchical sampling along rays.
     
@@ -224,10 +231,7 @@ def hierarchical_sampling(ray_origins: torch.Tensor,
     sample_points = ray_origins.unsqueeze(-2) + ray_directions.unsqueeze(-2) * t_combined.unsqueeze(-1)
     
     return {
-        'sample_points': sample_points,
-        'sample_distances': t_combined,
-        't_coarse': t_coarse,
-        't_fine': t_fine if coarse_weights is not None and num_fine > 0 else None
+        'sample_points': sample_points, 'sample_distances': t_combined, 't_coarse': t_coarse, 't_fine': t_fine if coarse_weights is not None and num_fine > 0 else None
     }
 
 
@@ -247,8 +251,12 @@ def compute_psnr(pred: torch.Tensor, target: torch.Tensor) -> torch.Tensor:
     return psnr
 
 
-def compute_ssim(pred: torch.Tensor, target: torch.Tensor,
-                window_size: int = 11, sigma: float = 1.5) -> torch.Tensor:
+def compute_ssim(
+    pred: torch.Tensor,
+    target: torch.Tensor,
+    window_size: int = 11,
+    sigma: float = 1.5
+): 
     """
     Compute Structural Similarity Index (SSIM).
     
@@ -284,8 +292,18 @@ def compute_ssim(pred: torch.Tensor, target: torch.Tensor,
     mu1_mu2 = mu1 * mu2
     
     sigma1_sq = F.conv2d(pred * pred, window, groups=pred.shape[1], padding=window_size//2) - mu1_sq
-    sigma2_sq = F.conv2d(target * target, window, groups=target.shape[1], padding=window_size//2) - mu2_sq
-    sigma12 = F.conv2d(pred * target, window, groups=pred.shape[1], padding=window_size//2) - mu1_mu2
+    sigma2_sq = F.conv2d(
+        target * target,
+        window,
+        groups=target.shape[1],
+        padding=window_size//2,
+    )
+    sigma12 = F.conv2d(
+        pred * target,
+        window,
+        groups=pred.shape[1],
+        padding=window_size//2,
+    )
     
     C1 = 0.01 ** 2
     C2 = 0.03 ** 2

@@ -16,7 +16,7 @@ import cv2
 import json
 import os
 from pathlib import Path
-from typing import Dict, List, Tuple, Optional, Union, Any
+from typing import Dict, List, Optional, Tuple, Any
 from dataclasses import dataclass
 import math
 
@@ -148,9 +148,7 @@ class InfNeRFDataset(Dataset):
                 h, w = img.shape[:2]
                 focal = max(h, w)  # Rough estimate
                 intrinsic = np.array([
-                    [focal, 0, w/2],
-                    [0, focal, h/2], 
-                    [0, 0, 1]
+                    [focal, 0, w/2], [0, focal, h/2], [0, 0, 1]
                 ])
                 extrinsic = np.eye(4)  # Identity for now
                 self.intrinsics.append(intrinsic)
@@ -211,8 +209,10 @@ class InfNeRFDataset(Dataset):
             for level in range(1, self.num_pyramid_levels):
                 scale = 1.0 / (self.config.pyramid_scale_factor ** level)
                 new_size = (
-                    max(1, int(current_img.shape[1] * self.config.pyramid_scale_factor**(-1))),
-                    max(1, int(current_img.shape[0] * self.config.pyramid_scale_factor**(-1)))
+                    max(
+                        1,
+                        int,
+                    )
                 )
                 current_img = cv2.resize(current_img, new_size)
                 pyramid.append(current_img)
@@ -247,7 +247,7 @@ class InfNeRFDataset(Dataset):
         else:
             return len(self.images)
     
-    def __getitem__(self, idx: int) -> Dict[str, torch.Tensor]:
+    def __getitem__(self, idx: int) -> dict[str, torch.Tensor]:
         """
         Get training sample.
         
@@ -282,22 +282,23 @@ class InfNeRFDataset(Dataset):
         pixel_width = 1.0  # Normalized pixel width
         
         return {
-            'rays_o': torch.from_numpy(rays_o).float(),
-            'rays_d': torch.from_numpy(rays_d).float(),
-            'target_rgb': torch.from_numpy(target_rgb).float(),
-            'focal_length': torch.tensor(focal_length).float(),
-            'pixel_width': torch.tensor(pixel_width).float(),
-            'near': torch.tensor(self.config.near_plane).float(),
-            'far': torch.tensor(self.config.far_plane).float(),
-            'pyramid_level': torch.tensor(level).long(),
-            'image_idx': torch.tensor(img_idx).long(),
+            'rays_o': torch.from_numpy(
+                rays_o,
+            ),
+            'rays_d': torch.from_numpy(rays_d),
+            'target_rgb': torch.from_numpy(target_rgb),
+            'pixel_coords': torch.from_numpy(pixel_coords),
+            'focal_length': focal_length,
+            'pixel_width': pixel_width,
         }
     
-    def _sample_rays(self, 
-                    img: np.ndarray,
-                    intrinsic: np.ndarray, 
-                    extrinsic: np.ndarray,
-                    num_rays: int) -> Tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
+    def _sample_rays(
+        self,
+        img: np.ndarray,
+        intrinsic: np.ndarray,
+        extrinsic: np.ndarray,
+        num_rays: int,
+    ) -> tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
         """
         Sample rays from image.
         
@@ -346,10 +347,12 @@ class InfNeRFDataset(Dataset):
         
         return rays_o, rays_d, target_rgb, pixel_coords
     
-    def _pixels_to_rays(self,
-                       pixel_coords: np.ndarray,
-                       intrinsic: np.ndarray,
-                       extrinsic: np.ndarray) -> Tuple[np.ndarray, np.ndarray]:
+    def _pixels_to_rays(
+        self,
+        pixel_coords: np.ndarray,
+        intrinsic: np.ndarray,
+        extrinsic: np.ndarray,
+    ) -> tuple[np.ndarray, np.ndarray]:
         """
         Convert pixel coordinates to 3D rays.
         
@@ -388,7 +391,7 @@ class InfNeRFDataset(Dataset):
         """Get sparse points from SfM."""
         return self.sparse_points.copy()
     
-    def get_all_camera_poses(self) -> List[np.ndarray]:
+    def get_all_camera_poses(self) -> list[np.ndarray]:
         """Get all camera poses for testing."""
         return [ext.copy() for ext in self.extrinsics]
     
@@ -400,11 +403,13 @@ class InfNeRFDataset(Dataset):
             raise IndexError("Invalid image index or pyramid level")
 
 
-def create_inf_nerf_dataloader(config: InfNeRFDatasetConfig, 
-                              split: str = 'train',
-                              batch_size: Optional[int] = None,
-                              shuffle: bool = True,
-                              num_workers: int = 4) -> DataLoader:
+def create_inf_nerf_dataloader(
+    config: InfNeRFDatasetConfig,
+    split: str = 'train',
+    batch_size: Optional[int] = None,
+    shuffle: bool = True,
+    num_workers: int = 4,
+) -> DataLoader:
     """
     Create DataLoader for InfNeRF dataset.
     
@@ -424,12 +429,7 @@ def create_inf_nerf_dataloader(config: InfNeRFDatasetConfig,
         batch_size = config.batch_size
     
     dataloader = DataLoader(
-        dataset,
-        batch_size=batch_size,
-        shuffle=shuffle,
-        num_workers=num_workers,
-        pin_memory=True,
-        drop_last=True if split == 'train' else False
+        dataset, batch_size=batch_size, shuffle=shuffle, num_workers=num_workers, pin_memory=True, drop_last=True if split == 'train' else False
     )
     
     return dataloader

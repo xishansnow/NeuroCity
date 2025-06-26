@@ -4,7 +4,7 @@ Utility functions for PyNeRF
 
 import torch
 import torch.nn.functional as F
-from typing import Dict, List, Optional, Tuple, Union
+from typing import Dict, List, Optional, Tuple, Any, Union
 import numpy as np
 import logging
 import os
@@ -14,10 +14,7 @@ logger = logging.getLogger(__name__)
 
 
 def compute_sample_area(
-    rays_o: torch.Tensor,
-    rays_d: torch.Tensor,
-    z_vals: torch.Tensor,
-    cone_angle: float = 0.00628
+    rays_o: torch.Tensor, rays_d: torch.Tensor, z_vals: torch.Tensor, cone_angle: float = 0.00628
 ) -> torch.Tensor:
     """
     Compute sample areas for pyramid level selection
@@ -42,9 +39,7 @@ def compute_sample_area(
 
 
 def get_pyramid_level(
-    sample_areas: torch.Tensor,
-    pyramid_levels: List[int],
-    scale_factor: float = 2.0
+    sample_areas: torch.Tensor, pyramid_levels: list[int], scale_factor: float = 2.0
 ) -> torch.Tensor:
     """
     Determine pyramid level for each sample based on area
@@ -72,12 +67,8 @@ def get_pyramid_level(
 
 
 def interpolate_pyramid_outputs(
-    rgb_outputs: List[Tuple[torch.Tensor, torch.Tensor, torch.Tensor]],
-    sigma_outputs: List[Tuple[torch.Tensor, torch.Tensor, torch.Tensor]],
-    pyramid_levels: torch.Tensor,
-    num_points: int,
-    device: torch.device
-) -> Tuple[torch.Tensor, torch.Tensor]:
+    rgb_outputs: list[tuple[torch.Tensor, torch.Tensor, torch.Tensor]], sigma_outputs: list[tuple[torch.Tensor, torch.Tensor, torch.Tensor]], pyramid_levels: torch.Tensor, num_points: int, device: torch.device
+) -> tuple[torch.Tensor, torch.Tensor]:
     """
     Interpolate outputs from different pyramid levels
     
@@ -104,11 +95,8 @@ def interpolate_pyramid_outputs(
 
 
 def create_pyramid_hierarchy(
-    num_levels: int = 8,
-    base_resolution: int = 16,
-    scale_factor: float = 2.0,
-    max_resolution: int = 2048
-) -> List[int]:
+    num_levels: int = 8, base_resolution: int = 16, scale_factor: float = 2.0, max_resolution: int = 2048
+) -> list[int]:
     """
     Create pyramid hierarchy of resolutions
     
@@ -124,8 +112,7 @@ def create_pyramid_hierarchy(
     resolutions = []
     for level in range(num_levels):
         resolution = min(
-            base_resolution * (scale_factor ** level),
-            max_resolution
+            base_resolution * (scale_factor ** level), max_resolution
         )
         resolutions.append(int(resolution))
     
@@ -133,11 +120,7 @@ def create_pyramid_hierarchy(
 
 
 def save_pyramid_model(
-    model: torch.nn.Module,
-    config: dict,
-    save_path: str,
-    epoch: Optional[int] = None,
-    optimizer_state: Optional[dict] = None
+    model: torch.nn.Module, config: dict, save_path: str, epoch: Optional[int] = None, optimizer_state: Optional[dict] = None
 ) -> None:
     """
     Save PyNeRF model and configuration
@@ -152,9 +135,8 @@ def save_pyramid_model(
     os.makedirs(os.path.dirname(save_path), exist_ok=True)
     
     checkpoint = {
-        'model_state_dict': model.state_dict(),
-        'config': config,
-        'pyramid_info': model.get_pyramid_info() if hasattr(model, 'get_pyramid_info') else None
+        'model_state_dict': model.state_dict(
+        )
     }
     
     if epoch is not None:
@@ -168,10 +150,8 @@ def save_pyramid_model(
 
 
 def load_pyramid_model(
-    model: torch.nn.Module,
-    load_path: str,
-    device: str = "cuda"
-) -> Tuple[torch.nn.Module, dict]:
+    model: torch.nn.Module, load_path: str, device: str = "cuda"
+) -> tuple[torch.nn.Module, dict]:
     """
     Load PyNeRF model and configuration
     
@@ -194,9 +174,7 @@ def load_pyramid_model(
 
 
 def compute_psnr(
-    img_pred: torch.Tensor,
-    img_gt: torch.Tensor,
-    mask: Optional[torch.Tensor] = None
+    img_pred: torch.Tensor, img_gt: torch.Tensor, mask: Optional[torch.Tensor] = None
 ) -> float:
     """
     Compute Peak Signal-to-Noise Ratio (PSNR)
@@ -223,10 +201,7 @@ def compute_psnr(
 
 
 def compute_ssim(
-    img_pred: torch.Tensor,
-    img_gt: torch.Tensor,
-    window_size: int = 11,
-    sigma: float = 1.5
+    img_pred: torch.Tensor, img_gt: torch.Tensor, window_size: int = 11, sigma: float = 1.5
 ) -> float:
     """
     Compute Structural Similarity Index (SSIM)
@@ -282,9 +257,7 @@ def compute_ssim(
 
 
 def log_pyramid_stats(
-    model: torch.nn.Module,
-    step: int,
-    losses: Dict[str, float]
+    model: torch.nn.Module, step: int, losses: dict[str, float]
 ) -> None:
     """
     Log pyramid model statistics
@@ -301,15 +274,12 @@ def log_pyramid_stats(
         logger.info(f"  Total Loss: {losses.get('total_loss', 0.0):.6f}")
         logger.info(f"  Color Loss: {losses.get('color_loss', 0.0):.6f}")
         logger.info(f"  Pyramid Levels: {pyramid_info['num_levels']}")
-        logger.info(f"  Total Parameters: {pyramid_info['total_parameters']:,}")
+        logger.info(f"  Total Parameters: {pyramid_info['total_parameters']:, }")
 
 
 def create_training_schedule(
-    max_steps: int,
-    warmup_steps: int = 1000,
-    decay_steps: int = 5000,
-    decay_rate: float = 0.1
-) -> Dict[str, any]:
+    max_steps: int, warmup_steps: int = 1000, decay_steps: int = 5000, decay_rate: float = 0.1
+) -> dict[str, any]:
     """
     Create learning rate schedule for PyNeRF training
     
@@ -323,19 +293,12 @@ def create_training_schedule(
         Training schedule configuration
     """
     return {
-        "max_steps": max_steps,
-        "warmup_steps": warmup_steps,
-        "decay_steps": decay_steps,
-        "decay_rate": decay_rate,
-        "schedule_type": "exponential_decay_with_warmup"
+        "max_steps": max_steps, "warmup_steps": warmup_steps, "decay_steps": decay_steps, "decay_rate": decay_rate, "schedule_type": "exponential_decay_with_warmup"
     }
 
 
 def apply_learning_rate_schedule(
-    optimizer: torch.optim.Optimizer,
-    step: int,
-    schedule: Dict[str, any],
-    base_lr: float
+    optimizer: torch.optim.Optimizer, step: int, schedule: dict[str, any], base_lr: float
 ) -> float:
     """
     Apply learning rate schedule

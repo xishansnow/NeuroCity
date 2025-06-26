@@ -16,13 +16,7 @@ import imageio
 from pathlib import Path
 
 from . import (
-    NeRFConfig, 
-    NeRF, 
-    NeRFTrainer,
-    create_nerf_dataloader,
-    pose_spherical,
-    to8b,
-    create_spherical_poses
+    NeRFConfig, NeRF, NeRFTrainer, create_nerf_dataloader, pose_spherical, to8b, create_spherical_poses
 )
 
 
@@ -30,32 +24,12 @@ def create_demo_config():
     """Create a demo configuration for NeRF."""
     config = NeRFConfig(
         # Network architecture
-        netdepth=8,
-        netwidth=256,
-        netdepth_fine=8,
-        netwidth_fine=256,
-        
-        # Positional encoding
-        multires=10,
-        multires_views=4,
-        
-        # Sampling
-        N_samples=64,
-        N_importance=128,
-        perturb=True,
-        use_viewdirs=True,
-        
-        # Rendering
-        raw_noise_std=0.0,
-        white_bkgd=True,
-        
-        # Training
-        learning_rate=5e-4,
-        lrate_decay=250,
-        
-        # Scene bounds
-        near=2.0,
-        far=6.0
+        netdepth=8, netwidth=256, netdepth_fine=8, netwidth_fine=256, # Positional encoding
+        multires=10, multires_views=4, # Sampling
+        N_samples=64, N_importance=128, perturb=True, use_viewdirs=True, # Rendering
+        raw_noise_std=0.0, white_bkgd=True, # Training
+        learning_rate=5e-4, lrate_decay=250, # Scene bounds
+        near=2.0, far=6.0
     )
     return config
 
@@ -78,26 +52,16 @@ def train_demo():
     
     try:
         train_loader = create_nerf_dataloader(
-            dataset_type='blender',
-            basedir=dataset_path,
-            split='train',
-            batch_size=1024,
-            shuffle=True,
-            white_bkgd=config.white_bkgd
+            dataset_type='blender', basedir=dataset_path, split='train', batch_size=1024, shuffle=True, white_bkgd=config.white_bkgd
         )
         
         val_loader = create_nerf_dataloader(
-            dataset_type='blender', 
-            basedir=dataset_path,
-            split='val',
-            batch_size=1024,
-            shuffle=False,
-            white_bkgd=config.white_bkgd
+            dataset_type='blender', basedir=dataset_path, split='val', batch_size=1024, shuffle=False, white_bkgd=config.white_bkgd
         )
         
         print(f"Created data loaders:")
-        print(f"  Train samples: {len(train_loader.dataset):,}")
-        print(f"  Val samples: {len(val_loader.dataset):,}")
+        print(f"  Train samples: {len(train_loader.dataset):, }")
+        print(f"  Val samples: {len(val_loader.dataset):, }")
         
     except Exception as e:
         print(f"Warning: Could not load real data ({e})")
@@ -111,22 +75,17 @@ def train_demo():
     
     print(f"Created trainer on device: {device}")
     print(f"Model parameters:")
-    print(f"  Coarse network: {sum(p.numel() for p in trainer.model_coarse.parameters()):,}")
+    print(f"  Coarse network: {sum(p.numel() for p in trainer.model_coarse.parameters()):, }")
     if trainer.model_fine is not None:
-        print(f"  Fine network: {sum(p.numel() for p in trainer.model_fine.parameters()):,}")
+        print(f"  Fine network: {sum(p.numel() for p in trainer.model_fine.parameters()):, }")
     
     # Train for a few epochs (demo)
     output_dir = "outputs/classic_nerf_demo"
     os.makedirs(output_dir, exist_ok=True)
     
     trainer.train(
-        train_loader=train_loader,
-        val_loader=val_loader,
-        num_epochs=5,  # Short demo
-        log_dir=f"{output_dir}/logs",
-        ckpt_dir=f"{output_dir}/checkpoints",
-        val_interval=2,
-        save_interval=5
+        train_loader=train_loader, val_loader=val_loader, num_epochs=5, # Short demo
+        log_dir=f"{output_dir}/logs", ckpt_dir=f"{output_dir}/checkpoints", val_interval=2, save_interval=5
     )
     
     print("Training completed!")
@@ -144,9 +103,7 @@ def render_demo(trainer, config):
     H, W = 400, 400
     focal = 555.5  # Typical focal length for Blender scenes
     K = np.array([
-        [focal, 0, W/2],
-        [0, focal, H/2], 
-        [0, 0, 1]
+        [focal, 0, W/2], [0, focal, H/2], [0, 0, 1]
     ])
     
     print(f"Rendering {len(render_poses)} views...")
@@ -182,7 +139,7 @@ def render_demo(trainer, config):
     return rgbs
 
 
-def evaluate_demo(trainer, config):
+def evaluate_demo(trainer, config) -> dict[str, float]:
     """Demonstrate evaluation of NeRF model."""
     print("\n=== Evaluation Demo ===")
     
@@ -215,15 +172,15 @@ def create_synthetic_dataloader(batch_size=1024):
     def collate_fn(batch):
         rays_o, rays_d, targets = zip(*batch)
         return {
-            'rays_o': torch.stack(rays_o),
-            'rays_d': torch.stack(rays_d),
-            'targets': torch.stack(targets)
+            'rays_o': torch.stack(
+                rays_o,
+            )
         }
     
     return DataLoader(dataset, batch_size=batch_size, shuffle=True, collate_fn=collate_fn)
 
 
-def model_analysis_demo():
+def model_analysis_demo() -> None:
     """Demonstrate model analysis and visualization."""
     print("\n=== Model Analysis Demo ===")
     
@@ -233,7 +190,7 @@ def model_analysis_demo():
     model = NeRF(config)
     
     print("Model architecture:")
-    print(f"  Total parameters: {sum(p.numel() for p in model.parameters()):,}")
+    print(f"  Total parameters: {sum(p.numel() for p in model.parameters()):, }")
     
     # Analyze positional encoding
     print(f"  Positional encoding dimensions:")

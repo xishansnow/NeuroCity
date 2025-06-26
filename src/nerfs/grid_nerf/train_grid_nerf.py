@@ -2,13 +2,13 @@
 """
 Grid-NeRF Training Script
 
-A standalone script for training Grid-NeRF models with command-line interface.
-Supports single-GPU and multi-GPU distributed training.
+This script provides a command-line interface for training Grid-NeRF models
+on various datasets with configurable parameters.
 
 Usage:
-    python train_grid_nerf.py --data_path /path/to/data --output_dir ./outputs
-    python train_grid_nerf.py --config configs/urban_scene.yaml
-    python -m torch.distributed.launch --nproc_per_node=4 train_grid_nerf.py --distributed
+    python -m nerfs.grid_nerf.train_grid_nerf --data_path /path/to/data --output_dir /path/to/output
+    python -m nerfs.grid_nerf.train_grid_nerf --config config.yaml
+    python -m nerfs.grid_nerf.train_grid_nerf --create_config config_template.yaml
 """
 
 import os
@@ -22,11 +22,10 @@ from pathlib import Path
 # Add the parent directory to the path so we can import grid_nerf
 sys.path.append(str(Path(__file__).parent.parent))
 
-from . import (
-    GridNeRF, GridNeRFConfig, GridNeRFTrainer,
-    create_dataset, get_default_config, setup_logging
-)
-from .trainer import main_worker, setup_distributed_training
+from .core import GridNeRF, GridNeRFConfig
+from .trainer import GridNeRFTrainer, main_worker, setup_distributed_training
+from .dataset import create_dataset
+from .logging_utils import setup_logging
 
 
 def load_config_file(config_path: str) -> dict:
@@ -47,83 +46,34 @@ def create_default_config_file(output_path: str) -> None:
     config = {
         # Data configuration
         'data': {
-            'data_path': '/path/to/your/dataset',
-            'dataset_type': 'GridNeRFDataset',  # or 'KITTI360GridDataset'
-            'image_extension': '.png',
-            'load_depth': False,
-            'train_split': 0.8,
-            'val_split': 0.1,
-            'test_split': 0.1
-        },
-        
-        # Scene configuration
+            'data_path': '/path/to/your/dataset', 'dataset_type': 'GridNeRFDataset', # or 'KITTI360GridDataset'
+            'image_extension': '.png', 'load_depth': False, 'train_split': 0.8, 'val_split': 0.1, 'test_split': 0.1
+        }, # Scene configuration
         'scene': {
             'scene_bounds': {
-                'min_bound': [-100, -100, -10],
-                'max_bound': [100, 100, 50]
+                'min_bound': [-100, -100, -10], 'max_bound': [100, 100, 50]
             }
-        },
-        
-        # Grid configuration
+        }, # Grid configuration
         'grid': {
-            'grid_levels': 4,
-            'base_resolution': 64,
-            'resolution_multiplier': 2,
-            'grid_feature_dim': 32
-        },
-        
-        # Network architecture
+            'grid_levels': 4, 'base_resolution': 64, 'resolution_multiplier': 2, 'grid_feature_dim': 32
+        }, # Network architecture
         'network': {
-            'density_layers': 3,
-            'density_hidden_dim': 256,
-            'color_layers': 2,
-            'color_hidden_dim': 128,
-            'position_encoding_levels': 10,
-            'direction_encoding_levels': 4
-        },
-        
-        # Rendering configuration
+            'density_layers': 3, 'density_hidden_dim': 256, 'color_layers': 2, 'color_hidden_dim': 128, 'position_encoding_levels': 10, 'direction_encoding_levels': 4
+        }, # Rendering configuration
         'rendering': {
-            'num_samples': 64,
-            'num_importance_samples': 128,
-            'perturb': True,
-            'white_background': False,
-            'chunk_size': 1024
-        },
-        
-        # Training configuration
+            'num_samples': 64, 'num_importance_samples': 128, 'perturb': True, 'white_background': False, 'chunk_size': 1024
+        }, # Training configuration
         'training': {
-            'batch_size': 1024,
-            'num_epochs': 200,
-            'max_steps': 200000,
-            'grid_lr': 0.01,
-            'mlp_lr': 0.0005,
-            'weight_decay': 1e-6,
-            'grad_clip_norm': 1.0,
-            'scheduler_type': 'cosine',
-            'warmup_steps': 2000
-        },
-        
-        # Loss configuration
+            'batch_size': 1024, 'num_epochs': 200, 'max_steps': 200000, 'grid_lr': 0.01, 'mlp_lr': 0.0005, 'weight_decay': 1e-6, 'grad_clip_norm': 1.0, 'scheduler_type': 'cosine', 'warmup_steps': 2000
+        }, # Loss configuration
         'loss': {
-            'color_weight': 1.0,
-            'depth_weight': 0.1,
-            'grid_regularization_weight': 0.0001
-        },
-        
-        # Evaluation configuration
+            'color_weight': 1.0, 'depth_weight': 0.1, 'grid_regularization_weight': 0.0001
+        }, # Evaluation configuration
         'evaluation': {
-            'eval_batch_size': 256,
-            'eval_every_n_epochs': 5,
-            'save_every_n_epochs': 10,
-            'render_every_n_epochs': 20
-        },
-        
-        # Logging configuration
+            'eval_batch_size': 256, 'eval_every_n_epochs': 5, 'save_every_n_epochs': 10, 'render_every_n_epochs': 20
+        }, # Logging configuration
         'logging': {
-            'log_every_n_steps': 100,
-            'use_tensorboard': True,
-            'save_debug_images': False
+            'log_every_n_steps': 100, 'use_tensorboard': True, 'save_debug_images': False
         }
     }
     
@@ -172,18 +122,16 @@ def single_gpu_training(args, config_dict: dict) -> None:
     
     # Create trainer
     trainer = GridNeRFTrainer(
-        config=config,
-        output_dir=args.output_dir,
-        device=device,
-        use_tensorboard=config_dict.get('logging', {}).get('use_tensorboard', True)
+        config=config, output_dir=args.output_dir, device=device, use_tensorboard=config_dict.get(
+            'logging',
+            {},
+        )
     )
     
     # Create datasets
     data_config = config_dict.get('data', {})
     train_dataset = create_dataset(
-        data_path=data_config.get('data_path', args.data_path),
-        split='train',
-        config=config
+        data_path=data_config.get('data_path', args.data_path), split='train', config=config
     )
     
     val_dataset = None
@@ -193,9 +141,7 @@ def single_gpu_training(args, config_dict: dict) -> None:
     if config_dict.get('data', {}).get('val_split', 0) > 0:
         try:
             val_dataset = create_dataset(
-                data_path=data_config.get('data_path', args.data_path),
-                split='val',
-                config=config
+                data_path=data_config.get('data_path', args.data_path), split='val', config=config
             )
         except Exception as e:
             print(f"Warning: Could not create validation dataset: {e}")
@@ -204,9 +150,7 @@ def single_gpu_training(args, config_dict: dict) -> None:
     if config_dict.get('data', {}).get('test_split', 0) > 0:
         try:
             test_dataset = create_dataset(
-                data_path=data_config.get('data_path', args.data_path),
-                split='test',
-                config=config
+                data_path=data_config.get('data_path', args.data_path), split='test', config=config
             )
         except Exception as e:
             print(f"Warning: Could not create test dataset: {e}")
@@ -219,10 +163,7 @@ def single_gpu_training(args, config_dict: dict) -> None:
     
     # Start training
     trainer.train(
-        train_dataset=train_dataset,
-        val_dataset=val_dataset,
-        test_dataset=test_dataset,
-        resume_from=args.resume_from
+        train_dataset=train_dataset, val_dataset=val_dataset, test_dataset=test_dataset, resume_from=args.resume_from
     )
 
 
@@ -247,21 +188,18 @@ def multi_gpu_training(args, config_dict: dict) -> None:
     
     # Prepare data configuration
     data_config = {
-        'train_data_path': config_dict.get('data', {}).get('data_path', args.data_path),
-        'val_data_path': config_dict.get('data', {}).get('data_path', args.data_path),
-        'test_data_path': config_dict.get('data', {}).get('data_path', args.data_path),
-        'train_kwargs': {},
-        'val_kwargs': {},
-        'test_kwargs': {},
-        'resume_from': args.resume_from
+        'train_data_path': config_dict.get('data', {
+        }
     }
     
     # Launch distributed training
     mp.spawn(
-        main_worker,
-        args=(num_gpus, config, args.output_dir, data_config),
-        nprocs=num_gpus,
-        join=True
+        main_worker, args=(
+            num_gpus,
+            config,
+            args.output_dir,
+            data_config,
+        )
     )
 
 
@@ -271,18 +209,28 @@ def main():
     
     # Data arguments
     parser.add_argument("--data_path", type=str, help="Path to training data")
-    parser.add_argument("--output_dir", type=str, default="./outputs", 
-                       help="Output directory for results")
+    parser.add_argument(
+        "--output_dir",
+        type=str,
+        default="./outputs",
+        help="Output directory for results",
+    )
     
     # Configuration arguments
     parser.add_argument("--config", type=str, help="Path to configuration file")
-    parser.add_argument("--create_config", type=str, 
-                       help="Create template configuration file and exit")
+    parser.add_argument(
+        "--create_config",
+        type=str,
+        help="Create template configuration file and exit",
+    )
     
     # Training arguments
     parser.add_argument("--resume_from", type=str, help="Resume training from checkpoint")
-    parser.add_argument("--distributed", action="store_true", 
-                       help="Use distributed training on multiple GPUs")
+    parser.add_argument(
+        "--distributed",
+        action="store_true",
+        help="Use distributed training on multiple GPUs",
+    )
     
     # Override arguments
     parser.add_argument("--batch_size", type=int, help="Override batch size")
@@ -292,8 +240,11 @@ def main():
     
     # Debug arguments
     parser.add_argument("--debug", action="store_true", help="Enable debug mode")
-    parser.add_argument("--dry_run", action="store_true", 
-                       help="Dry run - check configuration without training")
+    parser.add_argument(
+        "--dry_run",
+        action="store_true",
+        help="Dry run - check configuration without training",
+    )
     
     args = parser.parse_args()
     
@@ -311,9 +262,7 @@ def main():
     else:
         # Use default configuration
         config_dict = {
-            'data': {'data_path': args.data_path},
-            'training': {},
-            'logging': {}
+            'data': {'data_path': args.data_path}, 'training': {}, 'logging': {}
         }
         
         # Merge with defaults

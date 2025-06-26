@@ -11,7 +11,7 @@ import os
 import json
 from PIL import Image
 import cv2
-from typing import Dict, List, Optional, Tuple, Union
+from typing import Dict, List, Optional, Tuple, Any, Union 
 import logging
 from scipy.spatial.transform import Rotation
 
@@ -24,16 +24,7 @@ class BungeeNeRFDataset(data.Dataset):
     """
     
     def __init__(
-        self,
-        data_dir: str,
-        split: str = "train",
-        img_downscale: int = 1,
-        use_cache: bool = True,
-        white_background: bool = False,
-        near_far: Optional[Tuple[float, float]] = None,
-        scale_factor: float = 4.0,
-        num_scales: int = 4,
-        **kwargs
+        self, data_dir: str, split: str = "train", img_downscale: int = 1, use_cache: bool = True, white_background: bool = False, near_far: Optional[tuple[float, float]] = None, scale_factor: float = 4.0, num_scales: int = 4, **kwargs
     ):
         super().__init__()
         
@@ -330,7 +321,7 @@ class BungeeNeRFDataset(data.Dataset):
         
         return pose
     
-    def get_rays(self, idx: int) -> Tuple[torch.Tensor, torch.Tensor]:
+    def get_rays(self, idx: int) -> tuple[torch.Tensor, torch.Tensor]:
         """
         Get rays for a specific image
         
@@ -344,16 +335,12 @@ class BungeeNeRFDataset(data.Dataset):
         
         # Create pixel coordinates
         i, j = np.meshgrid(
-            np.arange(self.W, dtype=np.float32),
-            np.arange(self.H, dtype=np.float32),
-            indexing='xy'
+            np.arange(self.W, dtype=np.float32), np.arange(self.H, dtype=np.float32), indexing='xy'
         )
         
         # Convert to camera coordinates
         dirs = np.stack([
-            (i - self.W * 0.5) / self.focal,
-            -(j - self.H * 0.5) / self.focal,
-            -np.ones_like(i)
+            (i - self.W * 0.5) / self.focal, -(j - self.H * 0.5) / self.focal, -np.ones_like(i)
         ], axis=-1)
         
         # Transform to world coordinates
@@ -369,7 +356,7 @@ class BungeeNeRFDataset(data.Dataset):
     def __len__(self):
         return len(self.images)
     
-    def __getitem__(self, idx: int) -> Dict[str, torch.Tensor]:
+    def __getitem__(self, idx: int) -> dict[str, torch.Tensor]:
         """
         Get a single data sample
         
@@ -397,13 +384,7 @@ class BungeeNeRFDataset(data.Dataset):
         bounds = bounds.expand(rays_o.shape[0], rays_o.shape[1], 2)
         
         return {
-            "image": image,
-            "rays_o": rays_o,
-            "rays_d": rays_d,
-            "pose": pose,
-            "bounds": bounds,
-            "distance": distance,
-            "idx": idx
+            "image": image, "rays_o": rays_o, "rays_d": rays_d, "pose": pose, "bounds": bounds, "distance": distance, "idx": idx
         }
 
 
@@ -414,11 +395,7 @@ class MultiScaleDataset(BungeeNeRFDataset):
     """
     
     def __init__(
-        self,
-        data_dir: str,
-        split: str = "train",
-        scale_thresholds: List[float] = None,
-        **kwargs
+        self, data_dir: str, split: str = "train", scale_thresholds: list[float] = None, **kwargs
     ):
         if scale_thresholds is None:
             scale_thresholds = [100.0, 50.0, 25.0, 10.0]
@@ -448,14 +425,14 @@ class MultiScaleDataset(BungeeNeRFDataset):
         
         logger.info(f"Scale distribution: {[len(indices) for indices in self.scale_indices]}")
     
-    def get_scale_data(self, scale: int) -> List[int]:
+    def get_scale_data(self, scale: int) -> list[int]:
         """Get indices for a specific scale"""
         if scale < len(self.scale_indices):
             return self.scale_indices[scale]
         else:
             return []
     
-    def get_progressive_data(self, max_scale: int) -> List[int]:
+    def get_progressive_data(self, max_scale: int) -> list[int]:
         """Get indices for progressive training up to max_scale"""
         indices = []
         for scale in range(max_scale + 1):
@@ -469,12 +446,7 @@ class GoogleEarthDataset(BungeeNeRFDataset):
     """
     
     def __init__(
-        self,
-        data_dir: str,
-        split: str = "train",
-        coordinate_system: str = "ENU",
-        scale_scene: bool = True,
-        **kwargs
+        self, data_dir: str, split: str = "train", coordinate_system: str = "ENU", scale_scene: bool = True, **kwargs
     ):
         self.coordinate_system = coordinate_system
         self.scale_scene = scale_scene
@@ -505,18 +477,13 @@ class GoogleEarthDataset(BungeeNeRFDataset):
         # Update near/far bounds
         if self.near_far is not None:
             near, far = self.near_far
-            self.near_far = ((near - np.linalg.norm(scene_center)) * scale_factor,
-                            (far - np.linalg.norm(scene_center)) * scale_factor)
+            self.near_far = (near * scale_factor, far * scale_factor)
         
         logger.info(f"Scaled scene by factor {scale_factor:.6f}")
 
 
 def create_bungee_dataloader(
-    dataset: BungeeNeRFDataset,
-    batch_size: int = 1,
-    shuffle: bool = True,
-    num_workers: int = 4,
-    **kwargs
+    dataset: BungeeNeRFDataset, batch_size: int = 1, shuffle: bool = True, num_workers: int = 4, **kwargs
 ) -> DataLoader:
     """
     Create a DataLoader for BungeeNeRF dataset
@@ -531,10 +498,5 @@ def create_bungee_dataloader(
         PyTorch DataLoader
     """
     return DataLoader(
-        dataset,
-        batch_size=batch_size,
-        shuffle=shuffle,
-        num_workers=num_workers,
-        pin_memory=True,
-        **kwargs
+        dataset, batch_size=batch_size, shuffle=shuffle, num_workers=num_workers, pin_memory=True, **kwargs
     )

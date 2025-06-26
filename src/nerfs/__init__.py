@@ -25,6 +25,34 @@ Author: NeuroCity Team
 Version: 1.0.0
 """
 
+import warnings
+import sys
+from typing import Any
+
+# Suppress warnings for optional dependencies
+with warnings.catch_warnings():
+    warnings.simplefilter("ignore")
+    
+    # Try importing optional modules
+    try:
+        import openvdb
+        OPENVDB_AVAILABLE = True
+    except ImportError:
+        OPENVDB_AVAILABLE = False
+    
+    try:
+        import trimesh
+        TRIMESH_AVAILABLE = True
+    except ImportError:
+        TRIMESH_AVAILABLE = False
+
+# Only show warnings once if running as main script
+if __name__ != "__main__":
+    if not OPENVDB_AVAILABLE:
+        print("Note: OpenVDB not available. NeuralVDB functionality will be limited.")
+    if not TRIMESH_AVAILABLE:
+        print("Note: trimesh not available. Some mesh processing features disabled.")
+
 __version__ = "1.0.0"
 __author__ = "NeuroCity Team"
 
@@ -50,49 +78,21 @@ except ImportError as e:
 
 # Available NeRF implementations
 AVAILABLE_NERFS = [
-    'block_nerf',
-    'classic_nerf', 
-    'dnmp_nerf',
-    'grid_nerf',
-    'mega_nerf',
-    'mip_nerf',
-    'nerfacto',
-    'plenoxels',
-    'svraster',
-    'bungee_nerf',
-    'instant_ngp',
-    'mega_nerf_plus',
-    'pyramid_nerf',
-    'occupancy_net',
-    'sdf_net'
+    'block_nerf', 'classic_nerf', 'dnmp_nerf', 'grid_nerf', 'mega_nerf', 'mip_nerf', 'nerfacto', 'plenoxels', 'svraster', 'bungee_nerf', 'instant_ngp', 'mega_nerf_plus', 'pyramid_nerf', 'occupancy_net', 'sdf_net'
 ]
 
-def list_available_nerfs():
+def list_available_nerfs() -> list[str]:
     """List all available NeRF implementations."""
     return AVAILABLE_NERFS
 
-def get_nerf_info():
+def get_nerf_info() -> dict[str, str]:
     """Get information about all NeRF implementations."""
     info = {
-        'block_nerf': 'Block-NeRF for large-scale scene representation with spatial partitioning',
-        'classic_nerf': 'Original Neural Radiance Fields implementation',
-        'dnmp_nerf': 'Differentiable Neural Mesh Primitives with mesh-based representation',
-        'grid_nerf': 'Grid-based NeRF variants for efficient rendering',
-        'mega_nerf': 'Mega-NeRF for large-scale outdoor scene reconstruction',
-        'mip_nerf': 'Mip-NeRF with anti-aliasing and multiscale representation',
-        'nerfacto': 'Nerfacto - practical NeRF implementation',
-        'plenoxels': 'Plenoxels sparse voxel representation without neural networks',
-        'svraster': 'Sparse Voxel Rasterization for efficient rendering',
-        'bungee_nerf': 'Bungee-NeRF with progressive training strategy',
-        'instant_ngp': 'Instant Neural Graphics Primitives with hash encoding',
-        'mega_nerf_plus': 'Enhanced Mega-NeRF with improved memory management',
-        'pyramid_nerf': 'Pyramid NeRF with multi-scale hierarchical representation',
-        'occupancy_net': 'Occupancy Networks for 3D reconstruction',
-        'sdf_net': 'Signed Distance Function networks for shape representation'
+        'block_nerf': 'Block-NeRF for large-scale scene representation with spatial partitioning', 'classic_nerf': 'Original Neural Radiance Fields implementation', 'dnmp_nerf': 'Differentiable Neural Mesh Primitives with mesh-based representation', 'grid_nerf': 'Grid-based NeRF variants for efficient rendering', 'mega_nerf': 'Mega-NeRF for large-scale outdoor scene reconstruction', 'mip_nerf': 'Mip-NeRF with anti-aliasing and multiscale representation', 'nerfacto': 'Nerfacto - practical NeRF implementation', 'plenoxels': 'Plenoxels sparse voxel representation without neural networks', 'svraster': 'Sparse Voxel Rasterization for efficient rendering', 'bungee_nerf': 'Bungee-NeRF with progressive training strategy', 'instant_ngp': 'Instant Neural Graphics Primitives with hash encoding', 'mega_nerf_plus': 'Enhanced Mega-NeRF with improved memory management', 'pyramid_nerf': 'Pyramid NeRF with multi-scale hierarchical representation', 'occupancy_net': 'Occupancy Networks for 3D reconstruction', 'sdf_net': 'Signed Distance Function networks for shape representation'
     }
     return info
 
-def get_nerf_module(name: str):
+def get_nerf_module(name: str) -> Any:
     """Get a specific NeRF module by name."""
     if name not in AVAILABLE_NERFS:
         raise ValueError(f"NeRF '{name}' not available. Available: {AVAILABLE_NERFS}")
@@ -148,24 +148,6 @@ def get_nerf_module(name: str):
 
 # Expose main functions
 __all__ = [
-    'AVAILABLE_NERFS',
-    'list_available_nerfs',
-    'get_nerf_info', 
-    'get_nerf_module',
-    # Module imports
-    'block_nerf',
-    'classic_nerf',
-    'dnmp_nerf', 
-    'grid_nerf',
-    'mega_nerf',
-    'mip_nerf',
-    'nerfacto',
-    'plenoxels',
-    'svraster',
-    'bungee_nerf',
-    'instant_ngp',
-    'mega_nerf_plus',
-    'pyramid_nerf',
-    'occupancy_net',
-    'sdf_net'
+    'AVAILABLE_NERFS', 'list_available_nerfs', 'get_nerf_info', 'get_nerf_module', # Module imports
+    'block_nerf', 'classic_nerf', 'dnmp_nerf', 'grid_nerf', 'mega_nerf', 'mip_nerf', 'nerfacto', 'plenoxels', 'svraster', 'bungee_nerf', 'instant_ngp', 'mega_nerf_plus', 'pyramid_nerf', 'occupancy_net', 'sdf_net'
 ] 

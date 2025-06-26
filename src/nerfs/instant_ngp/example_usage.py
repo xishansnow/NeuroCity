@@ -15,8 +15,7 @@ import time
 from tqdm import tqdm
 
 from . import (
-    InstantNGPConfig, InstantNGP, InstantNGPTrainer, 
-    InstantNGPDataset, create_instant_ngp_dataloader
+    InstantNGPConfig, InstantNGP, InstantNGPTrainer, InstantNGPDataset, create_instant_ngp_dataloader
 )
 
 
@@ -27,14 +26,7 @@ def train_instant_ngp_example():
     
     # Configuration
     config = InstantNGPConfig(
-        num_levels=16,
-        level_dim=2,
-        base_resolution=16,
-        desired_resolution=2048,
-        hidden_dim=64,
-        learning_rate=5e-4,
-        lambda_entropy=1e-4,
-        lambda_tv=1e-4
+        num_levels=16, level_dim=2, base_resolution=16, desired_resolution=2048, hidden_dim=64, learning_rate=5e-4, lambda_entropy=1e-4, lambda_tv=1e-4
     )
     
     print("Configuration:")
@@ -45,7 +37,9 @@ def train_instant_ngp_example():
     
     # Create model and trainer
     trainer = InstantNGPTrainer(config)
-    print(f"✓ Model created with {sum(p.numel() for p in trainer.model.parameters()):,} parameters")
+    print(f"✓ Model created with {
+        sum(p.numel() for p in trainer.model.parameters()):,
+    }
     
     # Create dummy dataset (replace with real dataset path)
     data_root = "data/nerf_synthetic/lego"  # Example path
@@ -53,31 +47,24 @@ def train_instant_ngp_example():
     try:
         # Create dataloaders
         train_loader = create_instant_ngp_dataloader(
-            data_root=data_root,
-            split='train',
-            batch_size=8192,
-            img_wh=(400, 400),
-            num_workers=4
+            data_root=data_root, split='train', batch_size=8192, img_wh=(400, 400), num_workers=4
         )
         
         val_loader = create_instant_ngp_dataloader(
-            data_root=data_root,
-            split='val',
-            batch_size=1,
-            img_wh=(400, 400),
-            num_workers=0,
-            shuffle=False
+            data_root=data_root, split='val', batch_size=1, img_wh=(
+                400,
+                400,
+            )
         )
         
-        print(f"✓ Datasets loaded: {len(train_loader.dataset)} train rays, {len(val_loader.dataset)} val images")
+        print(f"✓ Datasets loaded: {
+            len(train_loader.dataset),
+        }
         
         # Train model
         print("\n🎯 Starting training...")
         trainer.train(
-            train_loader=train_loader,
-            val_loader=val_loader,
-            num_epochs=20,
-            save_dir="outputs/instant_ngp_example"
+            train_loader=train_loader, val_loader=val_loader, num_epochs=20, save_dir="outputs/instant_ngp_example"
         )
         
     except FileNotFoundError:
@@ -91,12 +78,7 @@ def synthetic_training_example():
     print("-" * 30)
     
     config = InstantNGPConfig(
-        num_levels=8,
-        level_dim=2,
-        base_resolution=16,
-        desired_resolution=512,
-        hidden_dim=32,
-        learning_rate=1e-3
+        num_levels=8, level_dim=2, base_resolution=16, desired_resolution=512, hidden_dim=32, learning_rate=1e-3
     )
     
     # Create model
@@ -181,16 +163,12 @@ def rendering_example():
     
     # Create pixel coordinates
     i, j = torch.meshgrid(
-        torch.arange(W, dtype=torch.float32),
-        torch.arange(H, dtype=torch.float32),
-        indexing='xy'
+        torch.arange(W, dtype=torch.float32), torch.arange(H, dtype=torch.float32), indexing='xy'
     )
     
     # Camera rays
     directions = torch.stack([
-        (i - W * 0.5) / focal,
-        -(j - H * 0.5) / focal,
-        -torch.ones_like(i)
+        (i - W * 0.5) / focal, -(j - H * 0.5) / focal, -torch.ones_like(i)
     ], dim=-1)
     
     # Normalize
@@ -214,8 +192,7 @@ def rendering_example():
     model.eval()
     with torch.no_grad():
         results = renderer.render_rays(
-            model, rays_o_flat, rays_d_flat, near, far, 
-            num_samples=64
+            model, rays_o_flat, rays_d_flat, near, far, num_samples=64
         )
     
     # Reshape to image
@@ -237,10 +214,7 @@ def hash_encoding_example():
     from .core import HashEncoder
     
     config = InstantNGPConfig(
-        num_levels=4,
-        level_dim=2,
-        base_resolution=16,
-        per_level_scale=2.0
+        num_levels=4, level_dim=2, base_resolution=16, per_level_scale=2.0
     )
     
     encoder = HashEncoder(config)
@@ -252,9 +226,9 @@ def hash_encoding_example():
     
     # Test encoding
     positions = torch.tensor([
-        [0.0, 0.0, 0.0],      # Origin
-        [0.5, 0.5, 0.5],      # Corner
-        [-0.8, 0.3, -0.1],    # Random point
+        [0.0, 0.0, 0.0], # Origin
+        [0.5, 0.5, 0.5], # Corner
+        [-0.8, 0.3, -0.1], # Random point
     ])
     
     encoded = encoder(positions)
@@ -281,10 +255,10 @@ def spherical_harmonics_example():
     
     # Test directions
     directions = torch.tensor([
-        [1.0, 0.0, 0.0],      # +X direction
-        [0.0, 1.0, 0.0],      # +Y direction  
-        [0.0, 0.0, 1.0],      # +Z direction
-        [0.707, 0.707, 0.0],  # Diagonal
+        [1.0, 0.0, 0.0], # +X direction
+        [0.0, 1.0, 0.0], # +Y direction  
+        [0.0, 0.0, 1.0], # +Z direction
+        [0.707, 0.707, 0.0], # Diagonal
     ])
     
     encoded = encoder(directions)
@@ -336,11 +310,24 @@ def benchmark_example():
 def main():
     """Main example runner."""
     parser = argparse.ArgumentParser(description="Instant NGP Examples")
-    parser.add_argument('--example', type=str, default='all',
-                       choices=['all', 'train', 'render', 'hash', 'sh', 'benchmark'],
-                       help='Which example to run')
-    parser.add_argument('--data_root', type=str, default=None,
-                       help='Path to dataset for training example')
+    parser.add_argument(
+        '--example',
+        type=str,
+        default='all',
+        choices=['all',
+        'train',
+        'render',
+        'hash',
+        'sh',
+        'benchmark'],
+        help='Which example to run',
+    )
+    parser.add_argument(
+        '--data_root',
+        type=str,
+        default=None,
+        help='Path to dataset for training example',
+    )
     
     args = parser.parse_args()
     

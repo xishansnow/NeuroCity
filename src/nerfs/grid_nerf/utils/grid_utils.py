@@ -1,18 +1,20 @@
 """
 Grid utilities for Grid-NeRF.
 
-This module provides utility functions for grid operations, spatial computations,
-and grid management specific to Grid-NeRF.
+This module provides utility functions for grid operations, spatial computations, and grid management specific to Grid-NeRF.
 """
 
 import torch
 import torch.nn.functional as F
 import numpy as np
-from typing import Tuple, List, Optional, Union
+from typing import List, Optional, Tuple, Union, Any, Dict
 import math
 
 
-def compute_grid_bounds(points: torch.Tensor, margin: float = 0.1) -> Tuple[float, float, float, float, float, float]:
+def compute_grid_bounds(
+    points: torch.Tensor,
+    margin: float = 0.1
+) -> tuple[float, float, float, float, float, float]:
     """
     Compute scene bounds from point cloud.
     
@@ -36,9 +38,11 @@ def compute_grid_bounds(points: torch.Tensor, margin: float = 0.1) -> Tuple[floa
     return (*min_bounds.tolist(), *max_bounds.tolist())
 
 
-def world_to_grid_coords(world_coords: torch.Tensor, 
-                        scene_bounds: torch.Tensor,
-                        grid_resolution: int) -> torch.Tensor:
+def world_to_grid_coords(
+    world_coords: torch.Tensor,
+    scene_bounds: torch.Tensor,
+    grid_resolution: int
+) -> torch.Tensor:
     """
     Convert world coordinates to grid coordinates.
     
@@ -62,9 +66,11 @@ def world_to_grid_coords(world_coords: torch.Tensor,
     return grid_coords
 
 
-def grid_to_world_coords(grid_coords: torch.Tensor,
-                        scene_bounds: torch.Tensor,
-                        grid_resolution: int) -> torch.Tensor:
+def grid_to_world_coords(
+    grid_coords: torch.Tensor,
+    scene_bounds: torch.Tensor,
+    grid_resolution: int
+) -> torch.Tensor:
     """
     Convert grid coordinates to world coordinates.
     
@@ -88,8 +94,7 @@ def grid_to_world_coords(grid_coords: torch.Tensor,
     return world_coords
 
 
-def trilinear_interpolation(grid_features: torch.Tensor,
-                           grid_coords: torch.Tensor) -> torch.Tensor:
+def trilinear_interpolation(grid_features: torch.Tensor, grid_coords: torch.Tensor) -> torch.Tensor:
     """
     Perform trilinear interpolation of grid features.
     
@@ -117,11 +122,7 @@ def trilinear_interpolation(grid_features: torch.Tensor,
     
     # Perform trilinear interpolation
     interpolated = F.grid_sample(
-        grid_features_reshaped,
-        grid_coords_reshaped,
-        mode='bilinear',
-        padding_mode='border',
-        align_corners=True
+        grid_features_reshaped, grid_coords_reshaped, mode='bilinear', padding_mode='border', align_corners=True
     )
     
     # Reshape output: [N, C]
@@ -130,10 +131,12 @@ def trilinear_interpolation(grid_features: torch.Tensor,
     return interpolated
 
 
-def create_voxel_grid(points: torch.Tensor,
-                     features: Optional[torch.Tensor] = None,
-                     grid_resolution: int = 64,
-                     scene_bounds: Optional[Tuple] = None) -> torch.Tensor:
+def create_voxel_grid(
+    points: torch.Tensor,
+    features: Optional[torch.Tensor] = None,
+    grid_resolution: int = 64,
+    scene_bounds: Optional[tuple[float, float, float, float, float, float]] = None
+) -> torch.Tensor:
     """
     Create voxel grid from point cloud.
     
@@ -161,8 +164,13 @@ def create_voxel_grid(points: torch.Tensor,
         feature_dim = 1
         features = torch.ones(len(points), 1, device=points.device)
     
-    voxel_grid = torch.zeros(grid_resolution, grid_resolution, grid_resolution, feature_dim,
-                            device=points.device)
+    voxel_grid = torch.zeros(
+        grid_resolution,
+        grid_resolution,
+        grid_resolution,
+        feature_dim,
+        device=points.device,
+    )
     
     # Round coordinates to nearest voxel
     voxel_indices = torch.round(grid_coords).long()
@@ -202,9 +210,7 @@ def dilate_grid(grid: torch.Tensor, kernel_size: int = 3) -> torch.Tensor:
         
         # Apply 3D dilation
         dilated_channel = F.conv3d(
-            channel,
-            kernel,
-            padding=kernel_size // 2
+            channel, kernel, padding=kernel_size // 2
         )
         
         dilated_channels.append(dilated_channel.squeeze(0).squeeze(0))
@@ -247,77 +253,82 @@ def compute_grid_occupancy(grid: torch.Tensor, threshold: float = 0.01) -> torch
         threshold: Occupancy threshold
         
     Returns:
-        Occupancy mask [D, H, W]
+        Binary occupancy mask [D, H, W]
     """
+    # Compute feature magnitude
     magnitude = torch.norm(grid, dim=-1)
+    
+    # Create binary mask
     occupancy = magnitude > threshold
     
     return occupancy
 
 
-def adaptive_grid_subdivision(grid: torch.Tensor,
-                            occupancy_threshold: float = 0.01,
-                            subdivision_threshold: float = 0.8) -> List[torch.Tensor]:
+def adaptive_grid_subdivision(
+    grid: torch.Tensor,
+    occupancy_threshold: float = 0.01,
+    subdivision_threshold: float = 0.8
+) -> tuple[torch.Tensor, torch.Tensor]:
     """
-    Perform adaptive grid subdivision based on occupancy.
+    Adaptively subdivide grid based on occupancy.
     
     Args:
         grid: Input grid [D, H, W, C]
         occupancy_threshold: Threshold for occupancy
-        subdivision_threshold: Threshold for subdivision decision
+        subdivision_threshold: Threshold for subdivision
         
     Returns:
-        List of subdivided grids
+        Tuple of (subdivided grid [D*2, H*2, W*2, C], subdivision mask [D, H, W])
     """
-    D, H, W, C = grid.shape
-    
     # Compute occupancy
     occupancy = compute_grid_occupancy(grid, occupancy_threshold)
     
-    subdivided_grids = []
+    # Compute subdivision mask
+    kernel_size = 3
+    kernel = torch.ones(1, 1, kernel_size, kernel_size, kernel_size, device=grid.device)
+    occupancy_count = F.conv3d(
+        occupancy.float().unsqueeze(0).unsqueeze(0),
+        kernel,
+        padding=kernel_size // 2
+    ).squeeze(0).squeeze(0)
     
-    # Check if subdivision is needed
-    if torch.sum(occupancy) / occupancy.numel() > subdivision_threshold:
-        # Subdivide into 8 subgrids
-        mid_d, mid_h, mid_w = D // 2, H // 2, W // 2
-        
-        for d_start, d_end in [(0, mid_d), (mid_d, D)]:
-            for h_start, h_end in [(0, mid_h), (mid_h, H)]:
-                for w_start, w_end in [(0, mid_w), (mid_w, W)]:
-                    subgrid = grid[d_start:d_end, h_start:h_end, w_start:w_end]
-                    
-                    # Recursively subdivide if needed
-                    sub_subdivided = adaptive_grid_subdivision(
-                        subgrid, occupancy_threshold, subdivision_threshold
-                    )
-                    subdivided_grids.extend(sub_subdivided)
-    else:
-        subdivided_grids.append(grid)
+    subdivision_mask = occupancy_count > (kernel_size ** 3 * subdivision_threshold)
     
-    return subdivided_grids
+    # Create subdivided grid
+    D, H, W, C = grid.shape
+    subdivided_grid = F.interpolate(
+        grid.permute(3, 0, 1, 2).unsqueeze(0),
+        size=(D*2, H*2, W*2),
+        mode='trilinear',
+        align_corners=True
+    ).squeeze(0).permute(1, 2, 3, 0)
+    
+    return subdivided_grid, subdivision_mask
 
 
 def compute_grid_gradient(grid: torch.Tensor) -> torch.Tensor:
     """
-    Compute spatial gradient of grid.
+    Compute spatial gradients of grid.
     
     Args:
         grid: Input grid [D, H, W, C]
         
     Returns:
-        Gradient tensor [D, H, W, C, 3]
+        Grid gradients [D, H, W, C, 3]
     """
-    D, H, W, C = grid.shape
+    # Compute gradients along each dimension
+    dx = torch.zeros_like(grid)
+    dy = torch.zeros_like(grid)
+    dz = torch.zeros_like(grid)
     
-    # Compute gradients along each axis
-    grad_d = torch.diff(grid, dim=0, prepend=grid[:1])
-    grad_h = torch.diff(grid, dim=1, prepend=grid[:, :1])
-    grad_w = torch.diff(grid, dim=2, prepend=grid[:, :, :1])
+    dx[1:, :, :] = grid[1:, :, :] - grid[:-1, :, :]
+    dy[:, 1:, :] = grid[:, 1:, :] - grid[:, :-1, :]
+    dz[:, :, 1:] = grid[:, :, 1:] - grid[:, :, :-1]
     
     # Stack gradients
-    gradient = torch.stack([grad_d, grad_h, grad_w], dim=-1)
+    gradients = torch.stack([dx, dy, dz], dim=-1)
     
-    return gradient
+    return gradients
 
 
 def smooth_grid(grid: torch.Tensor, sigma: float = 1.0) -> torch.Tensor:
@@ -326,44 +337,37 @@ def smooth_grid(grid: torch.Tensor, sigma: float = 1.0) -> torch.Tensor:
     
     Args:
         grid: Input grid [D, H, W, C]
-        sigma: Gaussian kernel standard deviation
+        sigma: Gaussian standard deviation
         
     Returns:
         Smoothed grid [D, H, W, C]
     """
-    D, H, W, C = grid.shape
+    # Create Gaussian kernel
+    kernel_size = int(2 * round(3 * sigma) + 1)
+    kernel = torch.zeros(1, 1, kernel_size, kernel_size, kernel_size, device=grid.device)
     
-    # Create 3D Gaussian kernel
-    kernel_size = int(6 * sigma + 1)
-    if kernel_size % 2 == 0:
-        kernel_size += 1
-    
+    # Fill kernel with Gaussian values
     center = kernel_size // 2
+    for i in range(kernel_size):
+        for j in range(kernel_size):
+            for k in range(kernel_size):
+                x = i - center
+                y = j - center
+                z = k - center
+                kernel[0, 0, i, j, k] = torch.exp(-(x*x + y*y + z*z) / (2*sigma*sigma))
     
-    # Create coordinate grids
-    x = torch.arange(kernel_size, dtype=torch.float32, device=grid.device) - center
-    y = torch.arange(kernel_size, dtype=torch.float32, device=grid.device) - center
-    z = torch.arange(kernel_size, dtype=torch.float32, device=grid.device) - center
+    # Normalize kernel
+    kernel = kernel / kernel.sum()
     
-    xx, yy, zz = torch.meshgrid(x, y, z, indexing='ij')
-    
-    # Compute Gaussian kernel
-    kernel = torch.exp(-(xx**2 + yy**2 + zz**2) / (2 * sigma**2))
-    kernel = kernel / torch.sum(kernel)
-    kernel = kernel.unsqueeze(0).unsqueeze(0)  # [1, 1, K, K, K]
-    
-    # Apply smoothing to each channel
+    # Process each channel separately
     smoothed_channels = []
-    
-    for c in range(C):
-        channel = grid[:, :, :, c].unsqueeze(0).unsqueeze(0)  # [1, 1, D, H, W]
-        
+    for c in range(grid.shape[-1]):
+        channel = grid[:, :, :, c].unsqueeze(0).unsqueeze(0)
         smoothed_channel = F.conv3d(
             channel,
             kernel,
-            padding=center
+            padding=kernel_size // 2
         )
-        
         smoothed_channels.append(smoothed_channel.squeeze(0).squeeze(0))
     
     # Stack channels
@@ -372,9 +376,9 @@ def smooth_grid(grid: torch.Tensor, sigma: float = 1.0) -> torch.Tensor:
     return smoothed_grid
 
 
-def compute_grid_statistics(grid: torch.Tensor) -> dict:
+def compute_grid_statistics(grid: torch.Tensor) -> dict[str, Union[float, int]]:
     """
-    Compute statistics for grid.
+    Compute statistics of grid values.
     
     Args:
         grid: Input grid [D, H, W, C]
@@ -382,17 +386,14 @@ def compute_grid_statistics(grid: torch.Tensor) -> dict:
     Returns:
         Dictionary of statistics
     """
-    magnitude = torch.norm(grid, dim=-1)
-    
     stats = {
-        'mean_magnitude': torch.mean(magnitude).item(),
-        'std_magnitude': torch.std(magnitude).item(),
-        'max_magnitude': torch.max(magnitude).item(),
-        'min_magnitude': torch.min(magnitude).item(),
-        'occupancy_ratio': (magnitude > 0.01).float().mean().item(),
-        'sparsity_ratio': (magnitude <= 0.01).float().mean().item(),
-        'total_cells': magnitude.numel(),
-        'active_cells': (magnitude > 0.01).sum().item()
+        'min': float(grid.min().item()),
+        'max': float(grid.max().item()),
+        'mean': float(grid.mean().item()),
+        'std': float(grid.std().item()),
+        'num_nonzero': int((grid != 0).sum().item()),
+        'total_cells': int(grid.numel()),
+        'sparsity': float((grid == 0).sum().item() / grid.numel())
     }
     
     return stats 

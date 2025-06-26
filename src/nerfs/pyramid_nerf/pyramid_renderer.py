@@ -24,13 +24,8 @@ class PyramidRenderer(nn.Module):
         self.white_background = False
         
     def render(
-        self,
-        rgb: torch.Tensor,
-        sigma: torch.Tensor,
-        z_vals: torch.Tensor,
-        rays_d: torch.Tensor,
-        noise_std: float = 0.0
-    ) -> Dict[str, torch.Tensor]:
+        self, rgb: torch.Tensor, sigma: torch.Tensor, z_vals: torch.Tensor, rays_d: torch.Tensor, noise_std: float = 0.0
+    ) -> dict[str, torch.Tensor]:
         """
         Volume rendering with alpha compositing
         
@@ -47,8 +42,7 @@ class PyramidRenderer(nn.Module):
         # Calculate distances between samples
         dists = z_vals[..., 1:] - z_vals[..., :-1]
         dists = torch.cat([
-            dists,
-            torch.full_like(dists[..., :1], 1e10)
+            dists, torch.full_like(dists[..., :1], 1e10)
         ], dim=-1)
         
         # Apply ray direction magnitude
@@ -65,10 +59,8 @@ class PyramidRenderer(nn.Module):
         # Calculate transmittance
         transmittance = torch.cumprod(
             torch.cat([
-                torch.ones_like(alpha[..., :1]),
-                1.0 - alpha[..., :-1]
-            ], dim=-1),
-            dim=-1
+                torch.ones_like(alpha[..., :1]), 1.0 - alpha[..., :-1]
+            ], dim=-1), dim=-1
         )
         
         # Calculate weights
@@ -89,28 +81,16 @@ class PyramidRenderer(nn.Module):
         
         # Calculate disparity map
         disp_map = 1.0 / torch.max(
-            1e-10 * torch.ones_like(depth_map),
-            depth_map / acc_map
+            1e-10 * torch.ones_like(depth_map), depth_map / acc_map
         )
         
         return {
-            "rgb": rgb_map,
-            "depth": depth_map,
-            "acc": acc_map,
-            "weights": weights,
-            "disp": disp_map,
-            "transmittance": transmittance,
-            "alpha": alpha
+            "rgb": rgb_map, "depth": depth_map, "acc": acc_map, "weights": weights, "disp": disp_map, "transmittance": transmittance, "alpha": alpha
         }
     
     def render_path(
-        self,
-        model: nn.Module,
-        render_poses: torch.Tensor,
-        hwf: Tuple[int, int, float],
-        chunk: int = 1024,
-        **kwargs
-    ) -> List[Dict[str, torch.Tensor]]:
+        self, model: nn.Module, render_poses: torch.Tensor, hwf: tuple[int, int, float], chunk: int = 1024, **kwargs
+    ) -> list[dict[str, torch.Tensor]]:
         """
         Render a path of poses
         
@@ -168,11 +148,8 @@ class PyramidRenderer(nn.Module):
     
     @staticmethod
     def get_rays(
-        H: int,
-        W: int,
-        focal: float,
-        c2w: torch.Tensor
-    ) -> Tuple[torch.Tensor, torch.Tensor]:
+        H: int, W: int, focal: float, c2w: torch.Tensor
+    ) -> tuple[torch.Tensor, torch.Tensor]:
         """
         Generate rays for a camera
         
@@ -189,24 +166,24 @@ class PyramidRenderer(nn.Module):
         
         # Create pixel coordinates
         i, j = torch.meshgrid(
-            torch.linspace(0, W-1, W, device=device),
-            torch.linspace(0, H-1, H, device=device),
-            indexing='ij'
+            torch.linspace(
+                0,
+                W-1,
+                W,
+                device=device,
+            )
         )
         i = i.t()
         j = j.t()
         
         # Convert to normalized device coordinates
         dirs = torch.stack([
-            (i - W * 0.5) / focal,
-            -(j - H * 0.5) / focal,
-            -torch.ones_like(i)
+            (i - W * 0.5) / focal, -(j - H * 0.5) / focal, -torch.ones_like(i)
         ], dim=-1)
         
         # Transform ray directions to world coordinates
         rays_d = torch.sum(
-            dirs[..., None, :] * c2w[:3, :3],
-            dim=-1
+            dirs[..., None, :] * c2w[:3, :3], dim=-1
         )
         
         # Ray origins are camera position
@@ -221,12 +198,7 @@ class VolumetricRenderer(nn.Module):
     """
     
     def __init__(
-        self,
-        num_samples: int = 64,
-        num_importance_samples: int = 128,
-        use_hierarchical_sampling: bool = True,
-        perturb: bool = True,
-        raw_noise_std: float = 0.0
+        self, num_samples: int = 64, num_importance_samples: int = 128, use_hierarchical_sampling: bool = True, perturb: bool = True, raw_noise_std: float = 0.0
     ):
         super().__init__()
         self.num_samples = num_samples
@@ -236,14 +208,8 @@ class VolumetricRenderer(nn.Module):
         self.raw_noise_std = raw_noise_std
         
     def sample_along_rays(
-        self,
-        rays_o: torch.Tensor,
-        rays_d: torch.Tensor,
-        near: torch.Tensor,
-        far: torch.Tensor,
-        num_samples: int,
-        perturb: bool = True
-    ) -> Tuple[torch.Tensor, torch.Tensor]:
+        self, rays_o: torch.Tensor, rays_d: torch.Tensor, near: torch.Tensor, far: torch.Tensor, num_samples: int, perturb: bool = True
+    ) -> tuple[torch.Tensor, torch.Tensor]:
         """
         Sample points along rays
         
@@ -282,11 +248,7 @@ class VolumetricRenderer(nn.Module):
         return pts, z_vals
     
     def importance_sample(
-        self,
-        z_vals: torch.Tensor,
-        weights: torch.Tensor,
-        num_samples: int,
-        det: bool = False
+        self, z_vals: torch.Tensor, weights: torch.Tensor, num_samples: int, det: bool = False
     ) -> torch.Tensor:
         """
         Importance sampling based on weights
@@ -334,20 +296,14 @@ class VolumetricRenderer(nn.Module):
         
         # Combine with original samples
         z_vals_combined, _ = torch.sort(
-            torch.cat([z_vals, samples], dim=-1),
-            dim=-1
+            torch.cat([z_vals, samples], dim=-1), dim=-1
         )
         
         return z_vals_combined
     
     def forward(
-        self,
-        model: nn.Module,
-        rays_o: torch.Tensor,
-        rays_d: torch.Tensor,
-        bounds: torch.Tensor,
-        **kwargs
-    ) -> Dict[str, torch.Tensor]:
+        self, model: nn.Module, rays_o: torch.Tensor, rays_d: torch.Tensor, bounds: torch.Tensor, **kwargs
+    ) -> dict[str, torch.Tensor]:
         """
         Forward pass through volumetric renderer
         
@@ -369,10 +325,11 @@ class VolumetricRenderer(nn.Module):
         
         # Query coarse model
         outputs_coarse = model(
-            rays_o, rays_d, 
-            torch.stack([near, far], dim=-1),
-            sample_points=pts_coarse,
-            z_vals=z_vals_coarse
+            rays_o, rays_d, torch.stack(
+                [near,
+                far],
+                dim=-1,
+            )
         )
         
         results = {"rgb_coarse": outputs_coarse["rgb"]}
@@ -380,33 +337,26 @@ class VolumetricRenderer(nn.Module):
         # Fine sampling with importance sampling
         if self.use_hierarchical_sampling and self.num_importance_samples > 0:
             z_vals_fine = self.importance_sample(
-                z_vals_coarse,
-                outputs_coarse["weights"][..., 1:-1],  # Exclude endpoints
-                self.num_importance_samples,
-                det=not self.training
+                z_vals_coarse, outputs_coarse["weights"][..., 1:-1], # Exclude endpoints
+                self.num_importance_samples, det=not self.training
             )
             
             # Query fine model
             pts_fine = rays_o[..., None, :] + rays_d[..., None, :] * z_vals_fine[..., :, None]
             outputs_fine = model(
-                rays_o, rays_d,
-                torch.stack([near, far], dim=-1),
-                sample_points=pts_fine,
-                z_vals=z_vals_fine
+                rays_o, rays_d, torch.stack(
+                    [near,
+                    far],
+                    dim=-1,
+                )
             )
             
             results.update({
-                "rgb": outputs_fine["rgb"],
-                "depth": outputs_fine["depth"],
-                "acc": outputs_fine["acc"],
-                "weights": outputs_fine["weights"]
+                "rgb": outputs_fine["rgb"], "depth": outputs_fine["depth"], "acc": outputs_fine["acc"], "weights": outputs_fine["weights"]
             })
         else:
             results.update({
-                "rgb": outputs_coarse["rgb"],
-                "depth": outputs_coarse["depth"],
-                "acc": outputs_coarse["acc"],
-                "weights": outputs_coarse["weights"]
+                "rgb": outputs_coarse["rgb"], "depth": outputs_coarse["depth"], "acc": outputs_coarse["acc"], "weights": outputs_coarse["weights"]
             })
         
         return results
@@ -422,9 +372,7 @@ class AntiAliasingRenderer(nn.Module):
         self.cone_angle = cone_angle
     
     def compute_cone_radius(
-        self,
-        z_vals: torch.Tensor,
-        pixel_radius: float = 1.0
+        self, z_vals: torch.Tensor, pixel_radius: float = 1.0
     ) -> torch.Tensor:
         """
         Compute cone radius at each sample point
@@ -439,10 +387,7 @@ class AntiAliasingRenderer(nn.Module):
         return pixel_radius * (z_vals * self.cone_angle + 1.0)
     
     def compute_sample_areas(
-        self,
-        rays_o: torch.Tensor,
-        rays_d: torch.Tensor,
-        z_vals: torch.Tensor
+        self, rays_o: torch.Tensor, rays_d: torch.Tensor, z_vals: torch.Tensor
     ) -> torch.Tensor:
         """
         Compute sample areas for pyramid level selection
@@ -464,13 +409,8 @@ class AntiAliasingRenderer(nn.Module):
         return sample_areas
     
     def forward(
-        self,
-        model: nn.Module,
-        rays_o: torch.Tensor,
-        rays_d: torch.Tensor,
-        bounds: torch.Tensor,
-        **kwargs
-    ) -> Dict[str, torch.Tensor]:
+        self, model: nn.Module, rays_o: torch.Tensor, rays_d: torch.Tensor, bounds: torch.Tensor, **kwargs
+    ) -> dict[str, torch.Tensor]:
         """
         Forward pass with anti-aliasing
         

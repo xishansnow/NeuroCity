@@ -1,8 +1,7 @@
 """
 CNC-NeRF Dataset Module
 
-This module implements dataset handling for Context-based NeRF Compression,
-supporting multi-resolution supervision and pyramid loss training.
+This module implements dataset handling for Context-based NeRF Compression, supporting multi-resolution supervision and pyramid loss training.
 """
 
 import torch
@@ -11,7 +10,7 @@ import numpy as np
 import json
 import cv2
 from pathlib import Path
-from typing import Dict, List, Optional, Tuple, Union, Any
+from typing import Dict, List, Optional, Tuple, Any
 from dataclasses import dataclass
 from torch.utils.data import Dataset, DataLoader
 
@@ -36,7 +35,7 @@ class CNCNeRFDatasetConfig:
     pyramid_levels: int = 4
     min_resolution: int = 64
     use_pyramid_loss: bool = True
-    pyramid_loss_weights: List[float] = None
+    pyramid_loss_weights: list[float] = None
     
     # Training data
     train_split: float = 0.8
@@ -89,7 +88,7 @@ class CNCNeRFDataset(Dataset):
         
         print(f"Loaded {len(self.indices)} {split} views, {len(self.rays)} rays")
     
-    def _load_cameras(self) -> Dict[str, Any]:
+    def _load_cameras(self) -> dict[str, Any]:
         """Load camera parameters from JSON file."""
         cameras_path = Path(self.config.data_root) / self.config.cameras_file
         
@@ -98,9 +97,7 @@ class CNCNeRFDataset(Dataset):
         
         # Convert to more convenient format
         cameras = {
-            'intrinsics': [],
-            'extrinsics': [],
-            'image_names': []
+            'intrinsics': [], 'extrinsics': [], 'image_names': []
         }
         
         for frame in cameras_data['frames']:
@@ -119,9 +116,7 @@ class CNCNeRFDataset(Dataset):
                 cy = self.config.image_height / 2
             
             intrinsic = np.array([
-                [fx, 0, cx],
-                [0, fy, cy],
-                [0, 0, 1]
+                [fx, 0, cx], [0, fy, cy], [0, 0, 1]
             ])
             
             # Extrinsic matrix (camera-to-world)
@@ -133,7 +128,7 @@ class CNCNeRFDataset(Dataset):
         
         return cameras
     
-    def _load_images(self) -> List[np.ndarray]:
+    def _load_images(self) -> list[np.ndarray]:
         """Load and preprocess images."""
         images = []
         images_dir = Path(self.config.data_root) / self.config.images_dir
@@ -168,7 +163,7 @@ class CNCNeRFDataset(Dataset):
         
         return images
     
-    def _create_image_pyramid(self) -> List[List[np.ndarray]]:
+    def _create_image_pyramid(self) -> list[list[np.ndarray]]:
         """Create multi-resolution image pyramid for pyramid supervision."""
         pyramid = []
         
@@ -188,7 +183,7 @@ class CNCNeRFDataset(Dataset):
         
         return pyramid
     
-    def _create_split(self) -> List[int]:
+    def _create_split(self) -> list[int]:
         """Create train/val/test split indices."""
         num_images = len(self.images)
         indices = list(range(num_images))
@@ -205,7 +200,7 @@ class CNCNeRFDataset(Dataset):
             start_idx = int(num_images * (self.config.train_split + self.config.val_split))
             return indices[start_idx:]
     
-    def _precompute_rays(self) -> Tuple[torch.Tensor, torch.Tensor]:
+    def _precompute_rays(self) -> tuple[torch.Tensor, torch.Tensor]:
         """Pre-compute rays and colors for all pixels."""
         all_rays = []
         all_colors = []
@@ -225,8 +220,12 @@ class CNCNeRFDataset(Dataset):
         
         return all_rays, all_colors
     
-    def _generate_rays(self, intrinsic: np.ndarray, extrinsic: np.ndarray, 
-                      image: np.ndarray) -> Tuple[torch.Tensor, torch.Tensor]:
+    def _generate_rays(
+        self,
+        intrinsic: np.ndarray,
+        extrinsic: np.ndarray,
+        image: np.ndarray,
+    ) -> tuple[torch.Tensor, torch.Tensor]:
         """Generate rays for a single image."""
         H, W = image.shape[:2]
         
@@ -238,8 +237,7 @@ class CNCNeRFDataset(Dataset):
         cx, cy = intrinsic[0, 2], intrinsic[1, 2]
         
         dirs = np.stack([
-            (i - cx) / fx,
-            -(j - cy) / fy,  # Negative y for right-handed coordinate system
+            (i - cx) / fx, -(j - cy) / fy, # Negative y for right-handed coordinate system
             -np.ones_like(i)
         ], axis=-1)
         
@@ -257,15 +255,15 @@ class CNCNeRFDataset(Dataset):
         
         # Create ray bundle
         rays = np.concatenate([
-            rays_o,  # Origin (3)
-            rays_d,  # Direction (3)
-            np.full((rays_o.shape[0], 1), self.config.near_plane),  # Near (1)
+            rays_o, # Origin (3)
+            rays_d, # Direction (3)
+            np.full((rays_o.shape[0], 1), self.config.near_plane), # Near (1)
             np.full((rays_o.shape[0], 1), self.config.far_plane)   # Far (1)
         ], axis=-1)
         
         return torch.from_numpy(rays).float(), torch.from_numpy(colors).float()
     
-    def get_pyramid_targets(self, ray_indices: torch.Tensor) -> List[torch.Tensor]:
+    def get_pyramid_targets(self, ray_indices: torch.Tensor) -> list[torch.Tensor]:
         """Get multi-resolution targets for pyramid supervision."""
         if not self.config.use_pyramid_loss:
             return [self.colors[ray_indices]]
@@ -281,10 +279,9 @@ class CNCNeRFDataset(Dataset):
             # This is a simplified approach - in practice, you'd want to maintain
             # a mapping from ray indices to image/pixel coordinates
             downsampled_colors = F.interpolate(
-                self.colors[ray_indices].unsqueeze(0).permute(0, 2, 1),
-                scale_factor=1.0 / (2 ** level),
-                mode='bilinear',
-                align_corners=False
+                self.colors[ray_indices].unsqueeze(
+                    0,
+                )
             ).permute(0, 2, 1).squeeze(0)
             
             targets.append(downsampled_colors)
@@ -295,7 +292,7 @@ class CNCNeRFDataset(Dataset):
         """Get dataset size."""
         return len(self.rays) // self.config.num_rays_per_batch
     
-    def __getitem__(self, idx: int) -> Dict[str, torch.Tensor]:
+    def __getitem__(self, idx: int) -> dict[str, torch.Tensor]:
         """Get a batch of rays and colors."""
         # Sample random rays
         if self.split == 'train':
@@ -311,9 +308,7 @@ class CNCNeRFDataset(Dataset):
         colors = self.colors[ray_indices]
         
         batch = {
-            'rays': rays,
-            'colors': colors,
-            'ray_indices': ray_indices
+            'rays': rays, 'colors': colors, 'ray_indices': ray_indices
         }
         
         # Add pyramid targets if enabled
@@ -327,8 +322,13 @@ class CNCNeRFDataset(Dataset):
 class MultiResolutionDataLoader:
     """Multi-resolution data loader for progressive training."""
     
-    def __init__(self, dataset: CNCNeRFDataset, batch_size: int = 1, 
-                 shuffle: bool = True, num_workers: int = 0):
+    def __init__(
+        self,
+        dataset: CNCNeRFDataset,
+        batch_size: int = 1,
+        shuffle: bool = True,
+        num_workers: int = 0,
+    ) -> None:
         self.dataset = dataset
         self.batch_size = batch_size
         self.shuffle = shuffle
@@ -336,11 +336,7 @@ class MultiResolutionDataLoader:
         
         # Create base dataloader
         self.dataloader = DataLoader(
-            dataset, 
-            batch_size=batch_size,
-            shuffle=shuffle,
-            num_workers=num_workers,
-            pin_memory=True
+            dataset, batch_size=batch_size, shuffle=shuffle, num_workers=num_workers, pin_memory=True
         )
     
     def __iter__(self):
@@ -353,7 +349,10 @@ class MultiResolutionDataLoader:
         return len(self.dataloader)
 
 
-def create_synthetic_dataset(config: CNCNeRFDatasetConfig, scene_type: str = 'lego') -> CNCNeRFDataset:
+def create_synthetic_dataset(
+    config: CNCNeRFDatasetConfig,
+    scene_type: str = 'lego',
+) -> CNCNeRFDataset:
     """Create a synthetic dataset for testing CNC-NeRF."""
     import os
     from pathlib import Path
@@ -369,8 +368,7 @@ def create_synthetic_dataset(config: CNCNeRFDatasetConfig, scene_type: str = 'le
     num_views = 100
     radius = 4.0
     cameras_data = {
-        'camera_angle_x': 0.6911112070083618,
-        'frames': []
+        'camera_angle_x': 0.6911112070083618, 'frames': []
     }
     
     # Generate synthetic images and poses
@@ -428,8 +426,7 @@ def create_synthetic_dataset(config: CNCNeRFDatasetConfig, scene_type: str = 'le
         
         # Add to cameras data
         cameras_data['frames'].append({
-            'file_path': img_name,
-            'transform_matrix': c2w.tolist()
+            'file_path': img_name, 'transform_matrix': c2w.tolist()
         })
     
     # Save cameras file
@@ -443,8 +440,11 @@ def create_synthetic_dataset(config: CNCNeRFDatasetConfig, scene_type: str = 'le
     return CNCNeRFDataset(config, split='train')
 
 
-def compute_pyramid_loss(predictions: List[torch.Tensor], targets: List[torch.Tensor], 
-                        weights: torch.Tensor) -> torch.Tensor:
+def compute_pyramid_loss(
+    predictions: list[torch.Tensor],
+    targets: list[torch.Tensor],
+    weights: torch.Tensor,
+) -> torch.Tensor:
     """Compute multi-resolution pyramid loss."""
     total_loss = 0.0
     
@@ -456,16 +456,18 @@ def compute_pyramid_loss(predictions: List[torch.Tensor], targets: List[torch.Te
     return total_loss
 
 
-def create_cnc_nerf_dataloader(config: CNCNeRFDatasetConfig, split: str = 'train', 
-                              batch_size: int = 1) -> MultiResolutionDataLoader:
+def create_cnc_nerf_dataloader(
+    config: CNCNeRFDatasetConfig,
+    split: str = 'train',
+    batch_size: int = 1,
+) -> MultiResolutionDataLoader: 
     """Create a CNC-NeRF dataloader."""
     dataset = CNCNeRFDataset(config, split=split)
     
     return MultiResolutionDataLoader(
-        dataset,
-        batch_size=batch_size,
-        shuffle=(split == 'train'),
-        num_workers=4 if split == 'train' else 0
+        dataset, batch_size=batch_size, shuffle=(
+            split == 'train',
+        )
     )
 
 
@@ -473,12 +475,7 @@ def create_cnc_nerf_dataloader(config: CNCNeRFDatasetConfig, split: str = 'train
 if __name__ == "__main__":
     # Create dataset config
     config = CNCNeRFDatasetConfig(
-        data_root="test_data",
-        image_width=400,
-        image_height=300,
-        pyramid_levels=3,
-        use_pyramid_loss=True,
-        num_rays_per_batch=1024
+        data_root="test_data", image_width=400, image_height=300, pyramid_levels=3, use_pyramid_loss=True, num_rays_per_batch=1024
     )
     
     # Create synthetic dataset

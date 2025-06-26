@@ -14,7 +14,7 @@ import numpy as np
 import json
 import os
 from pathlib import Path
-from typing import Dict, List, Optional, Tuple, Union, Any
+from typing import Dict, List, Optional, Tuple, Any
 from dataclasses import dataclass
 import cv2
 from PIL import Image
@@ -40,7 +40,7 @@ class NerfactoDatasetConfig:
     
     # Camera settings
     camera_model: str = "perspective"  # perspective, fisheye, equirectangular
-    distortion_params: Optional[List[float]] = None
+    distortion_params: Optional[list[float]] = None
     
     # Data splitting
     train_split_fraction: float = 0.9
@@ -48,7 +48,7 @@ class NerfactoDatasetConfig:
     test_split_fraction: float = 0.0
     
     # Scene bounds
-    scene_bounds: Optional[Tuple[float, float, float, float, float, float]] = None
+    scene_bounds: Optional[tuple[float, float, float, float, float, float]] = None
     auto_scale: bool = True
     
     # Sampling settings
@@ -84,7 +84,11 @@ class CameraModel:
         else:
             raise ValueError(f"Unsupported camera type: {self.camera_type}")
     
-    def _perspective_projection(self, points: torch.Tensor, intrinsics: torch.Tensor) -> torch.Tensor:
+    def _perspective_projection(
+        self,
+        points: torch.Tensor,
+        intrinsics: torch.Tensor,
+    ) -> torch.Tensor:
         """Standard perspective projection."""
         fx, fy, cx, cy = intrinsics[0], intrinsics[1], intrinsics[2], intrinsics[3]
         
@@ -121,8 +125,7 @@ class ImageProcessor:
     """Image processing utilities for Nerfacto dataset."""
     
     @staticmethod
-    def load_image(image_path: str, 
-                  target_size: Optional[Tuple[int, int]] = None) -> torch.Tensor:
+    def load_image(image_path: str, target_size: Optional[tuple[int, int]] = None) -> torch.Tensor:
         """Load and preprocess image."""
         if not os.path.exists(image_path):
             raise FileNotFoundError(f"Image not found: {image_path}")
@@ -140,20 +143,19 @@ class ImageProcessor:
         return image_tensor
     
     @staticmethod
-    def apply_color_jitter(image: torch.Tensor,
-                          brightness: float = 0.1,
-                          contrast: float = 0.1,
-                          saturation: float = 0.1,
-                          hue: float = 0.05) -> torch.Tensor:
+    def apply_color_jitter(
+        image: torch.Tensor,
+        brightness: float = 0.1,
+        contrast: float = 0.1,
+        saturation: float = 0.1,
+        hue: float = 0.05,
+    ) -> torch.Tensor:
         """Apply color jittering augmentation."""
         # Convert to PIL for color jittering
         from torchvision import transforms
         
         jitter = transforms.ColorJitter(
-            brightness=brightness,
-            contrast=contrast, 
-            saturation=saturation,
-            hue=hue
+            brightness=brightness, contrast=contrast, saturation=saturation, hue=hue
         )
         
         # Convert tensor to PIL and back
@@ -167,7 +169,7 @@ class COLMAPDataParser:
     """Parser for COLMAP data format."""
     
     @staticmethod
-    def parse_colmap_data(data_dir: str) -> Dict[str, Any]:
+    def parse_colmap_data(data_dir: str) -> dict[str, Any]:
         """Parse COLMAP reconstruction data."""
         # This is a simplified version - full COLMAP parsing would require
         # reading binary files and handling various camera models
@@ -194,10 +196,7 @@ class COLMAPDataParser:
                         params = [float(p) for p in parts[4:]]
                         
                         cameras[cam_id] = {
-                            'model': model,
-                            'width': width,
-                            'height': height,
-                            'params': params
+                            'model': model, 'width': width, 'height': height, 'params': params
                         }
         
         # Parse images
@@ -227,16 +226,11 @@ class COLMAPDataParser:
                         c2w[:3, 3] = -R.T @ t
                         
                         images[img_id] = {
-                            'name': name,
-                            'camera_id': cam_id,
-                            'pose': c2w,
-                            'quat': [qw, qx, qy, qz],
-                            'trans': [tx, ty, tz]
+                            'name': name, 'camera_id': cam_id, 'pose': c2w, 'quat': [qw, qx, qy, qz], 'trans': [tx, ty, tz]
                         }
         
         return {
-            'cameras': cameras,
-            'images': images
+            'cameras': cameras, 'images': images
         }
 
 
@@ -244,7 +238,7 @@ class BlenderDataParser:
     """Parser for Blender NeRF data format."""
     
     @staticmethod
-    def parse_blender_data(data_dir: str) -> Dict[str, Any]:
+    def parse_blender_data(data_dir: str) -> dict[str, Any]:
         """Parse Blender NeRF format data."""
         transform_files = ['transforms_train.json', 'transforms_val.json', 'transforms_test.json']
         
@@ -435,7 +429,7 @@ class NerfactoDataset(Dataset):
     def __len__(self) -> int:
         return len(self.image_paths)
     
-    def __getitem__(self, idx: int) -> Dict[str, torch.Tensor]:
+    def __getitem__(self, idx: int) -> dict[str, torch.Tensor]:
         """Get dataset item."""
         # Load image
         if self.config.cache_images and idx < len(self.images):
@@ -462,18 +456,15 @@ class NerfactoDataset(Dataset):
             rays_o, rays_d, colors = self._generate_all_rays(image, pose, intrinsics)
         
         return {
-            'image': image,
-            'pose': pose,
-            'intrinsics': intrinsics,
-            'rays_o': rays_o,
-            'rays_d': rays_d,
-            'colors': colors,
-            'image_idx': torch.tensor(idx)
+            'image': image, 'pose': pose, 'intrinsics': intrinsics, 'rays_o': rays_o, 'rays_d': rays_d, 'colors': colors, 'image_idx': torch.tensor(idx)
         }
     
-    def _generate_all_rays(self, image: torch.Tensor, 
-                          pose: torch.Tensor,
-                          intrinsics: torch.Tensor) -> Tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
+    def _generate_all_rays(
+        self,
+        image: torch.Tensor,
+        pose: torch.Tensor,
+        intrinsics: torch.Tensor,
+    ) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
         """Generate rays for entire image."""
         H, W = image.shape[:2]
         
@@ -504,23 +495,29 @@ class NerfactoDataset(Dataset):
         
         return rays_o, rays_d, colors
     
-    def _generate_patch_rays(self, image: torch.Tensor,
-                           pose: torch.Tensor, 
-                           intrinsics: torch.Tensor) -> Tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
+    def _generate_patch_rays(
+        self,
+        image: torch.Tensor,
+        pose: torch.Tensor,
+        intrinsics: torch.Tensor,
+    ) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
         """Generate rays for random patch."""
         H, W = image.shape[:2]
         patch_size = self.config.patch_size
         
         # Random patch location
-        top = torch.randint(0, H - patch_size + 1, (1,)).item()
-        left = torch.randint(0, W - patch_size + 1, (1,)).item()
+        top = torch.randint(0, H - patch_size + 1, (1, )).item()
+        left = torch.randint(0, W - patch_size + 1, (1, )).item()
         
         # Extract patch
         patch = image[top:top+patch_size, left:left+patch_size]
         
         # Generate rays for patch
-        i, j = torch.meshgrid(torch.arange(left, left+patch_size),
-                             torch.arange(top, top+patch_size), indexing='ij')
+        i, j = torch.meshgrid(
+            torch.arange(patch_size),
+            torch.arange(patch_size),
+            indexing='ij'
+        )
         i = i.t().float()
         j = j.t().float()
         
@@ -541,32 +538,31 @@ class NerfactoDataset(Dataset):
         return rays_o, rays_d, colors
 
 
-def create_nerfacto_dataloader(config: NerfactoDatasetConfig,
-                              split: str = "train",
-                              batch_size: int = 1,
-                              shuffle: bool = True,
-                              num_workers: int = 4) -> DataLoader:
+def create_nerfacto_dataloader(
+    config: NerfactoDatasetConfig,
+    split: str = "train",
+    batch_size: int = 1,
+    shuffle: bool = True,
+    num_workers: int = 4,
+) -> DataLoader:
     """Create Nerfacto dataloader."""
     dataset = NerfactoDataset(config, split)
     
     return DataLoader(
-        dataset,
-        batch_size=batch_size,
-        shuffle=shuffle,
-        num_workers=num_workers,
-        pin_memory=True
+        dataset, batch_size=batch_size, shuffle=shuffle, num_workers=num_workers, pin_memory=True
     )
 
 
-def create_nerfacto_dataset(data_dir: str,
-                           data_format: str = "colmap",
-                           image_size: Optional[Tuple[int, int]] = None,
-                           **kwargs) -> Dict[str, NerfactoDataset]:
+def create_nerfacto_dataset(
+    data_dir: str,
+    data_format: str = "colmap",
+    image_size: Optional[tuple[int,
+    int]] = None,
+    **kwargs,
+) -> dict[str, NerfactoDataset]:
     """Factory function to create Nerfacto datasets."""
     config = NerfactoDatasetConfig(
-        data_dir=data_dir,
-        data_format=data_format,
-        **kwargs
+        data_dir=data_dir, data_format=data_format, **kwargs
     )
     
     if image_size:

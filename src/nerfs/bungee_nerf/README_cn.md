@@ -1,18 +1,18 @@
 # BungeeNeRF: 极端多尺度场景渲染的渐进式神经辐射场
 
-本包实现了BungeeNeRF，这是一个专为极端多尺度场景渲染设计的渐进式神经辐射场，基于Xiangli等人的论文《BungeeNeRF: Progressive Neural Radiance Field for Extreme Multi-scale Scene Rendering》。
+本包实现了 BungeeNeRF，这是一个专为极端多尺度场景渲染设计的渐进式神经辐射场，基于 Xiangli 等人的论文《BungeeNeRF: Progressive Neural Radiance Field for Extreme Multi-scale Scene Rendering》。
 
 ## 特性
 
 - **渐进式训练**：多阶段训练，逐步增加细节级别
 - **多尺度渲染**：跨大幅度变化尺度的细节级别渲染
-- **Google Earth Studio支持**：原生支持Google Earth Studio数据
+- **Google Earth Studio 支持**：原生支持 Google Earth Studio 数据
 - **自适应采样**：基于距离的自适应采样以实现高效渲染
 - **灵活架构**：可配置的模型架构和训练参数
 
 ## 架构概览
 
-BungeeNeRF包含几个关键组件：
+BungeeNeRF 包含几个关键组件：
 
 1. **渐进式位置编码器**：在训练期间逐步激活高频通道
 2. **多尺度编码器**：基于观看距离处理不同细节级别
@@ -97,9 +97,9 @@ config = BungeeNeRFConfig(
     num_freqs_max=10,          # 最大频带数
     include_input=True,        # 包含输入坐标
     
-    # MLP架构
+    # MLP 架构
     hidden_dim=256,            # 隐藏层维度
-    num_layers=8,              # MLP层数
+    num_layers=8,              # MLP 层数
     skip_layers=[4],           # 跳跃连接层
     
     # 渐进式块
@@ -131,7 +131,7 @@ config = BungeeNeRFConfig(
 
 包支持三种类型的训练器：
 
-1. **BungeeNeRFTrainer**：用于标准NeRF训练的基础训练器
+1. **BungeeNeRFTrainer**：用于标准 NeRF 训练的基础训练器
 2. **ProgressiveTrainer**：基于阶段渐进的渐进式训练
 3. **MultiScaleTrainer**：带自适应采样的多尺度训练
 
@@ -139,13 +139,13 @@ config = BungeeNeRFConfig(
 
 ### 支持的格式
 
-- **NeRF合成**：Blender渲染的合成场景
+- **NeRF 合成**：Blender 渲染的合成场景
 - **LLFF**：真实世界前向面对场景
 - **Google Earth Studio**：具有极端尺度变化的航空/卫星图像
 
-### Google Earth Studio数据
+### Google Earth Studio 数据
 
-对于Google Earth Studio数据，包期望：
+对于 Google Earth Studio 数据，包期望：
 
 ```
 data_dir/
@@ -156,14 +156,14 @@ data_dir/
 │   └── ...
 ```
 
-metadata.json应包含带有位置、旋转和FOV信息的相机帧。
+metadata.json 应包含带有位置、旋转和 FOV 信息的相机帧。
 
 ## 渐进式训练
 
-BungeeNeRF使用渐进式训练策略：
+BungeeNeRF 使用渐进式训练策略：
 
-1. **阶段0**：使用浅基础块训练远距离视图
-2. **阶段1-N**：为近距离视图逐步添加细节块
+1. **阶段 0**：使用浅基础块训练远距离视图
+2. **阶段 1-N**：为近距离视图逐步添加细节块
 3. **频率激活**：逐步激活高频位置编码
 
 ### 训练调度
@@ -182,16 +182,16 @@ schedule = create_progressive_schedule(
 
 包实现细节级别渲染：
 
-- **基于距离的LOD**：基于相机距离的不同细节级别
+- **基于距离的 LOD**：基于相机距离的不同细节级别
 - **自适应采样**：为较近对象提供更多采样
 - **渐进式块**：为高细节区域提供额外细化
 
-## API参考
+## API 参考
 
 ### 核心类
 
 #### BungeeNeRF
-实现BungeeNeRF架构的主模型类。
+实现 BungeeNeRF 架构的主模型类。
 
 ```python
 model = BungeeNeRF(config)
@@ -390,7 +390,7 @@ config.num_importance = 64
 
 ## 应用案例
 
-### Google Earth Studio数据训练
+### Google Earth Studio 数据训练
 
 ```python
 # 为极端尺度场景配置
@@ -417,7 +417,7 @@ config = BungeeNeRFConfig(
 
 ## 许可证
 
-MIT许可证
+MIT 许可证
 
 ## 引用
 

@@ -102,14 +102,7 @@ def demo_nerfs_package():
         print("-" * 40)
         
         recommendations = {
-            "小规模场景学习": ["classic_nerf", "nerfacto"],
-            "实时渲染应用": ["instant_ngp", "svraster", "plenoxels"],
-            "大规模城市场景": ["block_nerf", "mega_nerf", "mega_nerf_plus"],
-            "高质量渲染": ["mip_nerf", "pyramid_nerf"],
-            "快速原型开发": ["instant_ngp", "nerfacto"],
-            "几何约束场景": ["dnmp_nerf"],
-            "渐进式训练": ["bungee_nerf"],
-            "多尺度场景": ["mip_nerf", "pyramid_nerf"]
+            "小规模场景学习": ["classic_nerf", "nerfacto"], "实时渲染应用": ["instant_ngp", "svraster", "plenoxels"], "大规模城市场景": ["block_nerf", "mega_nerf", "mega_nerf_plus"], "高质量渲染": ["mip_nerf", "pyramid_nerf"], "快速原型开发": ["instant_ngp", "nerfacto"], "几何约束场景": ["dnmp_nerf"], "渐进式训练": ["bungee_nerf"], "多尺度场景": ["mip_nerf", "pyramid_nerf"]
         }
         
         for use_case, recommended_nerfs in recommendations.items():
@@ -121,13 +114,10 @@ def demo_nerfs_package():
         print("-" * 40)
         
         performance_info = [
-            ("训练速度最快", "instant_ngp"),
-            ("渲染质量最高", "mip_nerf"),
-            ("内存使用最少", "plenoxels"),
-            ("最适合大规模场景", "mega_nerf_plus"),
-            ("最适合实时应用", "instant_ngp"),
-            ("最稳定训练", "bungee_nerf"),
-            ("最易于使用", "nerfacto")
+            (
+                "训练速度最快",
+                "instant_ngp",
+            )
         ]
         
         for feature, nerf_name in performance_info:

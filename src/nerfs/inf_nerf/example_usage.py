@@ -25,9 +25,11 @@ from .utils.lod_utils import pyramid_supervision, frustum_culling
 from .utils.rendering_utils import memory_efficient_rendering, rendering_profiler
 
 
-def demo_inf_nerf(data_path: str = "data/sample_scene",
-                 output_path: str = "outputs/inf_nerf_demo",
-                 device: str = "cuda"):
+def demo_inf_nerf(
+    data_path: str = "data/sample_scene",
+    output_path: str = "outputs/inf_nerf_demo",
+    device: str = "cuda",
+) -> None:
     """
     Complete demo of InfNeRF training and inference.
     
@@ -120,74 +122,34 @@ def create_demo_config() -> InfNeRFConfig:
     """Create demo configuration for InfNeRF."""
     return InfNeRFConfig(
         # Octree parameters
-        max_depth=6,
-        min_depth=2,
-        adaptive_depth=True,
-        
-        # LoD parameters
-        base_resolution=32,
-        grid_size=512,  # Reduced for demo
-        max_gsd=1.0,
-        min_gsd=0.01,
-        
-        # Network parameters
-        hidden_dim=64,
-        geo_feat_dim=15,
-        num_layers=2,
-        num_layers_color=3,
-        
-        # Hash encoding
-        num_levels=12,  # Reduced for demo
-        level_dim=2,
-        per_level_scale=2.0,
-        log2_hashmap_size=18,  # Reduced for demo
+        max_depth=6, min_depth=2, adaptive_depth=True, # LoD parameters
+        base_resolution=32, grid_size=512, # Reduced for demo
+        max_gsd=1.0, min_gsd=0.01, # Network parameters
+        hidden_dim=64, geo_feat_dim=15, num_layers=2, num_layers_color=3, # Hash encoding
+        num_levels=12, # Reduced for demo
+        level_dim=2, per_level_scale=2.0, log2_hashmap_size=18, # Reduced for demo
         
         # Sampling
-        num_samples=64,
-        num_importance=128,
-        perturb_radius=True,
-        
-        # Training
-        learning_rate=5e-3,
-        weight_decay=1e-6,
-        batch_size=1024,  # Reduced for demo
+        num_samples=64, num_importance=128, perturb_radius=True, # Training
+        learning_rate=5e-3, weight_decay=1e-6, batch_size=1024, # Reduced for demo
         
         # Scene
-        scene_bound=2.0,
-        
-        # Pruning
-        use_pruning=True,
-        sparse_point_threshold=5
+        scene_bound=2.0, # Pruning
+        use_pruning=True, sparse_point_threshold=5
     )
 
 
 def create_demo_dataset_config(data_path: str) -> InfNeRFDatasetConfig:
     """Create demo dataset configuration."""
     return InfNeRFDatasetConfig(
-        data_root=data_path,
-        images_path="images",
-        sparse_points_path="sparse_points.ply",
-        cameras_path="cameras.json",
-        
-        # Image processing
-        image_scale=0.5,  # Downsample for demo
-        max_image_size=1024,
-        min_image_size=256,
-        
-        # Multi-resolution
-        num_pyramid_levels=3,  # Reduced for demo
-        pyramid_scale_factor=2.0,
-        uniform_pixel_sampling=True,
-        
-        # Ray sampling
-        rays_per_image=512,  # Reduced for demo
-        batch_size=1024,
-        use_patch_sampling=False,
-        
-        # Scene bounds
-        scene_scale=1.0,
-        near_plane=0.1,
-        far_plane=100.0
+        data_root=data_path, images_path="images", sparse_points_path="sparse_points.ply", cameras_path="cameras.json", # Image processing
+        image_scale=0.5, # Downsample for demo
+        max_image_size=1024, min_image_size=256, # Multi-resolution
+        num_pyramid_levels=3, # Reduced for demo
+        pyramid_scale_factor=2.0, uniform_pixel_sampling=True, # Ray sampling
+        rays_per_image=512, # Reduced for demo
+        batch_size=1024, use_patch_sampling=False, # Scene bounds
+        scene_scale=1.0, near_plane=0.1, far_plane=100.0
     )
 
 
@@ -195,48 +157,18 @@ def create_demo_trainer_config(output_path: str) -> InfNeRFTrainerConfig:
     """Create demo trainer configuration."""
     return InfNeRFTrainerConfig(
         # Training
-        num_epochs=20,  # Reduced for demo
-        lr_init=5e-3,
-        lr_final=1e-4,
-        lr_decay_steps=5000,
-        
-        # Loss weights
-        lambda_rgb=1.0,
-        lambda_depth=0.1,
-        lambda_distortion=0.01,
-        lambda_transparency=1e-3,
-        lambda_regularization=1e-4,
-        
-        # Strategy
-        coarse_epochs=5,
-        fine_epochs=15,
-        progressive_training=True,
-        
-        # Memory
-        max_batch_size=1024,
-        gradient_accumulation_steps=1,
-        mixed_precision=True,
-        max_memory_gb=8.0,
-        
-        # Checkpointing
-        checkpoint_dir=f"{output_path}/checkpoints",
-        log_dir=f"{output_path}/logs",
-        save_interval=1000,
-        eval_interval=500,
-        log_interval=50,
-        
-        # Validation
-        num_val_images=3,
-        
-        # Wandb (disabled for demo)
+        num_epochs=20, # Reduced for demo
+        lr_init=5e-3, lr_final=1e-4, lr_decay_steps=5000, # Loss weights
+        lambda_rgb=1.0, lambda_depth=0.1, lambda_distortion=0.01, lambda_transparency=1e-3, lambda_regularization=1e-4, # Strategy
+        coarse_epochs=5, fine_epochs=15, progressive_training=True, # Memory
+        max_batch_size=1024, gradient_accumulation_steps=1, mixed_precision=True, max_memory_gb=8.0, # Checkpointing
+        checkpoint_dir=f"{output_path}/checkpoints", log_dir=f"{output_path}/logs", save_interval=1000, eval_interval=500, log_interval=50, # Validation
+        num_val_images=3, # Wandb (disabled for demo)
         use_wandb=False
     )
 
 
-def demo_inference(model: InfNeRF, 
-                  dataset: InfNeRFDataset,
-                  output_dir: Path,
-                  device: str):
+def demo_inference(model: InfNeRF, dataset: InfNeRFDataset, output_dir: Path, device: str):
     """Demonstrate inference and rendering."""
     model.eval()
     
@@ -253,12 +185,8 @@ def demo_inference(model: InfNeRF,
     with rendering_profiler.profile("inference"):
         with torch.no_grad():
             rendered = model(
-                rays_o=rays_o,
-                rays_d=rays_d,
-                near=test_sample['near'].item(),
-                far=test_sample['far'].item(),
-                focal_length=test_sample['focal_length'].item(),
-                pixel_width=test_sample['pixel_width'].item()
+                rays_o=rays_o, rays_d=rays_d, near=test_sample['near'].item(
+                )
             )
     
     # Calculate metrics
@@ -295,9 +223,7 @@ def demo_inference(model: InfNeRF,
         print(f"   - Could not save image: {e}")
 
 
-def demo_performance_analysis(model: InfNeRF,
-                            config: InfNeRFConfig,
-                            output_dir: Path):
+def demo_performance_analysis(model: InfNeRF, config: InfNeRFConfig, output_dir: Path):
     """Analyze and visualize performance characteristics."""
     
     # Memory analysis
@@ -376,10 +302,7 @@ def demo_performance_analysis(model: InfNeRF,
         
         # Save stats to JSON
         stats_dict = {
-            'memory_stats': memory_stats,
-            'profiler_stats': profiler_stats,
-            'compression_ratio': compression_ratio,
-            'config': config.__dict__
+            'memory_stats': memory_stats, 'profiler_stats': profiler_stats, 'compression_ratio': compression_ratio, 'config': config.__dict__
         }
         
         with open(output_dir / "performance_stats.json", 'w') as f:
@@ -391,7 +314,7 @@ def demo_performance_analysis(model: InfNeRF,
         print(f"   - Performance visualization failed: {e}")
 
 
-def create_inf_nerf_demo(scene_path: str = "data/demo_scene") -> Dict[str, Any]:
+def create_inf_nerf_demo(scene_path: str = "data/demo_scene") -> dict[str, Any]:
     """
     Create a simple demo scene and run InfNeRF.
     
@@ -415,10 +338,9 @@ def create_inf_nerf_demo(scene_path: str = "data/demo_scene") -> Dict[str, Any]:
     
     # Run demo
     demo_results = {
-        'scene_path': str(scene_dir),
-        'num_images': len(demo_data['images']),
-        'num_sparse_points': len(demo_data['sparse_points']),
-        'scene_bounds': demo_data['scene_bounds']
+        'scene_path': str(
+            scene_dir,
+        )
     }
     
     print(f"   - Created demo scene with {demo_results['num_images']} images")
@@ -427,7 +349,7 @@ def create_inf_nerf_demo(scene_path: str = "data/demo_scene") -> Dict[str, Any]:
     return demo_results
 
 
-def generate_synthetic_demo_data() -> Dict[str, Any]:
+def generate_synthetic_demo_data() -> dict[str, Any]:
     """Generate synthetic data for demo."""
     
     # Simple synthetic scene: colored cube
@@ -435,8 +357,7 @@ def generate_synthetic_demo_data() -> Dict[str, Any]:
     
     # Generate sparse points (corners and some random points in a cube)
     cube_corners = np.array([
-        [-1, -1, -1], [1, -1, -1], [1, 1, -1], [-1, 1, -1],
-        [-1, -1, 1], [1, -1, 1], [1, 1, 1], [-1, 1, 1]
+        [-1, -1, -1], [1, -1, -1], [1, 1, -1], [-1, 1, -1], [-1, -1, 1], [1, -1, 1], [1, 1, 1], [-1, 1, 1]
     ]) * 0.5
     
     random_points = np.random.uniform(-0.5, 0.5, (20, 3))
@@ -453,9 +374,7 @@ def generate_synthetic_demo_data() -> Dict[str, Any]:
         
         # Camera position
         cam_pos = np.array([
-            radius * np.cos(angle),
-            radius * np.sin(angle),
-            1.0
+            radius * np.cos(angle), radius * np.sin(angle), 1.0
         ])
         
         # Look at origin
@@ -490,22 +409,18 @@ def generate_synthetic_demo_data() -> Dict[str, Any]:
         focal_length = img_size * 0.8  # Rough focal length
         cameras[f"image_{i:03d}.png"] = {
             'intrinsic': [
-                [focal_length, 0, img_size/2],
-                [0, focal_length, img_size/2],
-                [0, 0, 1]
-            ],
-            'extrinsic': extrinsic.tolist()
+                [focal_length, 0, img_size/2], [0, focal_length, img_size/2], [0, 0, 1]
+            ], 'extrinsic': extrinsic.tolist()
         }
     
     return {
-        'images': images,
-        'cameras': cameras,
-        'sparse_points': sparse_points,
-        'scene_bounds': (np.array([-1, -1, -1]), np.array([1, 1, 1]))
+        'images': images, 'cameras': cameras, 'sparse_points': sparse_points, 'scene_bounds': (
+            np.array,
+        )
     }
 
 
-def save_demo_data(demo_data: Dict[str, Any], scene_dir: Path):
+def save_demo_data(demo_data: dict[str, Any], scene_dir: Path) -> None:
     """Save demo data to files."""
     
     # Create subdirectories
@@ -553,9 +468,7 @@ if __name__ == "__main__":
     
     # Run full demo
     demo_inf_nerf(
-        data_path=demo_scene['scene_path'],
-        output_path="outputs/inf_nerf_synthetic_demo",
-        device=device
+        data_path=demo_scene['scene_path'], output_path="outputs/inf_nerf_synthetic_demo", device=device
     )
     
     print("\n🎉 Demo completed! Check the outputs directory for results.") 

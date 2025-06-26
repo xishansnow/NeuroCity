@@ -1,14 +1,14 @@
 """
 Block Manager for Block-NeRF
 
-This module manages multiple Block-NeRF instances, handles block placement,
-and coordinates training and inference across blocks.
+This module manages multiple Block-NeRF instances, handles block placement, and coordinates training and inference across blocks.
 """
 
 import torch
 import torch.nn as nn
+import torch.nn.functional as F
 import numpy as np
-from typing import Dict, List, Optional, Tuple, Union
+from typing import Dict, List, Optional, Tuple, Union 
 import json
 import os
 from pathlib import Path
@@ -22,11 +22,18 @@ class BlockManager:
     Manages multiple Block-NeRF instances for large-scale scene reconstruction
     """
     
-    def __init__(self,
-                 scene_bounds: Tuple[Tuple[float, float], Tuple[float, float], Tuple[float, float]],
-                 block_size: float = 75.0,
-                 overlap_ratio: float = 0.5,
-                 device: str = 'cuda'):
+    def __init__(
+        self,
+        scene_bounds: tuple[tuple[float,
+        float],
+        tuple[float,
+        float],
+        tuple[float,
+        float]],
+        block_size: float = 75.0,
+        overlap_ratio: float = 0.5,
+        device: str = 'cuda',
+    ):
         """
         Initialize Block Manager
         
@@ -42,9 +49,9 @@ class BlockManager:
         self.device = device
         
         # Storage for blocks
-        self.blocks: Dict[str, BlockNeRF] = {}
-        self.block_centers: Dict[str, torch.Tensor] = {}
-        self.block_metadata: Dict[str, Dict] = {}
+        self.blocks: dict[str, BlockNeRF] = {}
+        self.block_centers: dict[str, torch.Tensor] = {}
+        self.block_metadata: dict[str, Dict] = {}
         
         # Visibility network (shared across blocks)
         self.visibility_network = VisibilityNetwork().to(device)
@@ -74,21 +81,19 @@ class BlockManager:
                     
                     self.block_centers[block_name] = center
                     self.block_metadata[block_name] = {
-                        'id': block_id,
-                        'center': [x, y, z],
-                        'radius': self.block_size,
-                        'active': False,
-                        'trained': False
+                        'id': block_id, 'center': [x, y, z], 'radius': self.block_size, 'active': False, 'trained': False
                     }
                     
                     block_id += 1
         
         print(f"Generated {len(self.block_centers)} blocks for scene")
         
-    def create_block(self,
-                    block_name: str,
-                    network_config: Dict,
-                    num_appearance_embeddings: int = 1000) -> BlockNeRF:
+    def create_block(
+        self,
+        block_name: str,
+        network_config: Dict,
+        num_appearance_embeddings: int = 1000
+    ):
         """
         Create a new Block-NeRF instance
         
@@ -106,10 +111,7 @@ class BlockManager:
         center = self.block_centers[block_name]
         
         block = BlockNeRF(
-            network_config=network_config,
-            block_center=center,
-            block_radius=self.block_size,
-            num_appearance_embeddings=num_appearance_embeddings
+            network_config=network_config, block_center=center, block_radius=self.block_size, num_appearance_embeddings=num_appearance_embeddings
         ).to(self.device)
         
         self.blocks[block_name] = block
@@ -117,14 +119,16 @@ class BlockManager:
         
         return block
     
-    def get_blocks_for_position(self,
-                              position: torch.Tensor,
-                              max_distance: Optional[float] = None) -> List[str]:
+    def get_blocks_for_position(
+        self,
+        position: torch.Tensor,
+        max_distance: Optional[float] = None    
+    ):
         """
         Get block names that contain or are near a given position
         
         Args:
-            position: 3D position (3,)
+            position: 3D position (3, )
             max_distance: Maximum distance to consider (default: block_size * 2)
             
         Returns:
@@ -142,17 +146,19 @@ class BlockManager:
         
         return relevant_blocks
     
-    def get_blocks_for_camera(self,
-                            camera_position: torch.Tensor,
-                            camera_direction: torch.Tensor,
-                            max_distance: float = 100.0,
-                            use_visibility: bool = True) -> List[str]:
+    def get_blocks_for_camera(
+        self,
+        camera_position: torch.Tensor,
+        camera_direction: torch.Tensor,
+        max_distance: float = 100.0,
+        use_visibility: bool = True
+    ):
         """
         Get relevant blocks for a camera viewpoint
         
         Args:
-            camera_position: Camera position (3,)
-            camera_direction: Camera viewing direction (3,)
+            camera_position: Camera position (3, )
+            camera_direction: Camera viewing direction (3, )
             max_distance: Maximum distance to consider
             use_visibility: Whether to use visibility filtering
             
@@ -180,14 +186,17 @@ class BlockManager:
         
         return filtered_blocks
     
-    def get_training_blocks_for_image(self,
-                                    camera_position: torch.Tensor,
-                                    image_bounds: Optional[Tuple[torch.Tensor, torch.Tensor]] = None) -> List[str]:
+    def get_training_blocks_for_image(
+        self,
+        camera_position: torch.Tensor,
+        image_bounds: Optional[tuple[torch.Tensor,
+        torch.Tensor]] = None
+    ):
         """
         Get blocks that should be trained on a given image
         
         Args:
-            camera_position: Camera position (3,)
+            camera_position: Camera position (3, )
             image_bounds: Optional bounds of what's visible in the image
             
         Returns:
@@ -207,20 +216,22 @@ class BlockManager:
         
         return training_blocks
     
-    def compute_block_weights(self,
-                            camera_position: torch.Tensor,
-                            block_names: List[str],
-                            power: float = 2.0) -> torch.Tensor:
+    def compute_block_weights(
+        self,
+        camera_position: torch.Tensor,
+        block_names: list[str],
+        power: float = 2.0  
+    ):
         """
         Compute interpolation weights for blocks based on distance
         
         Args:
-            camera_position: Camera position (3,)
+            camera_position: Camera position (3, )
             block_names: List of block names
             power: Power for inverse distance weighting
             
         Returns:
-            Normalized weights (len(block_names),)
+            Normalized weights (len(block_names), )
         """
         if not block_names:
             return torch.tensor([], device=self.device)
@@ -240,10 +251,8 @@ class BlockManager:
     def save_block_layout(self, save_path: str):
         """Save block layout and metadata"""
         layout_data = {
-            'scene_bounds': self.scene_bounds,
-            'block_size': self.block_size,
-            'overlap_ratio': self.overlap_ratio,
-            'blocks': {}
+            'scene_bounds': self.scene_bounds, 'block_size': self.block_size, 'overlap_ratio': self.overlap_ratio, 'blocks': {
+            }
         }
         
         for block_name, metadata in self.block_metadata.items():
@@ -276,15 +285,14 @@ class BlockManager:
     
     def save_blocks(self, save_dir: str):
         """Save all active blocks"""
-        save_dir = Path(save_dir)
+        save_dir = Path(save_dir)  # type: ignore
         save_dir.mkdir(parents=True, exist_ok=True)
         
         for block_name, block in self.blocks.items():
             block_path = save_dir / f"{block_name}.pth"
             torch.save({
-                'model_state_dict': block.state_dict(),
-                'block_info': block.get_block_info(),
-                'metadata': self.block_metadata[block_name]
+                'model_state_dict': block.state_dict(
+                )
             }, block_path)
         
         # Save visibility network
@@ -300,7 +308,9 @@ class BlockManager:
         # Load visibility network
         visibility_path = load_dir / "visibility_network.pth"
         if visibility_path.exists():
-            self.visibility_network.load_state_dict(torch.load(visibility_path, map_location=self.device))
+            self.visibility_network.load_state_dict(
+                torch.load(visibility_path)
+            )
         
         # Load individual blocks
         for block_file in load_dir.glob("block_*.pth"):
@@ -330,13 +340,7 @@ class BlockManager:
         scene_volume = (x_max - x_min) * (y_max - y_min) * (z_max - z_min)
         
         return {
-            'total_blocks': total_blocks,
-            'active_blocks': active_blocks,
-            'trained_blocks': trained_blocks,
-            'scene_bounds': self.scene_bounds,
-            'scene_volume': scene_volume,
-            'block_size': self.block_size,
-            'overlap_ratio': self.overlap_ratio
+            'total_blocks': total_blocks, 'active_blocks': active_blocks, 'trained_blocks': trained_blocks, 'scene_bounds': self.scene_bounds, 'scene_volume': scene_volume, 'block_size': self.block_size, 'overlap_ratio': self.overlap_ratio
         }
     
     def optimize_block_layout(self, camera_positions: torch.Tensor) -> Dict:
@@ -366,11 +370,18 @@ class BlockManager:
             self.block_metadata[block_name]['active'] = False
         
         optimization_stats = {
-            'camera_mean': camera_mean.tolist(),
-            'camera_std': camera_std.tolist(),
-            'visited_blocks': len(visited_blocks),
-            'unvisited_blocks': len(unvisited_blocks),
-            'coverage_ratio': len(visited_blocks) / len(self.block_centers)
+            'camera_mean': camera_mean.tolist(
+            )
         }
         
-        return optimization_stats 
+        return optimization_stats
+
+    def forward(
+        self, rays_o: torch.Tensor, rays_d: torch.Tensor, **kwargs
+    ) -> dict[str, torch.Tensor]:
+        # Implementation of forward method
+        pass
+
+    def get_block_info(self) -> dict[str, Union[torch.Tensor, float, list[float]]]:
+        # Implementation of get_block_info method
+        pass 

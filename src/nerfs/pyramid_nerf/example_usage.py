@@ -12,8 +12,7 @@ from pathlib import Path
 sys.path.append(str(Path(__file__).parent.parent))
 
 from . import (
-    PyNeRF, PyNeRFConfig, PyramidEncoder, PyramidRenderer,
-    create_pyramid_hierarchy, compute_psnr
+    PyNeRF, PyNeRFConfig, PyramidEncoder, PyramidRenderer, create_pyramid_hierarchy, compute_psnr
 )
 
 
@@ -23,17 +22,13 @@ def basic_usage_example():
     
     # 1. Create configuration
     config = PyNeRFConfig(
-        num_levels=6,
-        base_resolution=16,
-        max_resolution=512,
-        batch_size=1024,
-        learning_rate=1e-3
+        num_levels=6, base_resolution=16, max_resolution=512, batch_size=1024, learning_rate=1e-3
     )
     print(f"Created config with {config.num_levels} pyramid levels")
     
     # 2. Create model
     model = PyNeRF(config)
-    print(f"Created model with {sum(p.numel() for p in model.parameters()):,} parameters")
+    print(f"Created model with {sum(p.numel() for p in model.parameters()):, } parameters")
     
     # 3. Create sample data
     batch_size = 1024
@@ -63,10 +58,7 @@ def pyramid_encoder_example():
     
     # Create pyramid encoder
     encoder = PyramidEncoder(
-        num_levels=4,
-        base_resolution=16,
-        max_resolution=256,
-        features_per_level=4
+        num_levels=4, base_resolution=16, max_resolution=256, features_per_level=4
     )
     
     # Encode positions
@@ -87,9 +79,12 @@ def pyramid_hierarchy_example():
     
     # Create different pyramid hierarchies
     hierarchies = [
-        create_pyramid_hierarchy(6, 16, 2.0, 512),
-        create_pyramid_hierarchy(8, 8, 1.5, 256),
-        create_pyramid_hierarchy(4, 32, 3.0, 1024)
+        create_pyramid_hierarchy(
+            6,
+            16,
+            2.0,
+            512,
+        )
     ]
     
     for i, hierarchy in enumerate(hierarchies):
@@ -157,11 +152,7 @@ def main():
     print("=" * 50)
     
     examples = [
-        basic_usage_example,
-        pyramid_encoder_example,
-        pyramid_hierarchy_example,
-        volume_rendering_example,
-        metrics_example
+        basic_usage_example, pyramid_encoder_example, pyramid_hierarchy_example, volume_rendering_example, metrics_example
     ]
     
     for example in examples:

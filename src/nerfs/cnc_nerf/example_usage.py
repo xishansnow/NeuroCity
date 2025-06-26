@@ -19,17 +19,12 @@ def basic_usage_example():
     
     # Create model configuration
     model_config = CNCNeRFConfig(
-        feature_dim=8,
-        num_levels=8,
-        base_resolution=16,
-        max_resolution=256,
-        use_binarization=True,
-        compression_lambda=0.001
+        feature_dim=8, num_levels=8, base_resolution=16, max_resolution=256, use_binarization=True, compression_lambda=0.001
     )
     
     # Create model
     model = CNCNeRF(model_config)
-    print(f"Created CNC-NeRF model with {sum(p.numel() for p in model.parameters()):,} parameters")
+    print(f"Created CNC-NeRF model with {sum(p.numel() for p in model.parameters()):, } parameters")
     
     # Test forward pass
     coords = torch.rand(1000, 3)
@@ -62,12 +57,7 @@ def training_example():
     
     # Create dataset configuration
     dataset_config = CNCNeRFDatasetConfig(
-        data_root="cnc_synthetic_data",
-        image_width=200,
-        image_height=150,
-        pyramid_levels=3,
-        use_pyramid_loss=True,
-        num_rays_per_batch=512
+        data_root="cnc_synthetic_data", image_width=200, image_height=150, pyramid_levels=3, use_pyramid_loss=True, num_rays_per_batch=512
     )
     
     # Create synthetic dataset
@@ -76,22 +66,12 @@ def training_example():
     
     # Create model configuration
     model_config = CNCNeRFConfig(
-        feature_dim=4,
-        num_levels=6,
-        base_resolution=16,
-        max_resolution=128,
-        use_binarization=True,
-        compression_lambda=0.01
+        feature_dim=4, num_levels=6, base_resolution=16, max_resolution=128, use_binarization=True, compression_lambda=0.01
     )
     
     # Create trainer configuration
     trainer_config = CNCNeRFTrainerConfig(
-        num_epochs=50,
-        learning_rate=1e-3,
-        compression_loss_weight=0.01,
-        val_every=5,
-        save_every=10,
-        log_every=10
+        num_epochs=50, learning_rate=1e-3, compression_loss_weight=0.01, val_every=5, save_every=10, log_every=10
     )
     
     # Create trainer
@@ -118,10 +98,21 @@ def compression_analysis_example():
     
     # Test different compression settings
     compression_configs = [
-        {'use_binarization': False, 'compression_lambda': 0.0, 'name': 'No compression'},
-        {'use_binarization': True, 'compression_lambda': 0.001, 'name': 'Light compression'},
-        {'use_binarization': True, 'compression_lambda': 0.01, 'name': 'Medium compression'},
-        {'use_binarization': True, 'compression_lambda': 0.1, 'name': 'Heavy compression'},
+        {
+            'use_binarization': False,
+            'compression_lambda': 0.0,
+            'name': 'No compression',
+        },
+        {
+            'use_binarization': True,
+            'compression_lambda': 0.001,
+            'name': 'Binarization',
+        },
+        {
+            'use_binarization': True,
+            'compression_lambda': 0.01,
+            'name': 'Binarization + Compression',
+        },
     ]
     
     results = []
@@ -131,12 +122,7 @@ def compression_analysis_example():
         
         # Create model with specific compression settings
         model_config = CNCNeRFConfig(
-            feature_dim=8,
-            num_levels=8,
-            base_resolution=16,
-            max_resolution=256,
-            use_binarization=config['use_binarization'],
-            compression_lambda=config['compression_lambda']
+            feature_dim=8, num_levels=8, base_resolution=16, max_resolution=256, use_binarization=config['use_binarization'], compression_lambda=config['compression_lambda']
         )
         
         model = CNCNeRF(model_config)
@@ -146,11 +132,7 @@ def compression_analysis_example():
         stats = model.get_compression_stats()
         
         result = {
-            'name': config['name'],
-            'original_size_mb': stats['original_size_mb'],
-            'compressed_size_mb': stats['compressed_size_mb'],
-            'compression_ratio': stats['compression_ratio'],
-            'size_reduction_percent': stats['size_reduction_percent']
+            'name': config['name'], 'original_size_mb': stats['original_size_mb'], 'compressed_size_mb': stats['compressed_size_mb'], 'compression_ratio': stats['compression_ratio'], 'size_reduction_percent': stats['size_reduction_percent']
         }
         
         results.append(result)
@@ -169,9 +151,16 @@ def rendering_speed_benchmark():
     import time
     
     configs = [
-        {'num_levels': 4, 'max_resolution': 128, 'name': 'Low quality'},
-        {'num_levels': 8, 'max_resolution': 256, 'name': 'Medium quality'},
-        {'num_levels': 12, 'max_resolution': 512, 'name': 'High quality'},
+        {
+            'num_levels': 4,
+            'max_resolution': 128,
+            'name': 'Low quality',
+        },
+        {
+            'num_levels': 8,
+            'max_resolution': 256,
+            'name': 'High quality',
+        },
     ]
     
     num_rays = 1000
@@ -182,11 +171,7 @@ def rendering_speed_benchmark():
         print(f"\nTesting {config['name']}...")
         
         model_config = CNCNeRFConfig(
-            feature_dim=8,
-            num_levels=config['num_levels'],
-            base_resolution=16,
-            max_resolution=config['max_resolution'],
-            use_binarization=True
+            feature_dim=8, num_levels=config['num_levels'], base_resolution=16, max_resolution=config['max_resolution'], use_binarization=True
         )
         
         model = CNCNeRF(model_config)
@@ -210,7 +195,7 @@ def rendering_speed_benchmark():
         
         print(f"  Average time: {avg_time:.4f} seconds")
         print(f"  Rays per second: {rays_per_second:.0f}")
-        print(f"  Parameters: {sum(p.numel() for p in model.parameters()):,}")
+        print(f"  Parameters: {sum(p.numel() for p in model.parameters()):, }")
 
 
 def main():

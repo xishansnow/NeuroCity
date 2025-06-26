@@ -20,8 +20,7 @@ from pathlib import Path
 import logging
 
 from gfv import (
-    GFVCore, GFVConfig, GFVDataset, GFVTrainer,
-    create_gfv_dataloader
+    GFVCore, GFVConfig, GFVDataset, GFVTrainer, create_gfv_dataloader
 )
 from gfv.utils import (
     coordinate_utils, data_utils, visualization_utils
@@ -60,10 +59,7 @@ def test_config_creation():
         from src.gfv import GlobalHashConfig
         
         config = GlobalHashConfig(
-            num_levels=8,
-            max_hash=2**10,
-            feature_dim=2,
-            db_path="test_gfv.db"
+            num_levels=8, max_hash=2**10, feature_dim=2, db_path="test_gfv.db"
         )
         
         logger.info(f"✅ 配置创建成功: {config.num_levels} 层, {config.feature_dim} 维特征")
@@ -117,12 +113,11 @@ def test_dataset_creation():
         
         # 创建模拟数据
         coords = [
-            (39.9042, 116.4074),  # 北京
-            (31.2304, 121.4737),  # 上海
+            (39.9042, 116.4074), # 北京
+            (31.2304, 121.4737), # 上海
         ]
         features = [
-            np.random.randn(16),
-            np.random.randn(16)
+            np.random.randn(16), np.random.randn(16)
         ]
         
         dataset = GlobalFeatureDataset(coords, features)
@@ -130,7 +125,9 @@ def test_dataset_creation():
         
         # 测试数据访问
         sample = dataset[0]
-        logger.info(f"✅ 数据访问成功: coords shape={sample['coords'].shape}, features shape={sample['features'].shape}")
+        logger.info(f"✅ 数据访问成功: coords shape={
+            sample['coords'].shape,
+        }
         
         return True, dataset
     except Exception as e:

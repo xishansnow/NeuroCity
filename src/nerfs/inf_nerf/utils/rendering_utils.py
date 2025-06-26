@@ -14,7 +14,7 @@ import torch.distributed as dist
 from torch.utils.data import DataLoader
 import numpy as np
 import math
-from typing import Dict, List, Optional, Tuple, Any, Union, Callable
+from typing import Dict, List, Optional, Tuple, Any, Callable
 import time
 from contextlib import contextmanager
 
@@ -26,10 +26,7 @@ class DistributedRenderer:
     Distributed renderer for InfNeRF across multiple devices.
     """
     
-    def __init__(self, 
-                 model: InfNeRF,
-                 device_ids: List[int],
-                 master_device: int = 0):
+    def __init__(self, model: InfNeRF, device_ids: list[int], master_device: int = 0):
         """
         Initialize distributed renderer.
         
@@ -61,14 +58,16 @@ class DistributedRenderer:
             # Move node to appropriate device
             node.nerf.to(f'cuda:{device_id}')
     
-    def render_distributed(self,
-                          rays_o: torch.Tensor,
-                          rays_d: torch.Tensor,
-                          near: float,
-                          far: float,
-                          focal_length: float,
-                          pixel_width: float,
-                          chunk_size: int = 1024) -> Dict[str, torch.Tensor]:
+    def render_distributed(
+        self,
+        rays_o: torch.Tensor,
+        rays_d: torch.Tensor,
+        near: float,
+        far: float,
+        focal_length: float,
+        pixel_width: float,
+        chunk_size: int = 1024,
+    ) -> dict[str, torch.Tensor]:
         """
         Render rays using distributed processing.
         
@@ -110,18 +109,18 @@ class DistributedRenderer:
             accs[i:end_i] = chunk_result['acc']
         
         return {
-            'rgb': colors,
-            'depth': depths, 
-            'acc': accs
+            'rgb': colors, 'depth': depths, 'acc': accs
         }
     
-    def _render_chunk_distributed(self,
-                                 rays_o: torch.Tensor,
-                                 rays_d: torch.Tensor,
-                                 near: float,
-                                 far: float,
-                                 focal_length: float,
-                                 pixel_width: float) -> Dict[str, torch.Tensor]:
+    def _render_chunk_distributed(
+        self,
+        rays_o: torch.Tensor,
+        rays_d: torch.Tensor,
+        near: float,
+        far: float,
+        focal_length: float,
+        pixel_width: float,
+    ) -> dict[str, torch.Tensor]:
         """Render a chunk of rays using distributed nodes."""
         # Sample points along rays
         batch_size = rays_o.shape[0]
@@ -150,11 +149,13 @@ class DistributedRenderer:
         
         return rendered
     
-    def _render_on_device(self,
-                         device_id: int,
-                         pts: torch.Tensor,
-                         rays_d: torch.Tensor,
-                         radii: torch.Tensor) -> Tuple[torch.Tensor, torch.Tensor]:
+    def _render_on_device(
+        self,
+        device_id: int,
+        pts: torch.Tensor,
+        rays_d: torch.Tensor,
+        radii: torch.Tensor,
+    ) -> tuple[torch.Tensor, torch.Tensor]:
         """Render points using nodes on a specific device."""
         device = f'cuda:{device_id}'
         nodes = self.device_nodes[device_id]
@@ -182,8 +183,7 @@ class DistributedRenderer:
                 if selected_node is not None:
                     with torch.cuda.device(device):
                         result = selected_node.nerf(
-                            sample_pos.unsqueeze(0),
-                            rays_d_device[i:i+1]
+                            sample_pos.unsqueeze(0), rays_d_device[i:i+1]
                         )
                     
                     colors[i, j] = result['color'].squeeze(0)
@@ -191,10 +191,12 @@ class DistributedRenderer:
         
         return colors, densities
     
-    def _find_node_on_device(self,
-                            nodes: List[OctreeNode],
-                            position: torch.Tensor,
-                            radius: float) -> Optional[OctreeNode]:
+    def _find_node_on_device(
+        self,
+        nodes: list[OctreeNode],
+        position: torch.Tensor,
+        radius: float,
+    ) -> OctreeNode | None:
         """Find appropriate node on device for given position and radius."""
         pos_np = position.detach().cpu().numpy()
         
@@ -246,10 +248,7 @@ class MemoryEfficientRenderer:
     Memory-efficient renderer for large-scale scenes.
     """
     
-    def __init__(self, 
-                 model: InfNeRF,
-                 max_memory_gb: float = 8.0,
-                 adaptive_chunking: bool = True):
+    def __init__(self, model: InfNeRF, max_memory_gb: float = 8.0, adaptive_chunking: bool = True):
         """
         Initialize memory-efficient renderer.
         
@@ -296,14 +295,16 @@ class MemoryEfficientRenderer:
         else:
             yield
     
-    def render_memory_efficient(self,
-                               rays_o: torch.Tensor,
-                               rays_d: torch.Tensor,
-                               near: float,
-                               far: float,
-                               focal_length: float,
-                               pixel_width: float,
-                               progress_callback: Optional[Callable] = None) -> Dict[str, torch.Tensor]:
+    def render_memory_efficient(
+        self,
+        rays_o: torch.Tensor,
+        rays_d: torch.Tensor,
+        near: float,
+        far: float,
+        focal_length: float,
+        pixel_width: float,
+        progress_callback: Optional[Callable] = None,
+    ) -> dict[str, torch.Tensor]:
         """
         Render rays with memory-efficient chunking.
         
@@ -365,9 +366,7 @@ class MemoryEfficientRenderer:
                 progress_callback(progress)
         
         return {
-            'rgb': colors,
-            'depth': depths,
-            'acc': accs
+            'rgb': colors, 'depth': depths, 'acc': accs
         }
     
     def _adaptive_chunk_size(self, num_rays: int) -> int:
@@ -393,11 +392,13 @@ class MemoryEfficientRenderer:
             return self.model(*args, **kwargs)
 
 
-def distributed_rendering(model: InfNeRF,
-                         rays_o: torch.Tensor,
-                         rays_d: torch.Tensor,
-                         device_ids: List[int],
-                         **kwargs) -> Dict[str, torch.Tensor]:
+def distributed_rendering(
+    model: InfNeRF,
+    rays_o: torch.Tensor,
+    rays_d: torch.Tensor,
+    device_ids: list[int],
+    **kwargs,
+) -> dict[str, torch.Tensor]:
     """
     Perform distributed rendering across multiple devices.
     
@@ -415,11 +416,13 @@ def distributed_rendering(model: InfNeRF,
     return renderer.render_distributed(rays_o, rays_d, **kwargs)
 
 
-def memory_efficient_rendering(model: InfNeRF,
-                              rays_o: torch.Tensor,
-                              rays_d: torch.Tensor,
-                              max_memory_gb: float = 8.0,
-                              **kwargs) -> Dict[str, torch.Tensor]:
+def memory_efficient_rendering(
+    model: InfNeRF,
+    rays_o: torch.Tensor,
+    rays_d: torch.Tensor,
+    max_memory_gb: float = 8.0,
+    **kwargs,
+) -> dict[str, torch.Tensor]:
     """
     Perform memory-efficient rendering.
     
@@ -437,10 +440,13 @@ def memory_efficient_rendering(model: InfNeRF,
     return renderer.render_memory_efficient(rays_o, rays_d, **kwargs)
 
 
-def batch_ray_sampling(images: List[torch.Tensor],
-                      cameras: List[Dict[str, torch.Tensor]],
-                      batch_size: int,
-                      sampling_strategy: str = 'random') -> Dict[str, torch.Tensor]:
+def batch_ray_sampling(
+    images: list[torch.Tensor],
+    cameras: list[dict[str,
+    torch.Tensor]],
+    batch_size: int,
+    sampling_strategy: str = 'random',
+) -> dict[str, torch.Tensor]:
     """
     Sample rays from multiple images in batches.
     
@@ -478,23 +484,22 @@ def batch_ray_sampling(images: List[torch.Tensor],
         indices = _importance_sampling(all_colors, batch_size)
     
     return {
-        'rays_o': all_rays_o[indices],
-        'rays_d': all_rays_d[indices],
-        'target_rgb': all_colors[indices]
+        'rays_o': all_rays_o[indices], 'rays_d': all_rays_d[indices], 'target_rgb': all_colors[indices]
     }
 
 
-def _generate_rays_from_image(image: torch.Tensor,
-                             camera: Dict[str, torch.Tensor]) -> Tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
+def _generate_rays_from_image(
+    image: torch.Tensor,
+    camera: dict[str,
+    torch.Tensor],
+) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
     """Generate rays from a single image."""
     H, W = image.shape[:2]
     device = image.device
     
     # Create pixel coordinates
     i, j = torch.meshgrid(
-        torch.arange(W, device=device),
-        torch.arange(H, device=device),
-        indexing='xy'
+        torch.arange(W, device=device), torch.arange(H, device=device), indexing='xy'
     )
     
     # Camera parameters
@@ -504,9 +509,7 @@ def _generate_rays_from_image(image: torch.Tensor,
     
     # Convert to camera coordinates
     dirs = torch.stack([
-        (i - principal[0]) / focal[0],
-        -(j - principal[1]) / focal[1],
-        -torch.ones_like(i)
+        (i - principal[0]) / focal[0], -(j - principal[1]) / focal[1], -torch.ones_like(i)
     ], dim=-1)  # [H, W, 3]
     
     # Transform to world coordinates
@@ -580,7 +583,7 @@ class RenderingProfiler:
         self.timings[name].append(elapsed)
         self.memory_usage[name].append(memory_used)
     
-    def get_stats(self) -> Dict[str, Dict[str, float]]:
+    def get_stats(self) -> dict[str, dict[str, float]]:
         """Get profiling statistics."""
         stats = {}
         
@@ -589,13 +592,9 @@ class RenderingProfiler:
             memory = self.memory_usage[name]
             
             stats[name] = {
-                'avg_time': np.mean(timings),
-                'std_time': np.std(timings),
-                'min_time': np.min(timings),
-                'max_time': np.max(timings),
-                'avg_memory_mb': np.mean(memory),
-                'max_memory_mb': np.max(memory),
-                'num_calls': len(timings)
+                'avg_time': np.mean(
+                    timings,
+                )
             }
         
         return stats

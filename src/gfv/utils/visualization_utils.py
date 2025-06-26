@@ -7,14 +7,13 @@ This module provides visualization utilities for GFV library.
 import matplotlib.pyplot as plt
 import numpy as np
 import seaborn as sns
-from typing import Dict, List, Optional, Tuple, Any
+from typing import Any
 import plotly.graph_objects as go
 import plotly.express as px
 from plotly.subplots import make_subplots
 
 
-def plot_coverage_map(database_stats: Dict[str, Any], 
-                     save_path: Optional[str] = None) -> None:
+def plot_coverage_map(database_stats: dict[str, Any], save_path: str | None = None) -> None:
     """
     绘制瓦片覆盖图
     
@@ -42,8 +41,9 @@ def plot_coverage_map(database_stats: Dict[str, Any],
     labels = ['总瓦片数', '数据库大小(MB)', '缓存大小']
     values = [total_tiles, total_size_mb, cache_size]
     
-    ax2.pie([1, 1, 1], labels=labels, autopct=lambda pct: f'{values[int(pct/100*3)]:.1f}',
-            colors=['lightcoral', 'lightblue', 'lightgreen'])
+    ax2.pie([1, 1, 1], labels=labels, autopct=lambda pct: f'{
+        values[int(pct/100*3)]:.1f,
+    }
     ax2.set_title('数据库统计信息')
     
     plt.tight_layout()
@@ -54,9 +54,11 @@ def plot_coverage_map(database_stats: Dict[str, Any],
         plt.show()
 
 
-def plot_feature_distribution(features: np.ndarray, 
-                            title: str = "特征分布",
-                            save_path: Optional[str] = None) -> None:
+def plot_feature_distribution(
+    features: np.ndarray,
+    title: str = "特征分布",
+    save_path: str | None = None,
+)
     """
     绘制特征分布图
     
@@ -129,10 +131,12 @@ def plot_feature_distribution(features: np.ndarray,
         plt.show()
 
 
-def plot_training_history(train_losses: List[float], 
-                         val_losses: Optional[List[float]] = None,
-                         title: str = "训练历史",
-                         save_path: Optional[str] = None) -> None:
+def plot_training_history(
+    train_losses: list[float],
+    val_losses: list[float] | None = None,
+    title: str = "训练历史",
+    save_path: str | None = None,
+)
     """
     绘制训练历史图
     
@@ -162,11 +166,14 @@ def plot_training_history(train_losses: List[float],
         plt.show()
 
 
-def visualize_global_features(coords: List[Tuple[float, float]], 
-                            features: List[np.ndarray],
-                            feature_dim: int = 0,
-                            title: str = "全球特征可视化",
-                            save_path: Optional[str] = None) -> None:
+def visualize_global_features(
+    coords: list[tuple[float,
+    float]],
+    features: list[np.ndarray],
+    feature_dim: int = 0,
+    title: str = "全球特征可视化",
+    save_path: str | None = None,
+)
     """
     可视化全球特征分布
     
@@ -193,8 +200,7 @@ def visualize_global_features(coords: List[Tuple[float, float]],
     
     # 创建散点图
     plt.figure(figsize=(12, 8))
-    scatter = plt.scatter(lons, lats, c=feature_values, 
-                         cmap='viridis', alpha=0.6, s=50)
+    scatter = plt.scatter(lons, lats, c=feature_values, cmap='viridis', alpha=0.6, s=50)
     plt.colorbar(scatter, label=f'特征值 (维度 {feature_dim})')
     plt.xlabel('经度 (Longitude)')
     plt.ylabel('纬度 (Latitude)')
@@ -207,67 +213,63 @@ def visualize_global_features(coords: List[Tuple[float, float]],
         plt.show()
 
 
-def plot_interactive_map(coords: List[Tuple[float, float]], 
-                        features: List[np.ndarray],
-                        feature_dim: int = 0,
-                        title: str = "交互式全球特征地图") -> go.Figure:
+def plot_interactive_map(
+    coords: list[tuple[float,
+    float]],
+    features: list[np.ndarray],
+    feature_dim: int = 0,
+    title: str = "交互式全球特征地图",
+)
     """
-    创建交互式特征地图
+    创建交互式地图
     
     Args:
-        coords: 坐标列表
+        coords: 坐标列表 [(lat, lon), ...]
         features: 特征列表
-        feature_dim: 特征维度
+        feature_dim: 要可视化的特征维度
         title: 图标题
         
     Returns:
-        plotly图形对象
+        fig: plotly图形对象
     """
     if not coords or not features:
-        return None
+        print("没有数据可视化")
+        return go.Figure()
     
+    # 提取坐标和特征值
     lats = [coord[0] for coord in coords]
     lons = [coord[1] for coord in coords]
     
-    # 处理特征值
+    # 处理特征维度
     if isinstance(features[0], np.ndarray) and features[0].ndim > 1:
         feature_values = [feat.mean() if feat.ndim > 1 else feat[feature_dim] for feat in features]
     else:
         feature_values = [feat if np.isscalar(feat) else feat[feature_dim] for feat in features]
     
-    # 创建散点地图
+    # 创建地图
     fig = go.Figure(data=go.Scattermapbox(
-        lat=lats,
-        lon=lons,
-        mode='markers',
-        marker=dict(
-            size=8,
-            color=feature_values,
-            colorscale='Viridis',
-            colorbar=dict(title=f"特征值 (维度 {feature_dim})"),
-            opacity=0.7
-        ),
-        text=[f"坐标: ({lat:.4f}, {lon:.4f})<br>特征值: {val:.4f}" 
-              for lat, lon, val in zip(lats, lons, feature_values)],
-        hovertemplate='%{text}<extra></extra>'
+        lat=lats, lon=lons, mode='markers', marker=dict(
+            size=10, color=feature_values, colorscale='Viridis', showscale=True, colorbar=dict(
+                title=f'特征值,
+            )
+        ), text=[f'特征值: {val:.3f}' for val in feature_values], hoverinfo='text'
     ))
     
+    # 更新布局
     fig.update_layout(
-        title=title,
-        mapbox=dict(
-            style='open-street-map',
-            center=dict(lat=np.mean(lats), lon=np.mean(lons)),
-            zoom=5
-        ),
-        height=600
+        title=title, mapbox=dict(
+            style='carto-positron', center=dict(lat=np.mean(lats), lon=np.mean(lons)), zoom=2
+        ), margin=dict(l=0, r=0, t=30, b=0)
     )
     
     return fig
 
 
-def plot_feature_correlation_matrix(features: np.ndarray,
-                                   title: str = "特征相关性矩阵",
-                                   save_path: Optional[str] = None) -> None:
+def plot_feature_correlation_matrix(
+    features: np.ndarray,
+    title: str = "特征相关性矩阵",
+    save_path: str | None = None,
+)
     """
     绘制特征相关性矩阵
     
@@ -276,20 +278,16 @@ def plot_feature_correlation_matrix(features: np.ndarray,
         title: 图标题
         save_path: 保存路径
     """
-    if features.shape[1] > 50:
-        print(f"特征维度过高 ({features.shape[1]})，跳过相关性矩阵绘制")
-        return
+    if features.ndim == 1:
+        features = features.reshape(-1, 1)
     
     # 计算相关性矩阵
     corr_matrix = np.corrcoef(features.T)
     
     # 绘制热力图
     plt.figure(figsize=(10, 8))
-    sns.heatmap(corr_matrix, annot=True, cmap='coolwarm', center=0,
-                square=True, fmt='.2f', cbar_kws={'label': '相关系数'})
+    sns.heatmap(corr_matrix, annot=True, cmap='coolwarm', center=0, fmt='.2f', square=True)
     plt.title(title)
-    plt.xlabel('特征索引')
-    plt.ylabel('特征索引')
     
     if save_path:
         plt.savefig(save_path, dpi=300, bbox_inches='tight')
@@ -297,92 +295,90 @@ def plot_feature_correlation_matrix(features: np.ndarray,
         plt.show()
 
 
-def create_dashboard(database_stats: Dict[str, Any],
-                    training_history: Dict[str, List[float]],
-                    coords: List[Tuple[float, float]],
-                    features: List[np.ndarray]) -> go.Figure:
+def create_dashboard(
+    database_stats: dict[str,
+    Any],
+    training_history: dict[str,
+    list[float]],
+    coords: list[tuple[float,
+    float]],
+    features: list[np.ndarray],
+)
     """
-    创建综合仪表板
+    创建仪表板
     
     Args:
-        database_stats: 数据库统计
+        database_stats: 数据库统计信息
         training_history: 训练历史
         coords: 坐标列表
         features: 特征列表
         
     Returns:
-        plotly仪表板图形
+        fig: plotly图形对象
     """
-    # 创建子图
+    # 创建子图布局
     fig = make_subplots(
-        rows=2, cols=2,
-        subplot_titles=('缩放级别分布', '训练历史', '特征分布', '全球特征地图'),
-        specs=[[{"type": "bar"}, {"type": "scatter"}],
-               [{"type": "histogram"}, {"type": "scattermapbox"}]]
+        rows=2, cols=2, subplot_titles=(
+            '瓦片分布', '训练历史', '特征分布', '全球特征地图'
+        ), specs=[
+            [{
+                'type': 'bar',
+            }
+        ]
     )
     
-    # 1. 缩放级别分布
+    # 1. 瓦片分布
     zoom_levels = list(database_stats['zoom_levels'].keys())
     tile_counts = list(database_stats['zoom_levels'].values())
-    
     fig.add_trace(
-        go.Bar(x=zoom_levels, y=tile_counts, name="瓦片数量"),
-        row=1, col=1
+        go.Bar(x=zoom_levels, y=tile_counts, name='瓦片数量'), row=1, col=1
     )
     
     # 2. 训练历史
-    if 'train_losses' in training_history:
-        epochs = list(range(1, len(training_history['train_losses']) + 1))
-        fig.add_trace(
-            go.Scatter(x=epochs, y=training_history['train_losses'], 
-                      mode='lines', name="训练损失"),
-            row=1, col=2
+    epochs = list(range(1, len(training_history['train_loss']) + 1))
+    fig.add_trace(
+        go.Scatter(
+            x=epochs,
+            y=training_history['train_loss'],
+            name='训练损失',
+            mode='lines',
         )
-        
-        if 'val_losses' in training_history:
-            fig.add_trace(
-                go.Scatter(x=epochs, y=training_history['val_losses'],
-                          mode='lines', name="验证损失"),
-                row=1, col=2
+    )
+    if 'val_loss' in training_history:
+        fig.add_trace(
+            go.Scatter(
+                x=epochs,
+                y=training_history['val_loss'],
+                name='验证损失',
+                mode='lines',
             )
+        )
     
     # 3. 特征分布
-    if features:
-        all_features = np.concatenate([f.flatten() for f in features])
+    if features and isinstance(features[0], np.ndarray):
+        feature_values = [f.mean() for f in features]
         fig.add_trace(
-            go.Histogram(x=all_features, name="特征分布"),
-            row=2, col=1
+            go.Histogram(x=feature_values, name='特征分布'), row=2, col=1
         )
     
     # 4. 全球特征地图
     if coords and features:
         lats = [coord[0] for coord in coords]
         lons = [coord[1] for coord in coords]
-        feature_values = [feat.mean() if feat.ndim > 0 else feat for feat in features]
+        feature_values = [f.mean() if isinstance(f, np.ndarray) else f for f in features]
         
         fig.add_trace(
             go.Scattermapbox(
-                lat=lats, lon=lons,
-                mode='markers',
-                marker=dict(size=8, color=feature_values, colorscale='Viridis'),
-                name="特征点"
-            ),
-            row=2, col=2
+                lat=lats, lon=lons, mode='markers', marker=dict(
+                    size=10, color=feature_values, colorscale='Viridis', showscale=True
+                ), text=[f'特征值: {val:.3f}' for val in feature_values], hoverinfo='text'
+            ), row=2, col=2
         )
     
     # 更新布局
     fig.update_layout(
-        title="GFV 综合仪表板",
-        height=800,
-        showlegend=True
-    )
-    
-    # 更新地图样式
-    fig.update_layout(
-        mapbox=dict(
-            style='open-street-map',
-            center=dict(lat=0, lon=0),
-            zoom=1
+        height=800, showlegend=True, title_text='全球特征可视化仪表板', mapbox=dict(
+            style='carto-positron', center=dict(lat=0, lon=0), zoom=1
         )
     )
     

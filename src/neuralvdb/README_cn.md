@@ -1,12 +1,12 @@
 # NeuralVDB: 高效稀疏体积神经表示
 
-NeuralVDB是一个高效的稀疏体素神经表示库，基于八叉树数据结构和神经网络编码，专为大规模城市场景和复杂几何体的建模而设计。
+NeuralVDB 是一个高效的稀疏体素神经表示库，基于八叉树数据结构和神经网络编码，专为大规模城市场景和复杂几何体的建模而设计。
 
 ## 特性
 
 ### 核心功能
 - **稀疏体素表示**: 基于八叉树的高效存储结构
-- **神经网络编码**: 使用MLP网络进行特征提取和占用预测
+- **神经网络编码**: 使用 MLP 网络进行特征提取和占用预测
 - **分层数据结构**: 支持自适应分辨率和多尺度处理
 - **内存优化**: 相比传统体素化方法显著减少内存使用
 
@@ -19,7 +19,7 @@ NeuralVDB是一个高效的稀疏体素神经表示库，基于八叉树数据�
 ### 应用场景
 - **城市场景建模**: 大规模城市环境的稀疏表示
 - **SDF/占用场建模**: 支持有符号距离场和占用场预测
-- **3D重建**: 从点云数据重建三维场景
+- **3D 重建**: 从点云数据重建三维场景
 - **实时渲染**: 高效的体积渲染和可视化
 
 ## 安装
@@ -156,7 +156,7 @@ generate_sample_dataset(
 ### 核心类
 
 #### NeuralVDB
-基础NeuralVDB模型类。
+基础 NeuralVDB 模型类。
 
 **方法:**
 - `fit(points, occupancies, ...)`: 训练模型
@@ -166,7 +166,7 @@ generate_sample_dataset(
 - `visualize_octree(...)`: 可视化八叉树结构
 
 #### AdvancedNeuralVDB
-高级NeuralVDB模型类，包含更多功能。
+高级 NeuralVDB 模型类，包含更多功能。
 
 **额外方法:**
 - `get_memory_usage()`: 获取内存使用统计
@@ -185,7 +185,7 @@ class NeuralVDBConfig:
     feature_dim: int = 32                # 特征维度
     hidden_dims: List[int] = None        # 隐藏层维度
     activation: str = 'relu'             # 激活函数
-    dropout: float = 0.1                 # Dropout率
+    dropout: float = 0.1                 # Dropout 率
     learning_rate: float = 1e-3          # 学习率
     weight_decay: float = 1e-5           # 权重衰减
     batch_size: int = 1024               # 批量大小
@@ -195,7 +195,7 @@ class NeuralVDBConfig:
 
 #### AdvancedNeuralVDBConfig
 
-继承自NeuralVDBConfig，增加高级参数：
+继承自 NeuralVDBConfig，增加高级参数：
 
 ```python
 adaptive_resolution: bool = True         # 自适应分辨率
@@ -309,7 +309,7 @@ trainer = NeuralVDBTrainer(
     gradient_accumulation_steps=4
 )
 
-# 多GPU训练
+# 多 GPU 训练
 trainer = NeuralVDBTrainer(
     model=model,
     device_ids=[0, 1, 2, 3],
@@ -347,7 +347,7 @@ visualize_features(
 )
 ```
 
-### 3D场景渲染
+### 3D 场景渲染
 
 ```python
 from neuralvdb.viewer import VDBViewer
@@ -449,7 +449,7 @@ mesh = reconstructor.extract_mesh(point_cloud)
 
 ### 内存使用对比
 
-| 方法 | 1M体素 | 10M体素 | 100M体素 |
+| 方法 | 1M 体素 | 10M 体素 | 100M 体素 |
 |------|---------|---------|----------|
 | 传统体素网格 | 4GB | 40GB | 400GB |
 | 八叉树 | 0.8GB | 5GB | 35GB |
@@ -459,9 +459,9 @@ mesh = reconstructor.extract_mesh(point_cloud)
 
 | 场景复杂度 | 传统方法 | NeuralVDB | 加速比 |
 |------------|----------|-----------|--------|
-| 简单 | 2小时 | 30分钟 | 4x |
-| 中等 | 8小时 | 1.5小时 | 5.3x |
-| 复杂 | 24小时 | 4小时 | 6x |
+| 简单 | 2 小时 | 30 分钟 | 4x |
+| 中等 | 8 小时 | 1.5 小时 | 5.3x |
+| 复杂 | 24 小时 | 4 小时 | 6x |
 
 ## 故障排除
 
@@ -476,7 +476,7 @@ config.feature_dim = 16
 
 **训练收敛慢**
 ```python
-# 调整学习率和使用warmup
+# 调整学习率和使用 warmup
 config.learning_rate = 5e-3
 config.warmup_steps = 1000
 ```
@@ -523,23 +523,23 @@ class CustomDataset(BaseDataset):
 - [ ] 支持颜色信息编码
 - [ ] 实时交互式编辑
 - [ ] 分布式训练优化
-- [ ] WebGL可视化接口
+- [ ] WebGL 可视化接口
 - [ ] 移动端推理支持
 
 ### 长期目标
 
 - [ ] 时间序列支持（4D）
 - [ ] 物理仿真集成
-- [ ] AR/VR应用支持
+- [ ] AR/VR 应用支持
 - [ ] 云端服务部署
 
 ## 贡献指南
 
 我们欢迎各种形式的贡献：
 
-1. **Bug报告**：使用GitHub Issues
-2. **功能请求**：创建Feature Request
-3. **代码贡献**：提交Pull Request
+1. **Bug 报告**：使用 GitHub Issues
+2. **功能请求**：创建 Feature Request
+3. **代码贡献**：提交 Pull Request
 4. **文档改进**：修改或添加文档
 5. **示例和教程**：分享使用经验
 
@@ -563,11 +563,11 @@ pytest tests/
 
 ## 许可证
 
-MIT许可证 - 详见LICENSE文件
+MIT 许可证 - 详见 LICENSE 文件
 
 ## 引用
 
-如果您在研究中使用NeuralVDB，请引用：
+如果您在研究中使用 NeuralVDB，请引用：
 
 ```bibtex
 @misc{neuralvdb2024,
@@ -589,8 +589,8 @@ MIT许可证 - 详见LICENSE文件
 ## 致谢
 
 感谢以下开源项目和研究工作：
-- OpenVDB项目提供的数据结构灵感
-- PyTorch深度学习框架
+- OpenVDB 项目提供的数据结构灵感
+- PyTorch 深度学习框架
 - 所有贡献者和用户的支持
 
 ---

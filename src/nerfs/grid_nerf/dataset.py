@@ -6,77 +6,61 @@ urban scene data including KITTI-360, Waymo, and other autonomous driving datase
 """
 
 import torch
-import torch.utils.data as data
+from torch.utils.data import Dataset, DataLoader
 import numpy as np
 import os
 import json
-from typing import Dict, List, Tuple, Optional, Union
+from typing import List, Optional, Tuple, Any, Union
 from pathlib import Path
 import cv2
 from PIL import Image
 import pickle
+import logging
 
+logger = logging.getLogger(__name__)
 
-class GridNeRFDataset(data.Dataset):
-    """Base dataset class for Grid-NeRF training on large urban scenes."""
-    
-    def __init__(self,
-                 data_root: str,
-                 split: str = 'train',
-                 image_size: Tuple[int, int] = (512, 512),
-                 scene_bounds: Tuple[float, ...] = (-100, -100, -10, 100, 100, 50),
-                 subsample_factor: int = 1,
-                 max_images: Optional[int] = None):
-        
+class GridNeRFDataset(Dataset):
+    """Grid-NeRF dataset."""
+
+    def __init__(
+        self, data_root: str | Path, split: str = "train", **kwargs
+    ):
+        """Initialize dataset."""
+        super().__init__()
         self.data_root = Path(data_root)
         self.split = split
-        self.image_size = image_size
-        self.scene_bounds = scene_bounds
-        self.subsample_factor = subsample_factor
-        self.max_images = max_images
-        
-        # Will be populated by subclasses
-        self.samples = []
-        self.cameras = {}
-        self.scene_scale = 1.0
-        self.scene_center = np.array([0, 0, 0])
-        
+        self.image_size = None
         self.load_data()
-    
+
     def __len__(self) -> int:
-        return len(self.samples)
-    
-    def __getitem__(self, idx: int) -> Dict[str, torch.Tensor]:
-        """Get a training sample."""
-        sample = self.samples[idx]
-        
-        # Load image
-        image = self.load_image(sample['image_path'])
-        
-        # Load camera parameters
-        camera = self.load_camera(sample['camera_id'])
-        
-        # Generate rays
-        rays_o, rays_d = self.generate_rays(camera, image.shape[:2])
-        
-        # Load depth if available
-        depth = None
-        if 'depth_path' in sample and sample['depth_path'] is not None:
-            depth = self.load_depth(sample['depth_path'])
-        
-        # Apply scene normalization
-        rays_o = self.normalize_positions(rays_o)
-        
+        """Get dataset length."""
+        return len(self.images)
+
+    def __getitem__(self, idx: int) -> dict[str, Union[torch.Tensor, int, None]]:
+        """Get a batch of data."""
+        if self.split == "train":
+            # Random ray sampling for training
+            rays_o = self.ray_origins[idx]
+            rays_d = self.ray_directions[idx]
+            rgb = self.images[idx]
+            
+            return {
+                "ray_origins": rays_o, "ray_directions": rays_d, "rgb": rgb, "image_idx": idx
+            }
+        else:
+            # Return full image for validation/testing
+            return {
+                "ray_origins": self.ray_origins[idx], "ray_directions": self.ray_directions[idx], "rgb": self.images[idx], "image_idx": idx, "metadata": self.metadata[idx] if hasattr(self, "metadata") else None
+            }
+
+    def get_dataset_info(self) -> dict[str, Any]:
+        """Get dataset information."""
         return {
-            'image': image,
-            'rays_o': rays_o,
-            'rays_d': rays_d,
-            'camera': camera,
-            'depth': depth,
-            'sample_idx': idx,
-            'scene_bounds': torch.tensor(self.scene_bounds, dtype=torch.float32)
+            "num_images": len(
+                self.images,
+            )
         }
-    
+
     def load_data(self):
         """Load dataset metadata. To be implemented by subclasses."""
         raise NotImplementedError
@@ -99,15 +83,18 @@ class GridNeRFDataset(data.Dataset):
         depth = cv2.resize(depth, self.image_size, interpolation=cv2.INTER_NEAREST)
         return torch.from_numpy(depth).float()
     
-    def load_camera(self, camera_id: str) -> Dict[str, torch.Tensor]:
+    def load_camera(self, camera_id: str) -> dict[str, torch.Tensor]:
         """Load camera parameters."""
         if camera_id in self.cameras:
             return self.cameras[camera_id]
         else:
             raise ValueError(f"Camera {camera_id} not found")
     
-    def generate_rays(self, camera: Dict[str, torch.Tensor], 
-                     image_shape: Tuple[int, int]) -> Tuple[torch.Tensor, torch.Tensor]:
+    def generate_rays(
+        self,
+        camera: dict[str, torch.Tensor],
+        image_shape: tuple[int, int]
+    ) -> tuple[torch.Tensor, torch.Tensor]:
         """Generate camera rays."""
         height, width = image_shape
         
@@ -118,16 +105,15 @@ class GridNeRFDataset(data.Dataset):
         
         # Generate pixel coordinates
         i, j = torch.meshgrid(
-            torch.arange(width, dtype=torch.float32),
-            torch.arange(height, dtype=torch.float32),
-            indexing='xy'
+            torch.arange(
+                width,
+                dtype=torch.float32,
+            )
         )
         
         # Convert to normalized device coordinates
         dirs = torch.stack([
-            (i - K[0, 2]) / K[0, 0],
-            (j - K[1, 2]) / K[1, 1],
-            torch.ones_like(i)
+            (i - K[0, 2]) / K[0, 0], (j - K[1, 2]) / K[1, 1], torch.ones_like(i)
         ], dim=-1)
         
         # Transform ray directions to world coordinates
@@ -145,7 +131,7 @@ class GridNeRFDataset(data.Dataset):
         normalized = (positions - torch.tensor(self.scene_center)) * self.scene_scale
         return normalized
     
-    def compute_scene_normalization(self, all_positions: np.ndarray):
+    def compute_scene_normalization(self, all_positions: np.ndarray) -> None:
         """Compute scene normalization parameters."""
         # Compute scene center and scale
         min_pos = np.min(all_positions, axis=0)
@@ -159,11 +145,14 @@ class GridNeRFDataset(data.Dataset):
 class KITTI360GridDataset(GridNeRFDataset):
     """KITTI-360 dataset for Grid-NeRF training."""
     
-    def __init__(self, 
-                 data_root: str,
-                 sequence: str = '2013_05_28_drive_0000_sync',
-                 camera_id: int = 0,
-                 *args, **kwargs):
+    def __init__(
+        self,
+        data_root: str,
+        sequence: str = '2013_05_28_drive_0000_sync',
+        camera_id: int = 0,
+        *args,
+        **kwargs
+    ):
         
         self.sequence = sequence
         self.camera_id = camera_id
@@ -225,10 +214,7 @@ class KITTI360GridDataset(GridNeRFDataset):
             all_positions.append(camera_center)
             
             sample = {
-                'image_path': str(image_file),
-                'camera_id': f'cam_{self.camera_id}_{frame_id}',
-                'pose': pose,
-                'frame_id': frame_id
+                'image_path': str(image_file), 'camera_id': f'cam_{self.camera_id}'
             }
             
             # Check for depth
@@ -261,7 +247,7 @@ class KITTI360GridDataset(GridNeRFDataset):
             # Default calibration
             self.K = np.array([[552.554, 0, 512], [0, 552.554, 384], [0, 0, 1]])
     
-    def load_poses(self, pose_file: Path) -> Dict[int, np.ndarray]:
+    def load_poses(self, pose_file: Path) -> dict[int, np.ndarray]:
         """Load camera poses from KITTI-360."""
         poses = {}
         
@@ -278,7 +264,7 @@ class KITTI360GridDataset(GridNeRFDataset):
         
         return poses
     
-    def _create_camera_params(self, sample: Dict) -> Dict[str, torch.Tensor]:
+    def _create_camera_params(self, sample: dict) -> dict[str, torch.Tensor]:
         """Create camera parameters for a sample."""
         pose = sample['pose']
         
@@ -287,21 +273,23 @@ class KITTI360GridDataset(GridNeRFDataset):
         T = pose[:3, 3]
         
         return {
-            'K': torch.from_numpy(self.K).float(),
-            'R': torch.from_numpy(R).float(),
-            'T': torch.from_numpy(T).float(),
-            'pose': torch.from_numpy(pose).float()
+            'K': torch.from_numpy(
+                self.K,
+            )
         }
 
 
 class WaymoGridDataset(GridNeRFDataset):
     """Waymo dataset for Grid-NeRF training."""
     
-    def __init__(self, 
-                 data_root: str,
-                 segment_name: str,
-                 camera_name: str = 'FRONT',
-                 *args, **kwargs):
+    def __init__(
+        self,
+        data_root: str,
+        segment_name: str,
+        camera_name: str = 'FRONT',
+        *args,
+        **kwargs
+    ):
         
         self.segment_name = segment_name
         self.camera_name = camera_name
@@ -355,10 +343,7 @@ class WaymoGridDataset(GridNeRFDataset):
                 all_positions.append(camera_center)
                 
                 sample = {
-                    'image_path': str(image_file),
-                    'camera_id': f'{self.camera_name}_{timestamp}',
-                    'pose': pose,
-                    'timestamp': timestamp
+                    'image_path': str(image_file), 'camera_id': f'{self.camera_name}'
                 }
                 
                 # Check for depth
@@ -376,16 +361,14 @@ class WaymoGridDataset(GridNeRFDataset):
         for sample in self.samples:
             self.cameras[sample['camera_id']] = self._create_camera_params(sample)
     
-    def _create_camera_params(self, sample: Dict) -> Dict[str, torch.Tensor]:
+    def _create_camera_params(self, sample: dict) -> dict[str, torch.Tensor]:
         """Create camera parameters for a sample."""
         pose = sample['pose']
         calib = self.camera_calib
         
         # Camera intrinsics
         K = np.array([
-            [calib['fx'], 0, calib['cx']],
-            [0, calib['fy'], calib['cy']],
-            [0, 0, 1]
+            [calib['fx'], 0, calib['cx']], [0, calib['fy'], calib['cy']], [0, 0, 1]
         ])
         
         # Extract rotation and translation
@@ -393,10 +376,9 @@ class WaymoGridDataset(GridNeRFDataset):
         T = pose[:3, 3]
         
         return {
-            'K': torch.from_numpy(K).float(),
-            'R': torch.from_numpy(R).float(),
-            'T': torch.from_numpy(T).float(),
-            'pose': torch.from_numpy(pose).float()
+            'K': torch.from_numpy(
+                K,
+            )
         }
 
 
@@ -426,10 +408,10 @@ class UrbanSceneGridDataset(GridNeRFDataset):
         for camera_data in cameras_data:
             camera_id = camera_data['id']
             self.cameras[camera_id] = {
-                'K': torch.tensor(camera_data['K'], dtype=torch.float32),
-                'R': torch.tensor(camera_data['R'], dtype=torch.float32),
-                'T': torch.tensor(camera_data['T'], dtype=torch.float32),
-                'pose': torch.tensor(camera_data['pose'], dtype=torch.float32)
+                'K': torch.tensor(
+                    camera_data['K'],
+                    dtype=torch.float32,
+                )
             }
         
         # Compute scene normalization if positions are available
@@ -439,11 +421,13 @@ class UrbanSceneGridDataset(GridNeRFDataset):
             self.scene_scale = scene_info['scale']
 
 
-def create_dataloader(dataset: GridNeRFDataset,
-                     batch_size: int = 1,
-                     shuffle: bool = True,
-                     num_workers: int = 4,
-                     ray_batch_size: int = 4096) -> data.DataLoader:
+def create_dataloader(
+    dataset: GridNeRFDataset,
+    batch_size: int = 1,
+    shuffle: bool = True,
+    num_workers: int = 4,
+    ray_batch_size: int = 4096
+):
     """
     Create dataloader for Grid-NeRF training.
     
@@ -485,10 +469,7 @@ def create_dataloader(dataset: GridNeRFDataset,
             sampled_colors = image[ray_y, ray_x]  # [num_rays, 3]
             
             batch_data = {
-                'rays_o': sampled_rays_o,
-                'rays_d': sampled_rays_d,
-                'target_colors': sampled_colors,
-                'scene_bounds': sample['scene_bounds']
+                'rays_o': sampled_rays_o, 'rays_d': sampled_rays_d, 'target_colors': sampled_colors, 'scene_bounds': sample['scene_bounds']
             }
             
             # Add depth if available
@@ -501,13 +482,8 @@ def create_dataloader(dataset: GridNeRFDataset,
             # Multiple images - return as is
             return torch.utils.data.dataloader.default_collate(batch)
     
-    return data.DataLoader(
-        dataset,
-        batch_size=batch_size,
-        shuffle=shuffle,
-        num_workers=num_workers,
-        collate_fn=collate_fn,
-        pin_memory=True
+    return DataLoader(
+        dataset, batch_size=batch_size, shuffle=shuffle, num_workers=num_workers, collate_fn=collate_fn, pin_memory=True
     )
 
 
@@ -562,11 +538,7 @@ class RayBatchSampler:
             colors_flat = image.view(-1, 3)
             
             ray_info = {
-                'rays_o': rays_o_flat,
-                'rays_d': rays_d_flat,
-                'colors': colors_flat,
-                'sample_idx': i,
-                'scene_bounds': sample['scene_bounds']
+                'rays_o': rays_o_flat, 'rays_d': rays_d_flat, 'colors': colors_flat, 'sample_idx': i, 'scene_bounds': sample['scene_bounds']
             }
             
             if sample['depth'] is not None:
@@ -575,10 +547,10 @@ class RayBatchSampler:
             
             self.ray_info.append(ray_info)
     
-    def sample_batch(self) -> Dict[str, torch.Tensor]:
+    def sample_batch(self) -> dict[str, torch.Tensor]:
         """Sample a batch of rays from random images."""
         # Sample random image
-        img_idx = torch.randint(0, len(self.ray_info), (1,)).item()
+        img_idx = torch.randint(0, len(self.ray_info), (1, )).item()
         ray_data = self.ray_info[img_idx]
         
         # Sample random rays from this image
@@ -586,10 +558,7 @@ class RayBatchSampler:
         ray_indices = torch.randperm(num_rays)[:self.rays_per_batch]
         
         batch = {
-            'rays_o': ray_data['rays_o'][ray_indices],
-            'rays_d': ray_data['rays_d'][ray_indices],
-            'target_colors': ray_data['colors'][ray_indices],
-            'scene_bounds': ray_data['scene_bounds']
+            'rays_o': ray_data['rays_o'][ray_indices], 'rays_d': ray_data['rays_d'][ray_indices], 'target_colors': ray_data['colors'][ray_indices], 'scene_bounds': ray_data['scene_bounds']
         }
         
         if 'depth' in ray_data:

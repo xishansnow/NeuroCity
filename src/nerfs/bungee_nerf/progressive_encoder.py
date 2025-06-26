@@ -6,7 +6,7 @@ Implements progressive positional encoding for BungeeNeRF
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-from typing import Optional, List, Tuple
+from typing import List, Optional, Tuple
 import numpy as np
 import logging
 
@@ -19,12 +19,7 @@ class ProgressivePositionalEncoder(nn.Module):
     """
     
     def __init__(
-        self,
-        num_freqs_base: int = 4,
-        num_freqs_max: int = 10,
-        include_input: bool = True,
-        log_sampling: bool = True,
-        input_dim: int = 3
+        self, num_freqs_base: int = 4, num_freqs_max: int = 10, include_input: bool = True, log_sampling: bool = True, input_dim: int = 3
     ):
         super().__init__()
         
@@ -123,11 +118,7 @@ class MultiScaleEncoder(nn.Module):
     """
     
     def __init__(
-        self,
-        num_scales: int = 4,
-        base_freqs: int = 4,
-        max_freqs: int = 10,
-        include_input: bool = True
+        self, num_scales: int = 4, base_freqs: int = 4, max_freqs: int = 10, include_input: bool = True
     ):
         super().__init__()
         
@@ -145,9 +136,7 @@ class MultiScaleEncoder(nn.Module):
             freqs_for_scale = min(freqs_for_scale, max_freqs)
             
             encoder = ProgressivePositionalEncoder(
-                num_freqs_base=base_freqs,
-                num_freqs_max=freqs_for_scale,
-                include_input=include_input
+                num_freqs_base=base_freqs, num_freqs_max=freqs_for_scale, include_input=include_input
             )
             
             self.encoders.append(encoder)
@@ -159,10 +148,7 @@ class MultiScaleEncoder(nn.Module):
         return max(encoder.get_output_dim() for encoder in self.encoders)
     
     def forward(
-        self,
-        x: torch.Tensor,
-        scale: int = 0,
-        distances: Optional[torch.Tensor] = None
+        self, x: torch.Tensor, scale: int = 0, distances: Optional[torch.Tensor] = None
     ) -> torch.Tensor:
         """
         Apply multi-scale encoding
@@ -184,9 +170,7 @@ class MultiScaleEncoder(nn.Module):
             return self.encoders[scale](x)
     
     def _adaptive_encoding(
-        self,
-        x: torch.Tensor,
-        distances: torch.Tensor
+        self, x: torch.Tensor, distances: torch.Tensor
     ) -> torch.Tensor:
         """
         Adaptive encoding based on distance to camera
@@ -226,7 +210,11 @@ class MultiScaleEncoder(nn.Module):
                 scale_encoded = self.encoders[scale](x[mask])
                 # Pad if necessary
                 if scale_encoded.shape[1] < max_output_dim:
-                    padding = torch.zeros(scale_encoded.shape[0], max_output_dim - scale_encoded.shape[1], device=device)
+                    padding = torch.zeros(
+                        scale_encoded.shape[0],
+                        max_output_dim - scale_encoded.shape[1],
+                        device=device,
+                    )
                     scale_encoded = torch.cat([scale_encoded, padding], dim=1)
                 encoded[mask] = scale_encoded
         
@@ -237,7 +225,11 @@ class MultiScaleEncoder(nn.Module):
             closest_encoded = self.encoders[highest_scale](x[closest_mask])
             # Pad if necessary
             if closest_encoded.shape[1] < max_output_dim:
-                padding = torch.zeros(closest_encoded.shape[0], max_output_dim - closest_encoded.shape[1], device=device)
+                padding = torch.zeros(
+                    closest_encoded.shape[0],
+                    max_output_dim - closest_encoded.shape[1],
+                    device=device,
+                )
                 closest_encoded = torch.cat([closest_encoded, padding], dim=1)
             encoded[closest_mask] = closest_encoded
         
@@ -250,11 +242,7 @@ class FrequencyScheduler:
     """
     
     def __init__(
-        self,
-        num_freqs_base: int = 4,
-        num_freqs_max: int = 10,
-        num_stages: int = 4,
-        schedule_type: str = "linear"
+        self, num_freqs_base: int = 4, num_freqs_max: int = 10, num_stages: int = 4, schedule_type: str = "linear"
     ):
         self.num_freqs_base = num_freqs_base
         self.num_freqs_max = num_freqs_max
@@ -264,7 +252,7 @@ class FrequencyScheduler:
         # Create frequency schedule
         self.schedule = self._create_schedule()
     
-    def _create_schedule(self) -> List[int]:
+    def _create_schedule(self) -> list[int]:
         """Create frequency activation schedule"""
         
         if self.schedule_type == "linear":
@@ -310,10 +298,7 @@ class AnisotropicEncoder(nn.Module):
     """
     
     def __init__(
-        self,
-        num_freqs: int = 10,
-        anisotropy_factors: List[float] = None,
-        include_input: bool = True
+        self, num_freqs: int = 10, anisotropy_factors: list[float] = None, include_input: bool = True
     ):
         super().__init__()
         
@@ -370,10 +355,7 @@ class HierarchicalEncoder(nn.Module):
     """
     
     def __init__(
-        self,
-        scales: List[float] = None,
-        num_freqs_per_scale: int = 6,
-        include_input: bool = True
+        self, scales: list[float] = None, num_freqs_per_scale: int = 6, include_input: bool = True
     ):
         super().__init__()
         
@@ -389,7 +371,11 @@ class HierarchicalEncoder(nn.Module):
         
         for scale in scales:
             # Adjust frequency bands for this scale
-            freq_bands = scale * 2.0 ** torch.linspace(0.0, num_freqs_per_scale - 1, num_freqs_per_scale)
+            freq_bands = scale * 2.0 ** torch.linspace(
+                0.0,
+                num_freqs_per_scale - 1,
+                num_freqs_per_scale,
+            )
             
             encoder = nn.Module()
             encoder.register_buffer('freq_bands', freq_bands)

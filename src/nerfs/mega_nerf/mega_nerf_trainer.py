@@ -2,8 +2,7 @@
 """
 Mega-NeRF Trainer Module
 
-This module implements training pipelines for Mega-NeRF models,
-including parallel training of submodules and sequential training.
+This module implements training pipelines for Mega-NeRF models, including parallel training of submodules and sequential training.
 """
 
 import torch
@@ -30,12 +29,14 @@ logger = logging.getLogger(__name__)
 class MegaNeRFTrainer:
     """Main trainer for Mega-NeRF models"""
     
-    def __init__(self,
-                 config: MegaNeRFConfig,
-                 model: MegaNeRF,
-                 dataset: MegaNeRFDataset,
-                 output_dir: str,
-                 device: str = 'cuda'):
+    def __init__(
+        self,
+        config: MegaNeRFConfig,
+        model: MegaNeRF,
+        dataset: MegaNeRFDataset,
+        output_dir: str,
+        device: str = 'cuda',
+    ):
         """
         Initialize Mega-NeRF trainer
         
@@ -57,11 +58,7 @@ class MegaNeRFTrainer:
         
         # Initialize renderer
         self.renderer = VolumetricRenderer(
-            num_coarse_samples=config.num_coarse,
-            num_fine_samples=config.num_fine,
-            near=config.near,
-            far=config.far,
-            use_hierarchical_sampling=True
+            num_coarse_samples=config.num_coarse, num_fine_samples=config.num_fine, near=config.near, far=config.far, use_hierarchical_sampling=True
         )
         
         self.batch_renderer = BatchRenderer(self.renderer)
@@ -80,7 +77,7 @@ class MegaNeRFTrainer:
         
         logger.info(f"Initialized trainer with {len(self.model.submodules)} submodules")
     
-    def setup_optimizers(self, submodule_indices: Optional[List[int]] = None):
+    def setup_optimizers(self, submodule_indices: Optional[list[int]] = None):
         """Setup optimizers for specified submodules"""
         if submodule_indices is None:
             submodule_indices = list(range(len(self.model.submodules)))
@@ -91,9 +88,7 @@ class MegaNeRFTrainer:
                 
                 # Optimizer
                 optimizer = optim.Adam(
-                    submodule.parameters(),
-                    lr=self.config.learning_rate,
-                    weight_decay=1e-6
+                    submodule.parameters(), lr=self.config.learning_rate, weight_decay=1e-6
                 )
                 self.optimizers[idx] = optimizer
                 
@@ -105,11 +100,13 @@ class MegaNeRFTrainer:
         
         logger.info(f"Setup optimizers for {len(submodule_indices)} submodules")
     
-    def train_submodule(self,
-                       submodule_idx: int,
-                       num_iterations: int = 10000,
-                       log_interval: int = 100,
-                       val_interval: int = 1000) -> Dict[str, float]:
+    def train_submodule(
+        self,
+        submodule_idx: int,
+        num_iterations: int = 10000,
+        log_interval: int = 100,
+        val_interval: int = 1000,
+    ):
         """
         Train a single submodule
         
@@ -157,10 +154,9 @@ class MegaNeRFTrainer:
             optimizer.zero_grad()
             
             outputs = self.renderer.render_rays(
-                submodule,
-                ray_batch['ray_origins'],
-                ray_batch['ray_directions'],
-                ray_batch.get('appearance_ids')
+                submodule, ray_batch['ray_origins'], ray_batch['ray_directions'], ray_batch.get(
+                    'appearance_ids',
+                )
             )
             
             # Compute loss
@@ -182,9 +178,7 @@ class MegaNeRFTrainer:
             
             # Update progress bar
             pbar.set_postfix({
-                'loss': f"{loss.item():.4f}",
-                'psnr': f"{psnr.item():.2f}",
-                'lr': f"{scheduler.get_last_lr()[0]:.2e}"
+                'loss': f"{loss.item():.4f}"
             })
             
             # Logging
@@ -197,9 +191,8 @@ class MegaNeRFTrainer:
                 
                 if wandb.run is not None:
                     wandb.log({
-                        f'submodule_{submodule_idx}/loss': avg_loss,
-                        f'submodule_{submodule_idx}/psnr': avg_psnr,
-                        f'submodule_{submodule_idx}/lr': scheduler.get_last_lr()[0]
+                        f'submodule_{submodule_idx}': avg_loss,
+                        f'psnr_{submodule_idx}': avg_psnr
                     }, step=self.global_step)
             
             # Validation
@@ -208,16 +201,18 @@ class MegaNeRFTrainer:
                 
                 if wandb.run is not None:
                     for key, value in val_metrics.items():
-                        wandb.log({f'submodule_{submodule_idx}/val_{key}': value}, 
-                                step=self.global_step)
+                        wandb.log({
+                            f'submodule_{submodule_idx}': val_metrics['mse'],
+                            f'psnr_{submodule_idx}': val_metrics['psnr']
+                        }, step=self.global_step)
             
             self.global_step += 1
         
         # Final statistics
         stats = {
-            'final_loss': np.mean(losses[-100:]) if losses else 0.0,
-            'final_psnr': np.mean(psnrs[-100:]) if psnrs else 0.0,
-            'total_iterations': num_iterations
+            'final_loss': np.mean(
+                losses[-100:],
+            )
         }
         
         logger.info(f"Completed training submodule {submodule_idx}: "
@@ -225,32 +220,40 @@ class MegaNeRFTrainer:
         
         return stats
     
-    def _sample_rays_from_partition(self, rays_data: Dict[str, np.ndarray], batch_size: int) -> Dict[str, torch.Tensor]:
+    def _sample_rays_from_partition(
+        self,
+        rays_data: dict[str, np.ndarray],
+        batch_size: int
+    ):
         """Sample rays from partition data"""
         num_rays = len(rays_data['colors'])
         
         if num_rays == 0:
             # Return empty batch
             return {
-                'ray_origins': torch.zeros(0, 3, device=self.device),
-                'ray_directions': torch.zeros(0, 3, device=self.device),
-                'colors': torch.zeros(0, 3, device=self.device),
-                'appearance_ids': torch.zeros(0, dtype=torch.long, device=self.device)
+                'ray_origins': torch.zeros(
+                    0,
+                    3,
+                    device=self.device,
+                )
             }
         
         # Random sampling
         indices = np.random.choice(num_rays, min(batch_size, num_rays), replace=False)
         
         batch = {
-            'ray_origins': torch.from_numpy(rays_data['ray_origins'][indices]).float().to(self.device),
-            'ray_directions': torch.from_numpy(rays_data['ray_directions'][indices]).float().to(self.device),
-            'colors': torch.from_numpy(rays_data['colors'][indices]).float().to(self.device),
-            'appearance_ids': torch.from_numpy(rays_data['camera_ids'][indices]).long().to(self.device)
+            'ray_origins': torch.from_numpy(
+                rays_data['ray_origins'][indices],
+            )
         }
         
         return batch
     
-    def _compute_loss(self, outputs: Dict[str, torch.Tensor], target_rgb: torch.Tensor) -> torch.Tensor:
+    def _compute_loss(
+        self,
+        outputs: dict[str, torch.Tensor],
+        target_rgb: torch.Tensor
+    ):
         """Compute training loss"""
         # Main RGB loss
         rgb_loss = torch.mean((outputs['rgb'] - target_rgb) ** 2)
@@ -264,7 +267,7 @@ class MegaNeRFTrainer:
         
         return total_loss
     
-    def _validate_submodule(self, submodule_idx: int) -> Dict[str, float]:
+    def _validate_submodule(self, submodule_idx: int) -> dict[str, float]:
         """Validate a single submodule"""
         submodule = self.model.submodules[submodule_idx]
         partition_data = self.dataset.get_partition_data(submodule_idx)
@@ -280,10 +283,9 @@ class MegaNeRFTrainer:
         
         with torch.no_grad():
             outputs = self.renderer.render_rays(
-                submodule,
-                val_batch['ray_origins'],
-                val_batch['ray_directions'],
-                val_batch.get('appearance_ids')
+                submodule, val_batch['ray_origins'], val_batch['ray_directions'], val_batch.get(
+                    'appearance_ids',
+                )
             )
             
             target_rgb = val_batch['colors']
@@ -293,14 +295,15 @@ class MegaNeRFTrainer:
         submodule.train()
         
         return {
-            'mse': mse.item(),
-            'psnr': psnr.item()
+            'mse': mse.item(), 'psnr': psnr.item()
         }
     
-    def train_sequential(self,
-                        num_iterations_per_submodule: int = 10000,
-                        log_interval: int = 100,
-                        val_interval: int = 1000) -> Dict[str, Any]:
+    def train_sequential(
+        self,
+        num_iterations_per_submodule: int = 10000,
+        log_interval: int = 100,
+        val_interval: int = 1000
+    ):
         """
         Train all submodules sequentially
         
@@ -320,18 +323,14 @@ class MegaNeRFTrainer:
             logger.info(f"Training submodule {submodule_idx}/{len(self.model.submodules)-1}")
             
             stats = self.train_submodule(
-                submodule_idx,
-                num_iterations_per_submodule,
-                log_interval,
-                val_interval
+                submodule_idx, num_iterations_per_submodule, log_interval, val_interval
             )
             
             all_stats[f'submodule_{submodule_idx}'] = stats
             
             # Save intermediate checkpoint
             self.save_checkpoint(
-                self.output_dir / f'checkpoint_submodule_{submodule_idx}.pth',
-                submodule_idx
+                self.output_dir / f'checkpoint_submodule_{submodule_idx}.pth', submodule_idx
             )
         
         logger.info("Completed sequential training of all submodules")
@@ -340,11 +339,7 @@ class MegaNeRFTrainer:
     def save_checkpoint(self, path: str, submodule_idx: Optional[int] = None):
         """Save training checkpoint"""
         checkpoint = {
-            'global_step': self.global_step,
-            'current_epoch': self.current_epoch,
-            'best_psnr': self.best_psnr,
-            'config': self.config,
-            'loss_history': self.loss_history
+            'global_step': self.global_step, 'current_epoch': self.current_epoch, 'best_psnr': self.best_psnr, 'config': self.config, 'loss_history': self.loss_history
         }
         
         if submodule_idx is not None:
@@ -359,8 +354,13 @@ class MegaNeRFTrainer:
         else:
             # Save full model
             checkpoint['model_state_dict'] = self.model.state_dict()
-            checkpoint['optimizers'] = {idx: opt.state_dict() for idx, opt in self.optimizers.items()}
-            checkpoint['schedulers'] = {idx: sch.state_dict() for idx, sch in self.schedulers.items()}
+            checkpoint['optimizers'] = {
+                idx: opt.state_dict() for idx,
+                opt in self.optimizers.items()
+            }
+            checkpoint['schedulers'] = {
+                idx: sch.state_dict() for idx, sch in self.schedulers.items()
+            }
         
         torch.save(checkpoint, path)
         logger.info(f"Saved checkpoint to {path}")
@@ -404,9 +404,8 @@ class MegaNeRFTrainer:
     def save_model(self, path: str):
         """Save the trained model"""
         model_data = {
-            'model_state_dict': self.model.state_dict(),
-            'config': self.config,
-            'model_info': self.model.get_model_info()
+            'model_state_dict': self.model.state_dict(
+            )
         }
         
         torch.save(model_data, path)
@@ -427,13 +426,15 @@ class MegaNeRFTrainer:
 class ParallelTrainer:
     """Parallel trainer for training multiple submodules simultaneously"""
     
-    def __init__(self,
-                 config: MegaNeRFConfig,
-                 model: MegaNeRF,
-                 dataset: MegaNeRFDataset,
-                 output_dir: str,
-                 device: str = 'cuda',
-                 num_parallel_workers: int = 4):
+    def __init__(
+        self,
+        config: MegaNeRFConfig,
+        model: MegaNeRF,
+        dataset: MegaNeRFDataset,
+        output_dir: str,
+        device: str = 'cuda',
+        num_parallel_workers: int = 4,
+    ):
         """
         Initialize parallel trainer
         
@@ -456,9 +457,11 @@ class ParallelTrainer:
         
         logger.info(f"Initialized parallel trainer with {num_parallel_workers} workers")
     
-    def train_parallel(self,
-                      num_iterations_per_submodule: int = 10000,
-                      save_interval: int = 5000) -> Dict[str, Any]:
+    def train_parallel(
+        self,
+        num_iterations_per_submodule: int = 10000,
+        save_interval: int = 5000,
+    ):
         """
         Train submodules in parallel
         
@@ -480,11 +483,7 @@ class ParallelTrainer:
             single_submodule_model = self._create_single_submodule_model(submodule_idx)
             
             trainer = MegaNeRFTrainer(
-                config=self.config,
-                model=single_submodule_model,
-                dataset=self.dataset,
-                output_dir=self.output_dir / f'submodule_{submodule_idx}',
-                device=self.device
+                config=self.config, model=single_submodule_model, dataset=self.dataset, output_dir=self.output_dir / f'submodule_{submodule_idx}', device=self.device
             )
             
             trainers.append((submodule_idx, trainer))
@@ -496,9 +495,7 @@ class ParallelTrainer:
             # Submit training jobs
             future_to_submodule = {
                 executor.submit(
-                    trainer.train_submodule,
-                    submodule_idx,
-                    num_iterations_per_submodule
+                    trainer.train_submodule, submodule_idx, num_iterations_per_submodule
                 ): submodule_idx
                 for submodule_idx, trainer in trainers
             }
@@ -532,7 +529,7 @@ class ParallelTrainer:
         
         return single_model
     
-    def _merge_submodules(self, trainers: List[Tuple[int, MegaNeRFTrainer]]):
+    def _merge_submodules(self, trainers: list[tuple[int, MegaNeRFTrainer]]):
         """Merge trained submodules back to the main model"""
         for submodule_idx, trainer in trainers:
             # Copy trained weights back to main model
@@ -543,10 +540,9 @@ class ParallelTrainer:
         logger.info("Merged all trained submodules to main model")
 
 
-def create_sample_camera_path(center: np.ndarray = np.array([0, 0, 20]),
-                             radius: float = 50,
-                             num_frames: int = 100,
-                             height_variation: float = 10) -> List[np.ndarray]:
+def create_sample_camera_path(
+center: np.ndarray = np.array,
+):
     """
     Create a sample camera path for fly-through rendering
     
@@ -568,16 +564,15 @@ def create_sample_camera_path(center: np.ndarray = np.array([0, 0, 20]),
         # Camera position with height variation
         height_offset = height_variation * np.sin(angle * 3)  # Vary height
         pos = np.array([
-            center[0] + radius * np.cos(angle),
-            center[1] + radius * np.sin(angle),
-            center[2] + height_offset
+            center[0] + radius * np.cos(
+                angle,
+            )
         ])
         
         # Look at center with some variation
         target = center + np.array([
-            5 * np.sin(angle * 2),  # Slight target movement
-            5 * np.cos(angle * 2),
-            0
+            5 * np.sin(angle * 2), # Slight target movement
+            5 * np.cos(angle * 2), 0
         ])
         
         # Up vector

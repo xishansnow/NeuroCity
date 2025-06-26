@@ -23,33 +23,16 @@ def create_demo_scene():
     # 配置参数 - 针对大规模场景优化
     config = MegaNeRFConfig(
         # 空间分解参数
-        num_submodules=8,
-        grid_size=(4, 2),  # 4x2网格分解
-        overlap_factor=0.15,
-        
-        # 网络参数
-        hidden_dim=256,
-        num_layers=8,
-        use_viewdirs=True,
-        
-        # 训练参数
-        batch_size=512,
-        learning_rate=5e-4,
-        max_iterations=5000,  # 演示用较少迭代
+        num_submodules=8, grid_size=(4, 2), # 4x2网格分解
+        overlap_factor=0.15, # 网络参数
+        hidden_dim=256, num_layers=8, use_viewdirs=True, # 训练参数
+        batch_size=512, learning_rate=5e-4, max_iterations=5000, # 演示用较少迭代
         
         # 采样参数
-        num_coarse=128,  # 减少采样点以加快演示
-        num_fine=256,
-        near=0.1,
-        far=1000.0,
-        
-        # 外观嵌入
-        use_appearance_embedding=True,
-        appearance_dim=48,
-        
-        # 场景边界 - 大规模城市场景
-        scene_bounds=(-200, -200, -20, 200, 200, 100),
-        foreground_ratio=0.8
+        num_coarse=128, # 减少采样点以加快演示
+        num_fine=256, near=0.1, far=1000.0, # 外观嵌入
+        use_appearance_embedding=True, appearance_dim=48, # 场景边界 - 大规模城市场景
+        scene_bounds=(-200, -200, -20, 200, 200, 100), foreground_ratio=0.8
     )
     
     return config
@@ -105,7 +88,7 @@ def demonstrate_spatial_partitioning(config):
     plt.show()
     
     logger.info(f"✅ 创建了 {len(model.submodules)} 个子模块")
-    logger.info(f"📈 总参数数量: {sum(p.numel() for p in model.parameters()):,}")
+    logger.info(f"📈 总参数数量: {sum(p.numel() for p in model.parameters()):, }")
 
 def train_mega_nerf(config):
     """训练Mega-NeRF模型"""
@@ -176,11 +159,12 @@ def render_and_visualize(config, model_path):
     
     # 创建不同的相机位置
     camera_positions = [
-        ([0, 0, 50], "鸟瞰图"),
-        ([100, 0, 30], "侧视图1"),
-        ([0, 100, 30], "侧视图2"),
-        ([70, 70, 40], "斜视图"),
-        ([0, 0, 20], "低空视图")
+        (
+            [0,
+            0,
+            50],
+            "鸟瞰图",
+        )
     ]
     
     fig, axes = plt.subplots(2, 3, figsize=(18, 12))
@@ -259,9 +243,7 @@ def create_flythrough_video(config, model_path):
         
         # 相机位置
         pos = np.array([
-            radius * np.cos(angle),
-            radius * np.sin(angle),
-            height
+            radius * np.cos(angle), radius * np.sin(angle), height
         ])
         
         # 朝向中心，但稍微向上倾斜
@@ -363,7 +345,7 @@ def analyze_performance(config, model_path):
     # 输出总结
     total_params = sum(p.numel() for p in model.parameters())
     logger.info(f"📈 性能总结:")
-    logger.info(f"   - 总参数数量: {total_params:,}")
+    logger.info(f"   - 总参数数量: {total_params:, }")
     logger.info(f"   - 子模块数量: {len(model.submodules)}")
     logger.info(f"   - 平均渲染时间 (800x600): {render_times[2]:.3f}s")
     logger.info(f"   - 场景覆盖范围: {config.scene_bounds}")

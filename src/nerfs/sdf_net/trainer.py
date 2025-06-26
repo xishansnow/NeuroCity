@@ -11,7 +11,7 @@ from torch.utils.tensorboard import SummaryWriter
 import numpy as np
 import os
 import time
-from typing import Dict, List, Optional, Tuple, Union
+from typing import Dict, List, Optional, Tuple, Any, Union
 import json
 
 from .core import SDFNetwork, LatentSDFNetwork, MultiScaleSDFNetwork
@@ -34,17 +34,7 @@ class SDFTrainer:
     """
     
     def __init__(
-        self,
-        model: Union[SDFNetwork, LatentSDFNetwork, MultiScaleSDFNetwork],
-        train_dataloader: DataLoader,
-        val_dataloader: Optional[DataLoader] = None,
-        optimizer: Optional[optim.Optimizer] = None,
-        scheduler: Optional = None,
-        device: str = 'cuda',
-        log_dir: str = 'logs/sdf_net',
-        checkpoint_dir: str = 'checkpoints/sdf_net',
-        lambda_gp: float = 0.1,
-        loss_type: str = 'l1'
+        self, model: SDFNetwork | LatentSDFNetwork | MultiScaleSDFNetwork, train_dataloader: DataLoader, val_dataloader: Optional[DataLoader] = None, optimizer: Optional[optim.Optimizer] = None, scheduler: Optional = None, device: str = 'cuda', log_dir: str = 'logs/sdf_net', checkpoint_dir: str = 'checkpoints/sdf_net', lambda_gp: float = 0.1, loss_type: str = 'l1'
     ):
         self.model = model
         self.train_dataloader = train_dataloader
@@ -61,9 +51,7 @@ class SDFTrainer:
         # 设置优化器
         if optimizer is None:
             self.optimizer = optim.Adam(
-                self.model.parameters(),
-                lr=1e-4,
-                weight_decay=0
+                self.model.parameters(), lr=1e-4, weight_decay=0
             )
         else:
             self.optimizer = optimizer
@@ -86,10 +74,10 @@ class SDFTrainer:
         self.val_losses = []
         
         print(f"SDF Trainer initialized with device: {device}")
-        print(f"Model parameters: {sum(p.numel() for p in model.parameters()):,}")
+        print(f"Model parameters: {sum(p.numel() for p in model.parameters()):, }")
         print(f"Eikonal constraint weight: {lambda_gp}")
     
-    def train_epoch(self) -> Dict[str, float]:
+    def train_epoch(self) -> dict[str, float]:
         """训练一个epoch"""
         self.model.train()
         
@@ -110,7 +98,10 @@ class SDFTrainer:
                 # 如果没有预定义的潜在编码，使用随机编码
                 batch_size = points.shape[0]
                 if isinstance(self.model, SDFNetwork):
-                    latent_codes = torch.randn(batch_size, self.model.dim_latent).to(self.device) * 0.01
+                    latent_codes = torch.randn(
+                        batch_size,
+                        self.model.dim_latent,
+                    )
                 else:
                     # 对于LatentSDFNetwork，使用shape_ids
                     shape_ids = torch.arange(batch_size).to(self.device)
@@ -183,8 +174,15 @@ class SDFTrainer:
                 self.writer.add_scalar('train/batch_sdf_loss', sdf_loss.item(), self.global_step)
                 if eikonal_loss != 0.0:
                     eikonal_val = eikonal_loss if isinstance(eikonal_loss, float) else eikonal_loss.item()
-                    self.writer.add_scalar('train/batch_eikonal_loss', eikonal_val, self.global_step)
-                self.writer.add_scalar('train/batch_total_loss', total_loss.item(), self.global_step)
+                    self.writer.add_scalar(
+                        'train/batch_eikonal_loss',
+                        eikonal_val,
+                        self.global_step,
+                    )
+                self.writer.add_scalar(
+                    'train/batch_total_loss',
+                    total_loss.item,
+                )
                 
                 print(f'Epoch {self.epoch}, Batch {batch_idx}/{len(self.train_dataloader)}, '
                       f'SDF Loss: {sdf_loss.item():.6f}, '
@@ -199,12 +197,10 @@ class SDFTrainer:
         avg_total_loss = epoch_total_loss / num_batches
         
         return {
-            'sdf_loss': avg_sdf_loss,
-            'eikonal_loss': avg_eikonal_loss,
-            'total_loss': avg_total_loss
+            'sdf_loss': avg_sdf_loss, 'eikonal_loss': avg_eikonal_loss, 'total_loss': avg_total_loss
         }
     
-    def validate(self) -> Dict[str, float]:
+    def validate(self) -> dict[str, float]:
         """验证模型"""
         if self.val_dataloader is None:
             return {}
@@ -228,7 +224,10 @@ class SDFTrainer:
                 else:
                     batch_size = points.shape[0]
                     if isinstance(self.model, SDFNetwork):
-                        latent_codes = torch.randn(batch_size, self.model.dim_latent).to(self.device) * 0.01
+                        latent_codes = torch.randn(
+                            batch_size,
+                            self.model.dim_latent,
+                        )
                     else:
                         shape_ids = torch.arange(batch_size).to(self.device)
                         latent_codes = None
@@ -245,7 +244,11 @@ class SDFTrainer:
                 if hasattr(self.model, 'compute_sdf_loss'):
                     sdf_loss = self.model.compute_sdf_loss(pred_sdf, sdf, self.loss_type)
                 elif hasattr(self.model, 'sdf_decoder'):
-                    sdf_loss = self.model.sdf_decoder.compute_sdf_loss(pred_sdf, sdf, self.loss_type)
+                    sdf_loss = self.model.sdf_decoder.compute_sdf_loss(
+                        pred_sdf,
+                        sdf,
+                        self.loss_type,
+                    )
                 else:
                     if self.loss_type == 'l1':
                         sdf_loss = torch.nn.functional.l1_loss(pred_sdf, sdf)
@@ -260,15 +263,11 @@ class SDFTrainer:
         avg_val_total_loss = val_total_loss / num_batches
         
         return {
-            'val_sdf_loss': avg_val_sdf_loss,
-            'val_total_loss': avg_val_total_loss
+            'val_sdf_loss': avg_val_sdf_loss, 'val_total_loss': avg_val_total_loss
         }
     
     def train(
-        self,
-        num_epochs: int,
-        save_freq: int = 10,
-        eval_freq: int = 5
+        self, num_epochs: int, save_freq: int = 10, eval_freq: int = 5
     ):
         """训练模型
         
@@ -315,8 +314,11 @@ class SDFTrainer:
                 self.writer.add_scalar('val/sdf_loss', val_metrics['val_sdf_loss'], epoch)
                 self.writer.add_scalar('val/total_loss', val_metrics['val_total_loss'], epoch)
             
-            self.writer.add_scalar('train/learning_rate', 
-                                   self.optimizer.param_groups[0]['lr'], epoch)
+            self.writer.add_scalar(
+                'train/learning_rate',
+                self.optimizer.param_groups[0]['lr'],
+                epoch,
+            )
             
             # 打印进度
             print(f'Epoch {epoch}/{num_epochs} - {epoch_time:.2f}s')
@@ -344,15 +346,8 @@ class SDFTrainer:
     def save_checkpoint(self, filename: str):
         """保存检查点"""
         checkpoint = {
-            'epoch': self.epoch,
-            'global_step': self.global_step,
-            'model_state_dict': self.model.state_dict(),
-            'optimizer_state_dict': self.optimizer.state_dict(),
-            'best_val_loss': self.best_val_loss,
-            'train_losses': self.train_losses,
-            'val_losses': self.val_losses,
-            'lambda_gp': self.lambda_gp,
-            'loss_type': self.loss_type
+            'epoch': self.epoch, 'global_step': self.global_step, 'model_state_dict': self.model.state_dict(
+            )
         }
         
         if self.scheduler is not None:
@@ -387,11 +382,8 @@ class SDFTrainer:
         print(f'Resumed from epoch {self.epoch}')
     
     def evaluate_mesh_extraction(
-        self,
-        test_dataloader: DataLoader,
-        resolution: int = 128,
-        num_samples: int = 10
-    ) -> Dict[str, float]:
+        self, test_dataloader: DataLoader, resolution: int = 128, num_samples: int = 10
+    ) -> dict[str, float]:
         """评估网格提取质量"""
         self.model.eval()
         
@@ -411,7 +403,10 @@ class SDFTrainer:
                         try:
                             latent_code = self.model.get_latent_code(shape_id)
                         except:
-                            latent_code = torch.randn(1, self.model.dim_latent).to(self.device) * 0.01
+                            latent_code = torch.randn(
+                                1,
+                                self.model.dim_latent,
+                            )
                     else:
                         latent_code = torch.randn(1, self.model.dim_latent).to(self.device) * 0.01
                 
@@ -419,13 +414,11 @@ class SDFTrainer:
                 try:
                     if hasattr(self.model, 'extract_mesh'):
                         mesh_data = self.model.extract_mesh(
-                            latent_code=latent_code,
-                            resolution=resolution
+                            latent_code=latent_code, resolution=resolution
                         )
                     elif hasattr(self.model, 'sdf_decoder'):
                         mesh_data = self.model.sdf_decoder.extract_mesh(
-                            latent_code=latent_code,
-                            resolution=resolution
+                            latent_code=latent_code, resolution=resolution
                         )
                     else:
                         continue
@@ -435,9 +428,7 @@ class SDFTrainer:
                         num_faces = len(mesh_data['faces'])
                         
                         mesh_metrics.append({
-                            'num_vertices': num_vertices,
-                            'num_faces': num_faces,
-                            'success': True
+                            'num_vertices': num_vertices, 'num_faces': num_faces, 'success': True
                         })
                     else:
                         mesh_metrics.append({'success': False})
@@ -458,9 +449,7 @@ class SDFTrainer:
             avg_faces = 0
         
         return {
-            'mesh_extraction_success_rate': success_rate,
-            'avg_vertices': avg_vertices,
-            'avg_faces': avg_faces
+            'mesh_extraction_success_rate': success_rate, 'avg_vertices': avg_vertices, 'avg_faces': avg_faces
         }
     
     def get_training_summary(self) -> Dict:
@@ -468,14 +457,7 @@ class SDFTrainer:
         model_info = self.model.get_model_size() if hasattr(self.model, 'get_model_size') else {}
         
         summary = {
-            'total_epochs': self.epoch,
-            'total_steps': self.global_step,
-            'best_val_loss': self.best_val_loss,
-            'final_train_loss': self.train_losses[-1] if self.train_losses else None,
-            'final_val_loss': self.val_losses[-1] if self.val_losses else None,
-            'lambda_gp': self.lambda_gp,
-            'loss_type': self.loss_type,
-            'model_info': model_info
+            'total_epochs': self.epoch, 'total_steps': self.global_step, 'best_val_loss': self.best_val_loss, 'final_train_loss': self.train_losses[-1] if self.train_losses else None, 'final_val_loss': self.val_losses[-1] if self.val_losses else None, 'lambda_gp': self.lambda_gp, 'loss_type': self.loss_type, 'model_info': model_info
         }
         
         return summary
@@ -508,12 +490,19 @@ def create_sdf_trainer_from_config(config: Dict) -> SDFTrainer:
     # 创建数据集
     dataset_config = config.get('dataset', {})
     train_dataset = SDFDataset(split='train', **dataset_config)
-    val_dataset = SDFDataset(split='val', **dataset_config) if config.get('use_validation', True) else None
+    val_dataset = SDFDataset(
+        split='val',
+        **dataset_config,
+    )
     
     # 创建数据加载器
     dataloader_config = config.get('dataloader', {})
     train_dataloader = create_sdf_dataloader(train_dataset, **dataloader_config)
-    val_dataloader = create_sdf_dataloader(val_dataset, shuffle=False, **dataloader_config) if val_dataset else None
+    val_dataloader = create_sdf_dataloader(
+        val_dataset,
+        shuffle=False,
+        **dataloader_config,
+    )
     
     # 创建优化器
     optimizer_config = config.get('optimizer', {})
@@ -542,12 +531,7 @@ def create_sdf_trainer_from_config(config: Dict) -> SDFTrainer:
     # 创建训练器
     trainer_config = config.get('trainer', {})
     trainer = SDFTrainer(
-        model=model,
-        train_dataloader=train_dataloader,
-        val_dataloader=val_dataloader,
-        optimizer=optimizer,
-        scheduler=scheduler,
-        **trainer_config
+        model=model, train_dataloader=train_dataloader, val_dataloader=val_dataloader, optimizer=optimizer, scheduler=scheduler, **trainer_config
     )
     
     return trainer 

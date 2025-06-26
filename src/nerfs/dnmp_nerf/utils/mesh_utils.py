@@ -1,13 +1,12 @@
 """
 Mesh processing utilities for DNMP.
 
-This module provides functions for mesh manipulation, topology operations,
-and mesh quality metrics.
+This module provides functions for mesh manipulation, topology operations, and mesh quality metrics.
 """
 
 import torch
 import numpy as np
-from typing import Tuple, List, Optional, Dict
+from typing import Dict, List, Optional, Tuple
 import open3d as o3d
 
 
@@ -92,8 +91,11 @@ def compute_edge_lengths(vertices: torch.Tensor, faces: torch.Tensor) -> torch.T
     return edge_lengths
 
 
-def laplacian_smoothing(vertices: torch.Tensor, faces: torch.Tensor, 
-                       lambda_smooth: float = 0.1) -> torch.Tensor:
+def laplacian_smoothing(
+    vertices: torch.Tensor,
+    faces: torch.Tensor,
+    lambda_smooth: float = 0.1
+):
     """
     Apply Laplacian smoothing to mesh vertices.
     
@@ -130,7 +132,10 @@ def laplacian_smoothing(vertices: torch.Tensor, faces: torch.Tensor,
     return smoothed_vertices
 
 
-def subdivide_mesh(vertices: torch.Tensor, faces: torch.Tensor) -> Tuple[torch.Tensor, torch.Tensor]:
+def subdivide_mesh(
+    vertices: torch.Tensor,
+    faces: torch.Tensor
+):
     """
     Subdivide mesh using loop subdivision (simplified version).
     
@@ -180,10 +185,7 @@ def subdivide_mesh(vertices: torch.Tensor, faces: torch.Tensor) -> Tuple[torch.T
         
         # Create 4 new faces
         new_faces.extend([
-            [v0, e01, e20],
-            [v1, e12, e01],
-            [v2, e20, e12],
-            [e01, e12, e20]
+            [v0, e01, e20], [v1, e12, e01], [v2, e20, e12], [e01, e12, e20]
         ])
     
     new_faces = torch.tensor(new_faces, device=device)
@@ -191,8 +193,11 @@ def subdivide_mesh(vertices: torch.Tensor, faces: torch.Tensor) -> Tuple[torch.T
     return new_vertices, new_faces
 
 
-def mesh_decimation(vertices: torch.Tensor, faces: torch.Tensor, 
-                   target_faces: int) -> Tuple[torch.Tensor, torch.Tensor]:
+def mesh_decimation(
+    vertices: torch.Tensor,
+    faces: torch.Tensor,
+    target_faces: int
+):
     """
     Decimate mesh to reduce number of faces.
     
@@ -223,7 +228,7 @@ def mesh_decimation(vertices: torch.Tensor, faces: torch.Tensor,
     return decimated_vertices, decimated_faces
 
 
-def compute_mesh_quality_metrics(vertices: torch.Tensor, faces: torch.Tensor) -> Dict[str, float]:
+def compute_mesh_quality_metrics(vertices: torch.Tensor, faces: torch.Tensor) -> dict[str, float]:
     """
     Compute various mesh quality metrics.
     
@@ -269,8 +274,11 @@ def compute_mesh_quality_metrics(vertices: torch.Tensor, faces: torch.Tensor) ->
     return metrics
 
 
-def remove_duplicate_vertices(vertices: torch.Tensor, faces: torch.Tensor,
-                             tolerance: float = 1e-6) -> Tuple[torch.Tensor, torch.Tensor]:
+def remove_duplicate_vertices(
+    vertices: torch.Tensor,
+    faces: torch.Tensor,
+    tolerance: float = 1e-6
+):
     """
     Remove duplicate vertices from mesh.
     
@@ -342,7 +350,7 @@ def mesh_to_open3d(vertices: torch.Tensor, faces: torch.Tensor) -> o3d.geometry.
     return mesh
 
 
-def open3d_to_mesh(mesh: o3d.geometry.TriangleMesh) -> Tuple[torch.Tensor, torch.Tensor]:
+def open3d_to_mesh(mesh: o3d.geometry.TriangleMesh) -> tuple[torch.Tensor, torch.Tensor]:
     """
     Convert Open3D mesh to PyTorch tensors.
     
@@ -359,8 +367,12 @@ def open3d_to_mesh(mesh: o3d.geometry.TriangleMesh) -> Tuple[torch.Tensor, torch
     return vertices, faces
 
 
-def save_mesh(vertices: torch.Tensor, faces: torch.Tensor, 
-             filename: str, vertex_colors: Optional[torch.Tensor] = None):
+def save_mesh(
+    vertices: torch.Tensor,
+    faces: torch.Tensor,
+    filename: str,
+    vertex_colors: Optional[torch.Tensor] = None
+):
     """
     Save mesh to file.
     
@@ -378,7 +390,7 @@ def save_mesh(vertices: torch.Tensor, faces: torch.Tensor,
     o3d.io.write_triangle_mesh(filename, mesh)
 
 
-def load_mesh(filename: str) -> Tuple[torch.Tensor, torch.Tensor]:
+def load_mesh(filename: str) -> tuple[torch.Tensor, torch.Tensor]:
     """
     Load mesh from file.
     

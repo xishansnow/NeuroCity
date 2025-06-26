@@ -1,15 +1,14 @@
 """
 Volumetric Renderer for Mega-NeRF
 
-This module implements volumetric rendering for Mega-NeRF models,
-including hierarchical sampling and efficient batch processing.
+This module implements volumetric rendering for Mega-NeRF models, including hierarchical sampling and efficient batch processing.
 """
 
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
 import numpy as np
-from typing import Dict, List, Optional, Tuple, Union, Any
+from typing import Dict, List, Optional, Tuple, Any, Union 
 import logging
 from tqdm import tqdm
 
@@ -19,13 +18,16 @@ logger = logging.getLogger(__name__)
 class VolumetricRenderer:
     """Standard volumetric renderer for NeRF-style models"""
     
-    def __init__(self,
-                 num_coarse_samples: int = 64,
-                 num_fine_samples: int = 128,
-                 near: float = 0.1,
-                 far: float = 1000.0,
-                 use_hierarchical_sampling: bool = True,
-                 white_background: bool = False):
+    def __init__(
+        self,
+        num_coarse_samples: int = 64,
+        num_fine_samples: int = 128,
+        near: float = 0.1,
+        far: float = 1000.0,
+        use_hierarchical_sampling: bool = True,
+        white_background: bool = False,
+        training: bool = False
+    ):
         """
         Initialize volumetric renderer
         
@@ -36,6 +38,7 @@ class VolumetricRenderer:
             far: Far plane distance
             use_hierarchical_sampling: Whether to use hierarchical sampling
             white_background: Whether to use white background
+            training: Whether to use training mode
         """
         self.num_coarse_samples = num_coarse_samples
         self.num_fine_samples = num_fine_samples
@@ -43,14 +46,16 @@ class VolumetricRenderer:
         self.far = far
         self.use_hierarchical_sampling = use_hierarchical_sampling
         self.white_background = white_background
-    
-    def render_rays(self,
-                   model,
-                   ray_origins: torch.Tensor,
-                   ray_directions: torch.Tensor,
-                   appearance_ids: Optional[torch.Tensor] = None,
-                   return_weights: bool = False,
-                   return_depth: bool = False) -> Dict[str, torch.Tensor]:
+        self.training = training
+    def render_rays(
+        self,
+        model,
+        ray_origins: torch.Tensor,
+        ray_directions: torch.Tensor,
+        appearance_ids: Optional[torch.Tensor] = None,
+        return_weights: bool = False,
+        return_depth: bool = False
+    ) -> dict[str, torch.Tensor]:
         """
         Render a batch of rays
         
@@ -58,7 +63,7 @@ class VolumetricRenderer:
             model: Mega-NeRF model
             ray_origins: Ray origins (N, 3)
             ray_directions: Ray directions (N, 3)
-            appearance_ids: Appearance embedding IDs (N,)
+            appearance_ids: Appearance embedding IDs (N, )
             return_weights: Whether to return sampling weights
             return_depth: Whether to return depth maps
             
@@ -79,11 +84,11 @@ class VolumetricRenderer:
         
         # Flatten for model forward pass
         points_flat = points_coarse.reshape(-1, 3)
-        dirs_flat = ray_directions.unsqueeze(1).expand(-1, self.num_coarse_samples, -1).reshape(-1, 3)
+        dirs_flat = ray_directions.unsqueeze(1)        
         
         # Appearance IDs
         if appearance_ids is not None:
-            app_ids_flat = appearance_ids.unsqueeze(1).expand(-1, self.num_coarse_samples).reshape(-1)
+            app_ids_flat = appearance_ids.unsqueeze(1)
         else:
             app_ids_flat = None
         
@@ -99,17 +104,20 @@ class VolumetricRenderer:
             density_coarse, color_coarse, t_vals_coarse
         )
         
-        outputs = {
-            'rgb_coarse': rgb_coarse,
-            'depth_coarse': depth_coarse,
-            'weights_coarse': weights_coarse
-        }
+        outputs: dict[str, torch.Tensor] = {}
+        
+        outputs['rgb_coarse'] = rgb_coarse
+        outputs['depth_coarse'] = depth_coarse
+        outputs['weights_coarse'] = weights_coarse
         
         # Fine sampling (hierarchical)
         if self.use_hierarchical_sampling and self.num_fine_samples > 0:
             # Sample additional points based on coarse weights
-            t_vals_fine = self._hierarchical_sample(t_vals_coarse, weights_coarse, self.num_fine_samples)
-            
+            t_vals_fine = self._hierarchical_sample(
+                t_vals_coarse,
+                weights_coarse,
+                self.num_fine_samples
+                )
             # Combine coarse and fine samples
             t_vals_combined = torch.cat([t_vals_coarse, t_vals_fine], dim=-1)
             t_vals_combined, sort_indices = torch.sort(t_vals_combined, dim=-1)
@@ -119,11 +127,11 @@ class VolumetricRenderer:
             
             # Flatten for model forward pass
             points_flat = points_combined.reshape(-1, 3)
-            dirs_flat = ray_directions.unsqueeze(1).expand(-1, t_vals_combined.shape[1], -1).reshape(-1, 3)
+            dirs_flat = ray_directions.unsqueeze(1)
             
             # Appearance IDs
             if appearance_ids is not None:
-                app_ids_flat = appearance_ids.unsqueeze(1).expand(-1, t_vals_combined.shape[1]).reshape(-1)
+                app_ids_flat = appearance_ids.unsqueeze(1)
             else:
                 app_ids_flat = None
             
@@ -140,29 +148,31 @@ class VolumetricRenderer:
             )
             
             outputs.update({
-                'rgb': rgb_fine,
-                'depth': depth_fine,
-                'weights': weights_fine,
-                't_vals': t_vals_combined
+                'rgb_fine': rgb_fine,
+                'depth_fine': depth_fine,
+                'weights_fine': weights_fine,
+                't_vals_fine': t_vals_combined
             })
         else:
             outputs.update({
-                'rgb': rgb_coarse,
-                'depth': depth_coarse,
-                'weights': weights_coarse,
-                't_vals': t_vals_coarse
+                'rgb_coarse': rgb_coarse,
+                'depth_coarse': depth_coarse,
+                'weights_coarse': weights_coarse,
+                't_vals_coarse': t_vals_coarse
             })
         
         # Add optional outputs
         if return_weights:
-            outputs['weights_coarse'] = weights_coarse
             if self.use_hierarchical_sampling:
                 outputs['weights_fine'] = weights_fine
+            else:
+                outputs['weights_coarse'] = weights_coarse
         
         if return_depth:
-            outputs['depth_coarse'] = depth_coarse
             if self.use_hierarchical_sampling:
                 outputs['depth_fine'] = depth_fine
+            else:
+                outputs['depth_coarse'] = depth_coarse
         
         return outputs
     
@@ -185,10 +195,12 @@ class VolumetricRenderer:
         
         return t_vals
     
-    def _hierarchical_sample(self,
-                           t_vals: torch.Tensor,
-                           weights: torch.Tensor,
-                           N_samples: int) -> torch.Tensor:
+    def _hierarchical_sample(
+        self,
+        t_vals: torch.Tensor,
+        weights: torch.Tensor,
+        N_samples: int
+    ) -> torch.Tensor:
         """Hierarchical sampling based on coarse weights"""
         device = t_vals.device
         N_rays = t_vals.shape[0]
@@ -220,10 +232,12 @@ class VolumetricRenderer:
         
         return t_vals_fine
     
-    def _volume_render(self,
-                      density: torch.Tensor,
-                      color: torch.Tensor,
-                      t_vals: torch.Tensor) -> Tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
+    def _volume_render(
+        self,
+        density: torch.Tensor,
+        color: torch.Tensor,
+        t_vals: torch.Tensor
+    ) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
         """Perform volume rendering"""
         # Compute deltas
         deltas = t_vals[:, 1:] - t_vals[:, :-1]
@@ -234,8 +248,7 @@ class VolumetricRenderer:
         
         # Compute transmittance
         transmittance = torch.cumprod(
-            torch.cat([torch.ones_like(alpha[:, :1]), 1.0 - alpha[:, :-1] + 1e-10], dim=-1),
-            dim=-1
+            torch.cat([torch.ones_like(alpha[:, :1]), 1.0 - alpha[:, :-1] + 1e-10], dim=-1), dim=-1
         )[:, :-1]
         
         # Compute weights
@@ -254,11 +267,13 @@ class VolumetricRenderer:
         
         return rgb, weights, depth
     
-    def render_image(self,
-                    model,
-                    camera_info,
-                    chunk_size: int = 1024,
-                    appearance_id: Optional[int] = None) -> Dict[str, np.ndarray]:
+    def render_image(
+        self,
+        model,
+        camera_info,
+        chunk_size: int = 1024,
+        appearance_id: Optional[int] = None
+    ) -> dict[str, np.ndarray]:
         """
         Render a full image
         
@@ -281,8 +296,8 @@ class VolumetricRenderer:
         
         # Appearance IDs
         if appearance_id is not None:
-            appearance_ids = torch.full((ray_origins.shape[0],), appearance_id, 
-                                      dtype=torch.long, device=device)
+            appearance_ids = torch.full(
+            )
         else:
             appearance_ids = None
         
@@ -311,28 +326,29 @@ class VolumetricRenderer:
         depth = torch.cat(depth_chunks, dim=0).reshape(H, W).numpy()
         
         return {
-            'rgb': rgb,
-            'depth': depth
+            'rgb': rgb, 'depth': depth
         }
     
-    def _generate_camera_rays(self, camera_info, device: torch.device) -> Tuple[torch.Tensor, torch.Tensor]:
+    def _generate_camera_rays(
+        self,
+        camera_info,
+        device: torch.device
+    ) -> tuple[torch.Tensor, torch.Tensor]:
         """Generate rays for a camera"""
         H, W = camera_info.height, camera_info.width
         
         # Pixel coordinates
         i, j = torch.meshgrid(
-            torch.arange(W, device=device),
-            torch.arange(H, device=device),
-            indexing='xy'
+            torch.arange(W, device=device), torch.arange(H, device=device), indexing='xy'
         )
         
         # Camera coordinates
         intrinsics = torch.from_numpy(camera_info.intrinsics).to(device)
         dirs = torch.stack([
-            (i - intrinsics[0, 2]) / intrinsics[0, 0],
-            -(j - intrinsics[1, 2]) / intrinsics[1, 1],
-            -torch.ones_like(i)
-        ], dim=-1).float()
+            (
+                i - intrinsics[0,
+                2]
+	)        ], dim=-1).float()
         
         # Transform to world coordinates
         transform_matrix = torch.from_numpy(camera_info.transform_matrix).to(device)
@@ -354,10 +370,13 @@ class BatchRenderer:
         """
         self.base_renderer = base_renderer
     
-    def render_rays_batch(self,
-                         model,
-                         ray_batch: Dict[str, torch.Tensor],
-                         chunk_size: int = 1024) -> Dict[str, torch.Tensor]:
+    def render_rays_batch(
+        self,
+        model,
+        ray_batch: dict[str,
+        torch.Tensor],
+        chunk_size: int = 1024
+    ) -> dict[str, torch.Tensor]:
         """
         Render a batch of rays efficiently
         
@@ -401,11 +420,13 @@ class BatchRenderer:
         
         return outputs
     
-    def render_multiple_views(self,
-                             model,
-                             camera_list: List,
-                             chunk_size: int = 1024,
-                             appearance_ids: Optional[List[int]] = None) -> List[Dict[str, np.ndarray]]:
+    def render_multiple_views(
+        self,
+        model,
+        camera_list: List,
+        chunk_size: int = 1024,
+        appearance_ids: Optional[list[int]] = None
+    ) -> list[dict[str, np.ndarray]]:
         """
         Render multiple camera views
         
@@ -435,10 +456,7 @@ class BatchRenderer:
 class InteractiveRenderer:
     """Interactive renderer with caching for real-time visualization"""
     
-    def __init__(self,
-                 model,
-                 base_renderer: VolumetricRenderer,
-                 cache_size: int = 100):
+    def __init__(self, model, base_renderer: VolumetricRenderer, cache_size: int = 100):
         """
         Initialize interactive renderer
         
@@ -453,10 +471,12 @@ class InteractiveRenderer:
         self.render_cache = {}
         self.cache_order = []
     
-    def render_view(self,
-                   camera_info,
-                   use_cache: bool = True,
-                   appearance_id: Optional[int] = None) -> Dict[str, np.ndarray]:
+    def render_view(
+        self,
+        camera_info,
+        use_cache: bool = True,
+        appearance_id: Optional[int] = None
+    ) -> dict[str, np.ndarray]:
         """
         Render a view with caching
         
@@ -494,12 +514,12 @@ class InteractiveRenderer:
         
         # Simple hash of camera parameters
         key_data = f"{pos[0]:.2f}_{pos[1]:.2f}_{pos[2]:.2f}_"
-        key_data += f"{rot[0,0]:.3f}_{rot[0,1]:.3f}_{rot[0,2]:.3f}_"
+        key_data += f"{rot[0, 0]:.3f}_{rot[0, 1]:.3f}_{rot[0, 2]:.3f}_"
         key_data += f"{appearance_id if appearance_id is not None else 0}"
         
         return key_data
     
-    def _update_cache(self, key: str, result: Dict[str, np.ndarray]):
+    def _update_cache(self, key: str, result: dict[str, np.ndarray]):
         """Update render cache"""
         # Remove oldest entry if cache is full
         if len(self.render_cache) >= self.cache_size:
@@ -515,10 +535,16 @@ class InteractiveRenderer:
         self.render_cache.clear()
         self.cache_order.clear()
     
-    def get_cache_stats(self) -> Dict[str, Any]:
+    
+    
+    def get_cache_hit_rate(self) -> float:
+        """Get cache hit rate"""
+        return self.cache_hits / (self.cache_hits + self.cache_misses)
+    
+    def get_cache_stats(self) -> dict[str, Any]:
         """Get cache statistics"""
         return {
             'cache_size': len(self.render_cache),
-            'max_cache_size': self.cache_size,
-            'cache_keys': list(self.render_cache.keys())
-        } 
+            'cache_hits': self.cache_hits,
+            'cache_misses': self.cache_misses
+        }

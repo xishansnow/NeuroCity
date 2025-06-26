@@ -48,12 +48,9 @@ class MockVisibilityNetwork(torch.nn.Module):
     def __init__(self, config):
         super().__init__()
         self.network = torch.nn.Sequential(
-            torch.nn.Linear(6, 128),  # position + direction
-            torch.nn.ReLU(),
-            torch.nn.Linear(128, 128),
-            torch.nn.ReLU(),
-            torch.nn.Linear(128, 1),
-            torch.nn.Sigmoid()
+            torch.nn.Linear(6, 128), # position + direction
+            torch.nn.ReLU(
+            )
         )
     
     def forward(self, positions: torch.Tensor, directions: torch.Tensor) -> torch.Tensor:
@@ -85,20 +82,16 @@ class MockBlockManager:
             for y in y_coords:
                 if block_id < self.config.max_blocks:
                     block_bounds = (
-                        x, y, z_min,
-                        x + block_size, y + block_size, z_max
+                        x, y, z_min, x + block_size, y + block_size, z_max
                     )
                     self.blocks[block_id] = {
-                        'bounds': block_bounds,
-                        'center': torch.tensor([
-                            x + block_size/2,
-                            y + block_size/2,
-                            (z_min + z_max)/2
+                        'bounds': block_bounds, 'center': torch.tensor([
+                            x + block_size/2, y + block_size/2, (z_min + z_max)/2
                         ])
                     }
                     block_id += 1
     
-    def get_relevant_blocks(self, position: torch.Tensor) -> List[int]:
+    def get_relevant_blocks(self, position: torch.Tensor) -> list[int]:
         """获取与位置相关的块"""
         relevant_blocks = []
         for block_id, block_info in self.blocks.items():
@@ -133,13 +126,9 @@ class MockBlockNeRF(torch.nn.Module):
         self.block_networks = torch.nn.ModuleDict()
         for block_id in self.block_manager.blocks.keys():
             network = torch.nn.Sequential(
-                torch.nn.Linear(63, config.hidden_dim),  # 位置编码后
-                torch.nn.ReLU(),
-                torch.nn.Linear(config.hidden_dim, config.hidden_dim),
-                torch.nn.ReLU(),
-                torch.nn.Linear(config.hidden_dim, config.hidden_dim),
-                torch.nn.ReLU(),
-                torch.nn.Linear(config.hidden_dim, 4)  # density + color
+                torch.nn.Linear(63, config.hidden_dim), # 位置编码后
+                torch.nn.ReLU(
+                )
             )
             self.block_networks[str(block_id)] = network
         
@@ -155,7 +144,11 @@ class MockBlockNeRF(torch.nn.Module):
                 encoded.append(fn(2.**i * x))
         return torch.cat(encoded, dim=-1)
     
-    def forward(self, positions: torch.Tensor, directions: Optional[torch.Tensor] = None) -> Dict[str, torch.Tensor]:
+    def forward(
+        self,
+        positions: torch.Tensor,
+        directions: Optional[torch.Tensor] = None,
+    )
         """前向传播"""
         batch_size = positions.shape[0]
         
@@ -209,13 +202,13 @@ class MockBlockNeRF(torch.nn.Module):
             colors.append(final_color)
         
         return {
-            'density': torch.stack(densities),
-            'color': torch.stack(colors),
-            'num_blocks': len(self.block_manager.blocks)
+            'density': torch.stack(
+                densities,
+            )
         }
 
 
-def create_urban_dataset(num_views: int = 100, scene_size: float = 80.0) -> Dict[str, torch.Tensor]:
+def create_urban_dataset(num_views: int = 100, scene_size: float = 80.0) -> dict[str, torch.Tensor]:
     """创建城市场景数据集"""
     print(f"📊 创建城市场景数据集: {num_views}个视角, 场景大小{scene_size}x{scene_size}")
     
@@ -230,9 +223,7 @@ def create_urban_dataset(num_views: int = 100, scene_size: float = 80.0) -> Dict
         radius = 30.0 + 20.0 * np.random.random()  # 变化的距离
         
         cam_pos = torch.tensor([
-            radius * np.cos(angle),
-            radius * np.sin(angle),
-            height
+            radius * np.cos(angle), radius * np.sin(angle), height
         ])
         
         # 朝向场景中心的方向
@@ -251,9 +242,7 @@ def create_urban_dataset(num_views: int = 100, scene_size: float = 80.0) -> Dict
             distance_factor = torch.norm(cam_pos) / 50.0
             height_factor = cam_pos[2] / 20.0
             color = torch.sigmoid(torch.tensor([
-                distance_factor + ray_dir[0],
-                height_factor + ray_dir[1],
-                0.5 + ray_dir[2]
+                distance_factor + ray_dir[0], height_factor + ray_dir[1], 0.5 + ray_dir[2]
             ]))
             
             ray_origins.append(cam_pos)
@@ -261,15 +250,18 @@ def create_urban_dataset(num_views: int = 100, scene_size: float = 80.0) -> Dict
             colors.append(color)
     
     return {
-        'ray_origins': torch.stack(ray_origins),
-        'ray_directions': torch.stack(ray_directions),
-        'colors': torch.stack(colors)
+        'ray_origins': torch.stack(
+            ray_origins,
+        )
     }
 
 
-def train_block_nerf(model: MockBlockNeRF,
-                    dataset: Dict[str, torch.Tensor],
-                    num_epochs: int = 200) -> List[Dict]:
+def train_block_nerf(
+    model: MockBlockNeRF,
+    dataset: dict[str,
+    torch.Tensor],
+    num_epochs: int = 200,
+)
     """训练Block NeRF模型"""
     print(f"🚀 开始训练Block NeRF模型")
     print(f"📈 训练数据: {len(dataset['ray_origins'])} 条光线")
@@ -315,10 +307,8 @@ def train_block_nerf(model: MockBlockNeRF,
                 psnr = -10 * np.log10(mse) if mse > 0 else float('inf')
                 
                 training_history.append({
-                    'epoch': epoch,
-                    'loss': color_loss.item(),
-                    'psnr': psnr,
-                    'num_blocks': outputs['num_blocks']
+                    'epoch': epoch, 'loss': color_loss.item(
+                    )
                 })
                 
                 print(f"Epoch {epoch:3d}: Loss={color_loss.item():.6f}, PSNR={psnr:.2f}dB, "
@@ -351,7 +341,7 @@ def demonstrate_block_nerf():
     # 3. 创建模型
     model = MockBlockNeRF(config)
     total_params = sum(p.numel() for p in model.parameters())
-    print(f"🧠 模型参数数量: {total_params:,}")
+    print(f"🧠 模型参数数量: {total_params:, }")
     print(f"🏗️  实际创建块数: {len(model.block_manager.blocks)}")
     
     # 4. 训练模型
@@ -367,9 +357,9 @@ def demonstrate_block_nerf():
         print(f"   - 最终PSNR: {final_metrics['psnr']:.2f} dB")
         print(f"   - 使用块数: {final_metrics['num_blocks']}")
     
-    print(f"   - 总参数量: {total_params:,}")
+    print(f"   - 总参数量: {total_params:, }")
     print(f"   - 模型大小: {total_params * 4 / 1024 / 1024:.2f} MB")
-    print(f"   - 平均每块参数: {total_params // len(model.block_manager.blocks):,}")
+    print(f"   - 平均每块参数: {total_params // len(model.block_manager.blocks):, }")
     
     print("\n🎉 Block NeRF演示完成!")
     print("\n📋 Block NeRF特点:")

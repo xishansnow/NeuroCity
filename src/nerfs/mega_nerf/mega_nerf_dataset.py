@@ -12,7 +12,7 @@ import cv2
 import json
 import os
 from pathlib import Path
-from typing import Dict, List, Optional, Tuple, Union, Any
+from typing import Dict, List, Optional, Tuple, Any, Union 
 import logging
 from dataclasses import dataclass
 import pickle
@@ -40,11 +40,11 @@ class CameraInfo:
         """Get camera rotation matrix"""
         return self.transform_matrix[:3, :3]
     
-    def get_focal_length(self) -> Tuple[float, float]:
+    def get_focal_length(self) -> tuple[float, float]:
         """Get focal lengths (fx, fy)"""
         return self.intrinsics[0, 0], self.intrinsics[1, 1]
     
-    def get_principal_point(self) -> Tuple[float, float]:
+    def get_principal_point(self) -> tuple[float, float]:
         """Get principal point (cx, cy)"""
         return self.intrinsics[0, 2], self.intrinsics[1, 2]
 
@@ -52,11 +52,13 @@ class CameraInfo:
 class CameraDataset:
     """Dataset for managing camera information and images"""
     
-    def __init__(self, 
-                 data_root: str,
-                 split: str = 'train',
-                 image_scale: float = 1.0,
-                 load_images: bool = True):
+    def __init__(
+        self,
+        data_root: str,
+        split: str = 'train',
+        image_scale: float = 1.0,
+        load_images: bool = True,
+    ):
         """
         Initialize camera dataset
         
@@ -81,7 +83,7 @@ class CameraDataset:
         
         logger.info(f"Loaded {len(self.cameras)} cameras for {split} split")
     
-    def _load_cameras(self) -> List[CameraInfo]:
+    def _load_cameras(self) -> list[CameraInfo]:
         """Load camera information from various formats"""
         # Try different data formats
         if (self.data_root / 'transforms.json').exists():
@@ -94,7 +96,7 @@ class CameraDataset:
             # Create synthetic data for demo
             return self._create_synthetic_cameras()
     
-    def _load_nerf_format(self) -> List[CameraInfo]:
+    def _load_nerf_format(self) -> list[CameraInfo]:
         """Load NeRF-style transforms.json format"""
         transforms_file = self.data_root / 'transforms.json'
         
@@ -117,9 +119,7 @@ class CameraDataset:
         cy = transforms.get('cy', transforms.get('h', 600) / 2)
         
         intrinsics = np.array([
-            [fx, 0, cx],
-            [0, fy, cy],
-            [0, 0, 1]
+            [fx, 0, cx], [0, fy, cy], [0, 0, 1]
         ])
         
         # Scale intrinsics
@@ -155,17 +155,14 @@ class CameraDataset:
             camera = CameraInfo(
                 transform_matrix=transform_matrix,
                 intrinsics=intrinsics,
-                image_path=str(image_path),
-                image_id=i,
-                width=width,
-                height=height
+                image_path=str(image_path)
             )
             
             cameras.append(camera)
         
         return cameras
     
-    def _load_colmap_format(self) -> List[CameraInfo]:
+    def _load_colmap_format(self) -> list[CameraInfo]:
         """Load COLMAP format data"""
         try:
             from .utils.colmap_utils import read_cameras_binary, read_images_binary
@@ -209,9 +206,7 @@ class CameraDataset:
                 continue
             
             intrinsics = np.array([
-                [fx, 0, cx],
-                [0, fy, cy],
-                [0, 0, 1]
+                [fx, 0, cx], [0, fy, cy], [0, 0, 1]
             ]) * self.image_scale
             
             # Build transform matrix (COLMAP to NeRF convention)
@@ -239,17 +234,14 @@ class CameraDataset:
             camera = CameraInfo(
                 transform_matrix=transform_matrix,
                 intrinsics=intrinsics,
-                image_path=str(image_path),
-                image_id=img_id,
-                width=width,
-                height=height
+                image_path=str(image_path)
             )
             
             cameras.append(camera)
         
         return cameras
     
-    def _load_llff_format(self) -> List[CameraInfo]:
+    def _load_llff_format(self) -> list[CameraInfo]:
         """Load LLFF format data"""
         poses_bounds = np.load(self.data_root / 'poses_bounds.npy')
         
@@ -271,9 +263,7 @@ class CameraDataset:
             
             # Build intrinsics
             intrinsics = np.array([
-                [focal, 0, W/2],
-                [0, focal, H/2],
-                [0, 0, 1]
+                [focal, 0, W/2], [0, focal, H/2], [0, 0, 1]
             ])
             
             # Build transform matrix
@@ -283,17 +273,14 @@ class CameraDataset:
             camera = CameraInfo(
                 transform_matrix=transform_matrix,
                 intrinsics=intrinsics,
-                image_path=str(image_file),
-                image_id=i,
-                width=W,
-                height=H
+                image_path=str(image_file)
             )
             
             cameras.append(camera)
         
         return cameras
     
-    def _create_synthetic_cameras(self) -> List[CameraInfo]:
+    def _create_synthetic_cameras(self) -> list[CameraInfo]:
         """Create synthetic camera data for demo purposes"""
         cameras = []
         
@@ -307,9 +294,7 @@ class CameraDataset:
             
             # Camera position
             pos = np.array([
-                radius * np.cos(angle),
-                radius * np.sin(angle),
-                height
+                radius * np.cos(angle), radius * np.sin(angle), height
             ])
             
             # Look at center
@@ -334,18 +319,13 @@ class CameraDataset:
             focal = 800 * self.image_scale
             width, height = int(800 * self.image_scale), int(600 * self.image_scale)
             intrinsics = np.array([
-                [focal, 0, width/2],
-                [0, focal, height/2],
-                [0, 0, 1]
+                [focal, 0, width/2], [0, focal, height/2], [0, 0, 1]
             ])
             
             camera = CameraInfo(
                 transform_matrix=transform_matrix,
                 intrinsics=intrinsics,
-                image_path=f"synthetic_image_{i:03d}.jpg",
-                image_id=i,
-                width=width,
-                height=height
+                image_path=f"synthetic_image_{i:03d}"
             )
             
             cameras.append(camera)
@@ -353,7 +333,7 @@ class CameraDataset:
         logger.info(f"Created {len(cameras)} synthetic cameras")
         return cameras
     
-    def _load_images(self):
+    def _load_images(self) -> None:
         """Load image data"""
         for camera in self.cameras:
             if Path(camera.image_path).exists():
@@ -362,8 +342,7 @@ class CameraDataset:
                 
                 # Scale image
                 if self.image_scale != 1.0:
-                    image = cv2.resize(image, (camera.width, camera.height), 
-                                     interpolation=cv2.INTER_AREA)
+                    image = cv2.resize(image, None, fx=self.image_scale, fy=self.image_scale)
                 
                 image = image.astype(np.float32) / 255.0
                 self.images[camera.image_id] = image
@@ -379,7 +358,7 @@ class CameraDataset:
             positions.append(camera.get_position())
         return np.array(positions)
     
-    def get_scene_bounds(self) -> Tuple[np.ndarray, np.ndarray]:
+    def get_scene_bounds(self) -> tuple[np.ndarray, np.ndarray]:
         """Estimate scene bounds from camera positions"""
         positions = self.get_camera_positions()
         
@@ -405,14 +384,16 @@ class CameraDataset:
 class MegaNeRFDataset(Dataset):
     """Dataset for Mega-NeRF training with spatial partitioning"""
     
-    def __init__(self,
-                 data_root: str,
-                 partitioner,
-                 split: str = 'train',
-                 ray_batch_size: int = 1024,
-                 image_scale: float = 1.0,
-                 use_cache: bool = True,
-                 cache_dir: Optional[str] = None):
+    def __init__(
+        self,
+        data_root: str,
+        partitioner,
+        split: str = 'train',
+        ray_batch_size: int = 1024,
+        image_scale: float = 1.0,
+        use_cache: bool = True,
+        cache_dir: Optional[str] = None,
+    ):
         """
         Initialize Mega-NeRF dataset
         
@@ -439,10 +420,7 @@ class MegaNeRFDataset(Dataset):
         
         # Load camera dataset
         self.camera_dataset = CameraDataset(
-            data_root=data_root,
-            split=split,
-            image_scale=image_scale,
-            load_images=True
+            data_root=data_root, split=split, image_scale=image_scale, load_images=True
         )
         
         # Create data partitions
@@ -455,7 +433,7 @@ class MegaNeRFDataset(Dataset):
         
         logger.info(f"Created {len(self.data_partitions)} data partitions")
     
-    def _create_data_partitions(self) -> List[Dict[str, Any]]:
+    def _create_data_partitions(self) -> list[dict[str, Any]]:
         """Create data partitions based on spatial partitioner"""
         # Get camera positions
         camera_positions = self.camera_dataset.get_camera_positions()
@@ -474,16 +452,14 @@ class MegaNeRFDataset(Dataset):
             partition_data = {
                 'partition_idx': partition_idx,
                 'cameras': partition_cameras,
-                'camera_indices': np.where(mask)[0].tolist(),
-                'bounds': self.partitioner.get_partition_bounds(partition_idx),
-                'centroid': self.partitioner.partitions[partition_idx]['centroid']
+                'camera_indices': np.where(mask)
             }
             
             partitions.append(partition_data)
         
         return partitions
     
-    def _precompute_rays(self):
+    def _precompute_rays(self) -> None:
         """Precompute rays for all partitions"""
         for partition_idx, partition in enumerate(self.data_partitions):
             cache_file = self.cache_dir / f'{self.split}_partition_{partition_idx}_rays.h5'
@@ -492,10 +468,7 @@ class MegaNeRFDataset(Dataset):
                 logger.info(f"Loading cached rays for partition {partition_idx}")
                 with h5py.File(cache_file, 'r') as f:
                     self.rays_cache[partition_idx] = {
-                        'ray_origins': f['ray_origins'][:],
-                        'ray_directions': f['ray_directions'][:],
-                        'colors': f['colors'][:],
-                        'camera_ids': f['camera_ids'][:]
+                        'ray_origins': f['ray_origins'][:], 'ray_directions': f['ray_directions'][:], 'colors': f['colors'][:], 'camera_ids': f['camera_ids'][:]
                     }
             else:
                 logger.info(f"Precomputing rays for partition {partition_idx}")
@@ -510,7 +483,7 @@ class MegaNeRFDataset(Dataset):
                 
                 self.rays_cache[partition_idx] = rays_data
     
-    def _compute_partition_rays(self, partition: Dict[str, Any]) -> Dict[str, np.ndarray]:
+    def _compute_partition_rays(self, partition: dict[str, Any]) -> dict[str, np.ndarray]:
         """Compute rays for a specific partition"""
         all_ray_origins = []
         all_ray_directions = []
@@ -537,13 +510,10 @@ class MegaNeRFDataset(Dataset):
             all_camera_ids.append(camera_ids)
         
         return {
-            'ray_origins': np.concatenate(all_ray_origins, axis=0),
-            'ray_directions': np.concatenate(all_ray_directions, axis=0),
-            'colors': np.concatenate(all_colors, axis=0),
-            'camera_ids': np.concatenate(all_camera_ids, axis=0)
+            'ray_origins': np.concatenate(all_ray_origins, axis=0)
         }
     
-    def _generate_camera_rays(self, camera: CameraInfo) -> Tuple[np.ndarray, np.ndarray]:
+    def _generate_camera_rays(self, camera: CameraInfo) -> tuple[np.ndarray, np.ndarray]:
         """Generate rays for a camera"""
         H, W = camera.height, camera.width
         
@@ -551,11 +521,7 @@ class MegaNeRFDataset(Dataset):
         i, j = np.meshgrid(np.arange(W), np.arange(H), indexing='xy')
         
         # Camera coordinates
-        dirs = np.stack([
-            (i - camera.intrinsics[0, 2]) / camera.intrinsics[0, 0],
-            -(j - camera.intrinsics[1, 2]) / camera.intrinsics[1, 1],
-            -np.ones_like(i)
-        ], axis=-1).astype(np.float32)
+        dirs = np.stack([(i - camera.intrinsics[0, 2], j - camera.intrinsics[1, 2])], axis=-1).astype(np.float32)
         
         # Transform to world coordinates
         ray_directions = np.sum(dirs[..., None, :] * camera.transform_matrix[:3, :3], axis=-1)
@@ -567,7 +533,7 @@ class MegaNeRFDataset(Dataset):
         
         return ray_origins, ray_directions
     
-    def get_partition_data(self, partition_idx: int) -> Dict[str, Any]:
+    def get_partition_data(self, partition_idx: int) -> dict[str, Any]:
         """Get data for a specific partition"""
         if partition_idx >= len(self.data_partitions):
             raise ValueError(f"Partition {partition_idx} out of range")
@@ -576,8 +542,7 @@ class MegaNeRFDataset(Dataset):
         rays_data = self.rays_cache.get(partition_idx, {})
         
         return {
-            'partition': partition,
-            'rays': rays_data
+            'partition': partition, 'rays': rays_data
         }
     
     def __len__(self) -> int:
@@ -585,7 +550,7 @@ class MegaNeRFDataset(Dataset):
         total_rays = sum(len(rays_data.get('colors', [])) for rays_data in self.rays_cache.values())
         return max(1, total_rays // self.ray_batch_size)
     
-    def __getitem__(self, idx: int) -> Dict[str, torch.Tensor]:
+    def __getitem__(self, idx: int) -> dict[str, torch.Tensor]:
         """Get a batch of rays"""
         # Cycle through partitions
         partition_idx = idx % len(self.data_partitions)
@@ -594,11 +559,7 @@ class MegaNeRFDataset(Dataset):
         if not rays_data:
             # Return empty batch
             return {
-                'ray_origins': torch.zeros(0, 3),
-                'ray_directions': torch.zeros(0, 3),
-                'colors': torch.zeros(0, 3),
-                'camera_ids': torch.zeros(0, dtype=torch.long),
-                'partition_idx': torch.tensor(partition_idx, dtype=torch.long)
+                'ray_origins': torch.zeros(0, 3)
             }
         
         # Sample rays from partition
@@ -610,21 +571,18 @@ class MegaNeRFDataset(Dataset):
         ray_indices = np.random.choice(num_rays, min(self.ray_batch_size, num_rays), replace=False)
         
         batch = {
-            'ray_origins': torch.from_numpy(rays_data['ray_origins'][ray_indices]).float(),
-            'ray_directions': torch.from_numpy(rays_data['ray_directions'][ray_indices]).float(),
-            'colors': torch.from_numpy(rays_data['colors'][ray_indices]).float(),
-            'camera_ids': torch.from_numpy(rays_data['camera_ids'][ray_indices]).long(),
-            'partition_idx': torch.tensor(partition_idx, dtype=torch.long)
+            'ray_origins': torch.from_numpy(rays_data['ray_origins'][ray_indices])
         }
         
         return batch
     
-    def create_dataloader(self, batch_size: int = 1, shuffle: bool = True, num_workers: int = 4) -> DataLoader:
+    def create_dataloader(
+        self,
+        batch_size: int = 1,
+        shuffle: bool = True,
+        num_workers: int = 4,
+    ) -> DataLoader:
         """Create a DataLoader for this dataset"""
         return DataLoader(
-            self,
-            batch_size=batch_size,
-            shuffle=shuffle,
-            num_workers=num_workers,
-            pin_memory=True
+            self, batch_size=batch_size, shuffle=shuffle, num_workers=num_workers, pin_memory=True
         ) 

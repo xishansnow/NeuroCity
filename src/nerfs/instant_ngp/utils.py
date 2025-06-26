@@ -19,9 +19,7 @@ def contract_to_unisphere(x: torch.Tensor) -> torch.Tensor:
     mag = torch.norm(x, dim=-1, keepdim=True)
     mask = mag > 1
     x_contracted = torch.where(
-        mask,
-        (2 - 1/mag) * (x / mag),
-        x
+        mask, (2 - 1/mag) * (x / mag), x
     )
     return x_contracted
 
@@ -31,9 +29,7 @@ def uncontract_from_unisphere(x: torch.Tensor) -> torch.Tensor:
     mag = torch.norm(x, dim=-1, keepdim=True)
     mask = mag > 1
     x_uncontracted = torch.where(
-        mask,
-        x / (2 - mag),
-        x
+        mask, x / (2 - mag), x
     )
     return x_uncontracted
 
@@ -82,17 +78,25 @@ def compute_tv_loss(hash_grids: list, grid_coords: torch.Tensor) -> torch.Tensor
     return tv_loss
 
 
-def adaptive_sampling(density: torch.Tensor, z_vals: torch.Tensor, 
-                     rays_d: torch.Tensor, num_importance_samples: int = 64) -> torch.Tensor:
+def adaptive_sampling(
+    density: torch.Tensor,
+    z_vals: torch.Tensor,
+    rays_d: torch.Tensor,
+    num_importance_samples: int = 64,
+)
     """Adaptive sampling based on density."""
     # Compute weights
     dists = z_vals[..., 1:] - z_vals[..., :-1]
-    dists = torch.cat([dists, torch.tensor([1e10], device=dists.device).expand(dists[..., :1].shape)], -1)
+    dists = torch.cat(
+        [dists,
+        torch.tensor,
+    )
     dists = dists * torch.norm(rays_d[..., None, :], dim=-1)
     
     alpha = 1. - torch.exp(-density.squeeze(-1) * dists)
-    weights = alpha * torch.cumprod(torch.cat([torch.ones((alpha.shape[0], 1), device=alpha.device), 
-                                              1. - alpha + 1e-10], -1), -1)[:, :-1]
+    weights = alpha * torch.cumprod(
+        torch.cat,
+    )
     
     # Sample based on weights
     weights = weights + 1e-5  # Prevent nans
@@ -131,12 +135,7 @@ def estimate_normals(model, positions: torch.Tensor, epsilon: float = 1e-3) -> t
     # Compute gradients
     grad_outputs = torch.ones_like(density)
     gradients = torch.autograd.grad(
-        outputs=density,
-        inputs=positions,
-        grad_outputs=grad_outputs,
-        create_graph=True,
-        retain_graph=True,
-        only_inputs=True
+        outputs=density, inputs=positions, grad_outputs=grad_outputs, create_graph=True, retain_graph=True, only_inputs=True
     )[0]
     
     # Normalize to get normals
@@ -202,16 +201,12 @@ def compute_psnr(pred: torch.Tensor, target: torch.Tensor) -> float:
 def linear_to_srgb(linear: torch.Tensor) -> torch.Tensor:
     """Convert linear RGB to sRGB."""
     return torch.where(
-        linear <= 0.0031308,
-        12.92 * linear,
-        1.055 * torch.pow(linear, 1.0/2.4) - 0.055
+        linear <= 0.0031308, 12.92 * linear, 1.055 * torch.pow(linear, 1.0/2.4) - 0.055
     )
 
 
 def srgb_to_linear(srgb: torch.Tensor) -> torch.Tensor:
     """Convert sRGB to linear RGB."""
     return torch.where(
-        srgb <= 0.04045,
-        srgb / 12.92,
-        torch.pow((srgb + 0.055) / 1.055, 2.4)
+        srgb <= 0.04045, srgb / 12.92, torch.pow((srgb + 0.055) / 1.055, 2.4)
     )

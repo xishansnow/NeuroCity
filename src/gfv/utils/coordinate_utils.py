@@ -8,10 +8,10 @@ import math
 import numpy as np
 import mercantile
 import pyproj
-from typing import Tuple, List, Optional
+from typing import List, Optional, Tuple
 
 
-def lat_lon_to_mercator(lat: float, lon: float) -> Tuple[float, float]:
+def lat_lon_to_mercator(lat: float, lon: float) -> tuple[float, float]:
     """
     将经纬度转换为墨卡托投影坐标
     
@@ -29,7 +29,7 @@ def lat_lon_to_mercator(lat: float, lon: float) -> Tuple[float, float]:
     return x, y
 
 
-def mercator_to_lat_lon(x: float, y: float) -> Tuple[float, float]:
+def mercator_to_lat_lon(x: float, y: float) -> tuple[float, float]:
     """
     将墨卡托投影坐标转换为经纬度
     
@@ -46,7 +46,7 @@ def mercator_to_lat_lon(x: float, y: float) -> Tuple[float, float]:
     return lat, lon
 
 
-def lat_lon_to_tile(lat: float, lon: float, zoom: int) -> Tuple[int, int]:
+def lat_lon_to_tile(lat: float, lon: float, zoom: int) -> tuple[int, int]:
     """
     将经纬度转换为瓦片坐标
     
@@ -62,7 +62,7 @@ def lat_lon_to_tile(lat: float, lon: float, zoom: int) -> Tuple[int, int]:
     return tile.x, tile.y
 
 
-def tile_to_lat_lon(x: int, y: int, zoom: int) -> Tuple[float, float]:
+def tile_to_lat_lon(x: int, y: int, zoom: int) -> tuple[float, float]:
     """
     将瓦片坐标转换为经纬度（瓦片中心点）
     
@@ -80,7 +80,7 @@ def tile_to_lat_lon(x: int, y: int, zoom: int) -> Tuple[float, float]:
     return lat, lon
 
 
-def calculate_tile_bounds(x: int, y: int, zoom: int) -> Tuple[float, float, float, float]:
+def calculate_tile_bounds(x: int, y: int, zoom: int) -> tuple[float, float, float, float]:
     """
     计算瓦片的地理边界
     
@@ -136,8 +136,13 @@ def calculate_distance(lat1: float, lon1: float, lat2: float, lon2: float) -> fl
     return R * c
 
 
-def get_tiles_in_bbox(west: float, south: float, east: float, north: float, 
-                     zoom: int) -> List[Tuple[int, int]]:
+def get_tiles_in_bbox(
+    west: float,
+    south: float,
+    east: float,
+    north: float,
+    zoom: int,
+)
     """
     获取边界框内的所有瓦片
     
@@ -152,7 +157,13 @@ def get_tiles_in_bbox(west: float, south: float, east: float, north: float,
     return [(tile.x, tile.y) for tile in tiles]
 
 
-def normalize_coordinates(coords: np.ndarray, bounds: Tuple[float, float, float, float]) -> np.ndarray:
+def normalize_coordinates(
+    coords: np.ndarray,
+    bounds: tuple[float,
+    float,
+    float,
+    float],
+)
     """
     将坐标归一化到[0, 1]范围
     
@@ -173,8 +184,13 @@ def normalize_coordinates(coords: np.ndarray, bounds: Tuple[float, float, float,
     return normalized
 
 
-def denormalize_coordinates(normalized_coords: np.ndarray, 
-                          bounds: Tuple[float, float, float, float]) -> np.ndarray:
+def denormalize_coordinates(
+    normalized_coords: np.ndarray,
+    bounds: tuple[float,
+    float,
+    float,
+    float],
+)
     """
     将归一化坐标转换回地理坐标
     
@@ -194,33 +210,34 @@ def denormalize_coordinates(normalized_coords: np.ndarray,
     return coords
 
 
-def calculate_zoom_level(bbox: Tuple[float, float, float, float], 
-                        target_tiles: int = 100) -> int:
+def calculate_zoom_level(bbox: tuple[float, float, float, float], target_tiles: int = 100) -> int:
     """
     根据边界框和目标瓦片数计算合适的缩放级别
     
     Args:
         bbox: 边界框 (west, south, east, north)
-        target_tiles: 目标瓦片数量
+        target_tiles: 目标瓦片数
         
     Returns:
         zoom: 缩放级别
     """
     west, south, east, north = bbox
     
-    for zoom in range(1, 20):
+    for zoom in range(20, -1, -1):
         tiles = get_tiles_in_bbox(west, south, east, north, zoom)
-        if len(tiles) >= target_tiles:
-            return max(1, zoom - 1)
+        if len(tiles) <= target_tiles:
+            return zoom
     
-    return 18  # 最大缩放级别
+    return 0
 
 
-def project_coordinates(coords: np.ndarray, 
-                       src_crs: str = "EPSG:4326", 
-                       dst_crs: str = "EPSG:3857") -> np.ndarray:
+def project_coordinates(
+    coords: np.ndarray,
+    src_crs: str = "EPSG:4326",
+    dst_crs: str = "EPSG:3857",
+)
     """
-    坐标系投影转换
+    投影坐标转换
     
     Args:
         coords: 坐标数组 [N, 2]
@@ -233,8 +250,7 @@ def project_coordinates(coords: np.ndarray,
     transformer = pyproj.Transformer.from_crs(src_crs, dst_crs, always_xy=True)
     
     if coords.ndim == 1:
-        x, y = transformer.transform(coords[0], coords[1])
-        return np.array([x, y])
-    else:
-        x, y = transformer.transform(coords[:, 0], coords[:, 1])
-        return np.column_stack([x, y]) 
+        coords = coords.reshape(1, -1)
+    
+    x, y = transformer.transform(coords[:, 1], coords[:, 0])
+    return np.stack([y, x], axis=1) 

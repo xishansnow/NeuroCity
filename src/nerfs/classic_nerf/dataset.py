@@ -13,51 +13,51 @@ import imageio
 import numpy as np
 import torch
 from torch.utils.data import Dataset, DataLoader
-from typing import Dict, List, Optional, Tuple, Union
+from typing import Any
 import cv2
 
 
-def get_rays_np(H, W, K, c2w):
+def get_rays_np(H: int, W: int, K: np.ndarray, c2w: np.ndarray) -> tuple[np.ndarray, np.ndarray]:
     """Get ray origins and directions from camera parameters."""
-    i, j = np.meshgrid(np.arange(W, dtype=np.float32), np.arange(H, dtype=np.float32), indexing='xy')
+    i, j = np.meshgrid(
+        np.arange,
+    )
     dirs = np.stack([(i-K[0][2])/K[0][0], -(j-K[1][2])/K[1][1], -np.ones_like(i)], -1)
-    rays_d = np.sum(dirs[..., np.newaxis, :] * c2w[:3,:3], -1)
-    rays_o = np.broadcast_to(c2w[:3,-1], np.shape(rays_d))
+    rays_d = np.sum(dirs[..., np.newaxis, :] * c2w[:3, :3], -1)
+    rays_o = np.broadcast_to(c2w[:3, -1], np.shape(rays_d))
     return rays_o, rays_d
 
 
-def pose_spherical(theta, phi, radius):
+def pose_spherical(theta: float, phi: float, radius: float) -> np.ndarray:
     """Generate spherical pose."""
     trans_t = lambda t : np.array([
-        [1,0,0,0],
-        [0,1,0,0],
-        [0,0,1,t],
-        [0,0,0,1]], dtype=np.float32)
+        [1, 0, 0, 0], [0, 1, 0, 0], [0, 0, 1, t], [0, 0, 0, 1]], dtype=np.float32)
 
     rot_phi = lambda phi : np.array([
-        [1,0,0,0],
-        [0,np.cos(phi),-np.sin(phi),0],
-        [0,np.sin(phi), np.cos(phi),0],
-        [0,0,0,1]], dtype=np.float32)
+        [1, 0, 0, 0], [0, np.cos(phi), -np.sin(phi), 0], [0, np.sin(phi), np.cos(phi), 0], [0, 0, 0, 1]], dtype=np.float32)
 
     rot_theta = lambda th : np.array([
-        [np.cos(th),0,-np.sin(th),0],
-        [0,1,0,0],
-        [np.sin(th),0, np.cos(th),0],
-        [0,0,0,1]], dtype=np.float32)
+        [np.cos(th), 0, -np.sin(th), 0], [0, 1, 0, 0], [np.sin(th), 0, np.cos(th), 0], [0, 0, 0, 1]], dtype=np.float32)
 
     c2w = trans_t(radius)
     c2w = rot_phi(phi/180.*np.pi) @ c2w
     c2w = rot_theta(theta/180.*np.pi) @ c2w
-    c2w = np.array([[-1,0,0,0],[0,0,1,0],[0,1,0,0],[0,0,0,1]]) @ c2w
+    c2w = np.array([[-1, 0, 0, 0], [0, 0, 1, 0], [0, 1, 0, 0], [0, 0, 0, 1]]) @ c2w
     return c2w
 
 
 class BlenderDataset(Dataset):
     """Dataset for Blender synthetic scenes."""
     
-    def __init__(self, basedir: str, split: str = 'train', half_res: bool = False, 
-                 testskip: int = 1, white_bkgd: bool = True, factor: int = None):
+    def __init__(
+        self,
+        basedir: str,
+        split: str = 'train',
+        half_res: bool = False,
+        testskip: int = 1,
+        white_bkgd: bool = True,
+        factor: int | None = None
+    ):
         """
         Initialize Blender dataset.
         
@@ -77,7 +77,8 @@ class BlenderDataset(Dataset):
         self.factor = factor
         
         # Load dataset
-        self.images, self.poses, self.render_poses, self.hwf, self.i_split = self.load_blender_data()
+        self.images, self.poses, self.render_poses, self.hwf, self.i_split = self.load_blender_data(
+        )
         
         # Split data
         if split == 'train':
@@ -95,9 +96,7 @@ class BlenderDataset(Dataset):
         
         # Camera intrinsics
         self.K = np.array([
-            [self.focal, 0, 0.5*self.W],
-            [0, self.focal, 0.5*self.H],
-            [0, 0, 1]
+            [self.focal, 0, 0.5*self.W], [0, self.focal, 0.5*self.H], [0, 0, 1]
         ])
         
         # Generate rays for all images
@@ -129,11 +128,9 @@ class BlenderDataset(Dataset):
             if not os.path.exists(json_path):
                 # Create dummy data if file doesn't exist
                 metas[s] = {
-                    'camera_angle_x': 0.6911112070083618,
-                    'frames': [
+                    'camera_angle_x': 0.6911112070083618, 'frames': [
                         {
-                            'file_path': f'./train/r_{i:03d}',
-                            'transform_matrix': np.eye(4).tolist()
+                            'file_path': f'./train/r_{i:03d}'
                         } for i in range(10 if s == 'train' else 5)
                     ]
                 }
@@ -208,27 +205,31 @@ class BlenderDataset(Dataset):
             imgs = imgs_resized
         
         if self.white_bkgd:
-            imgs = imgs[...,:3]*imgs[...,-1:] + (1.-imgs[...,-1:])
+            imgs = imgs[..., :3]*imgs[..., -1:] + (1.-imgs[..., -1:])
         else:
-            imgs = imgs[...,:3]
+            imgs = imgs[..., :3]
         
         return imgs, poses, render_poses, [H, W, focal], i_split
     
-    def __len__(self):
+    def __len__(self) -> int:
         return len(self.rgbs)
     
-    def __getitem__(self, idx):
+    def __getitem__(self, idx: int) -> dict[str, torch.Tensor]:
         """Get a single ray."""
         return {
-            'rays_o': self.rays[idx, 0],
-            'rays_d': self.rays[idx, 1], 
-            'target': self.rgbs[idx]
+            'rays_o': self.rays[idx, 0], 'rays_d': self.rays[idx, 1], 'target': self.rgbs[idx]
         }
 
 
-def create_nerf_dataloader(dataset_type: str, basedir: str, split: str = 'train',
-                          batch_size: int = 1024, shuffle: bool = True,
-                          num_workers: int = 4, **kwargs) -> DataLoader:
+def create_nerf_dataloader(
+    dataset_type: str,
+    basedir: str,
+    split: str = 'train',
+    batch_size: int = 1024,
+    shuffle: bool = True,
+    num_workers: int = 4,
+    **kwargs
+):
     """Create NeRF dataloader."""
     
     if dataset_type.lower() == 'blender':
@@ -237,22 +238,15 @@ def create_nerf_dataloader(dataset_type: str, basedir: str, split: str = 'train'
         raise ValueError(f"Unknown dataset type: {dataset_type}")
     
     # Custom collate function for ray batching
-    def nerf_collate_fn(batch):
+    def nerf_collate_fn(batch: list[dict[str, torch.Tensor]]) -> dict[str, torch.Tensor]:
         batch_rays_o = torch.stack([item['rays_o'] for item in batch])
         batch_rays_d = torch.stack([item['rays_d'] for item in batch])
         batch_targets = torch.stack([item['target'] for item in batch])
         
         return {
-            'rays_o': batch_rays_o,
-            'rays_d': batch_rays_d,
-            'targets': batch_targets
+            'rays_o': batch_rays_o, 'rays_d': batch_rays_d, 'targets': batch_targets
         }
     
     return DataLoader(
-        dataset,
-        batch_size=batch_size,
-        shuffle=shuffle,
-        num_workers=num_workers,
-        collate_fn=nerf_collate_fn,
-        pin_memory=True
+        dataset, batch_size=batch_size, shuffle=shuffle, num_workers=num_workers, collate_fn=nerf_collate_fn, pin_memory=True
     ) 

@@ -15,11 +15,47 @@ import math
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-from typing import Dict, List, Optional, Tuple, Union, Any
+from typing import Dict, List, Optional, Tuple, Any, Union
 from dataclasses import dataclass, field
 from jaxtyping import Float, Int, Shaped
 from torch import Tensor
 import numpy as np
+
+
+class SHEncoding(nn.Module):
+    """Spherical harmonics encoding for directions."""
+    
+    def __init__(self, degree: int = 4):
+        super().__init__()
+        self.degree = degree
+        self.num_features = (degree + 1) ** 2
+        
+    def forward(self, directions: Float[Tensor, "*batch 3"]) -> Float[Tensor, "*batch features"]:
+        """Encode directions using spherical harmonics."""
+        x, y, z = directions.unbind(-1)
+        sh_bands = [
+            # L0
+            0.28209479177387814 * torch.ones_like(x),  # 1/sqrt(4*pi)
+            # L1
+            0.4886025119029199 * y,                    # sqrt(3/(4*pi)) * y
+            0.4886025119029199 * z,                    # sqrt(3/(4*pi)) * z
+            0.4886025119029199 * x,                    # sqrt(3/(4*pi)) * x
+            # L2
+            1.0925484305920792 * x * y,               # sqrt(15/(4*pi)) * xy
+            1.0925484305920792 * y * z,               # sqrt(15/(4*pi)) * yz
+            0.9461746957575601 * (2 * z * z - x * x - y * y), # sqrt(5/(16*pi)) * (3z^2 - 1)
+            1.0925484305920792 * z * x,               # sqrt(15/(4*pi)) * zx
+            0.5462742152960396 * (x * x - y * y),     # sqrt(15/(16*pi)) * (x^2 - y^2)
+            # L3
+            0.5900435899266435 * y * (3 * x * x - y * y),
+            2.890611442640554 * x * y * z,
+            0.4570457994644658 * y * (5 * z * z - 1),
+            0.3731763325901154 * z * (5 * z * z - 3),
+            0.4570457994644658 * x * (5 * z * z - 1),
+            1.445305721320277 * z * (x * x - y * y),
+            0.5900435899266435 * x * (x * x - 3 * y * y)
+        ]
+        return torch.stack(sh_bands[:self.num_features], dim=-1)
 
 
 @dataclass
@@ -41,7 +77,7 @@ class NerfactoConfig:
     features_per_level: int = 2
     
     # Proposal networks
-    num_proposal_samples_per_ray: Tuple[int, ...] = (256, 96)
+    num_proposal_samples_per_ray: tuple[int, ...] = (256, 96)
     num_nerf_samples_per_ray: int = 48
     proposal_update_every: int = 5
     proposal_warmup: int = 5000
@@ -68,29 +104,27 @@ class NerfactoConfig:
     
     # Training
     max_num_iterations: int = 30000
-    proposal_net_args_list: List[Dict] = field(default_factory=lambda: [
-        {"num_output_coords": 8, "num_levels": 5, "max_resolution": 128, "base_resolution": 16},
-        {"num_output_coords": 8, "num_levels": 5, "max_resolution": 256, "base_resolution": 16},
+    proposal_net_args_list: list[dict[str, Any]] = field(default_factory=lambda: [
+        {
+            "num_output_coords": 8,
+            "num_levels": 5,
+            "max_resolution": 128,
+            "base_resolution": 16,
+        }
     ])
-
 
 class HashEncoding(nn.Module):
     """Hash encoding for efficient scene representation."""
     
     def __init__(
-        self,
-        num_levels: int = 16,
-        min_res: int = 16,
-        max_res: int = 2048,
-        log2_hashmap_size: int = 19,
-        features_per_level: int = 2,
-    ):
+        self, num_levels: int = 16, min_res: int = 16, max_res: int = 2048, log2_hashmap_size: int = 19, features_per_level: int = 2, ):
         super().__init__()
         self.num_levels = num_levels
         self.min_res = min_res
         self.max_res = max_res
         self.log2_hashmap_size = log2_hashmap_size
         self.features_per_level = features_per_level
+        self.output_dim = num_levels * features_per_level
         
         # Calculate growth factor
         self.growth_factor = math.exp((math.log(max_res) - math.log(min_res)) / (num_levels - 1))
@@ -110,10 +144,10 @@ class HashEncoding(nn.Module):
             positions: 3D positions in [0, 1]^3
             
         Returns:
-            Hash encoded features
+            Hash encoded features [*batch, num_levels * features_per_level]
         """
         batch_shape = positions.shape[:-1]
-        positions = positions.view(-1, 3)
+        positions = positions.reshape(-1, 3)
         
         features = []
         for i, hash_table in enumerate(self.hash_tables):
@@ -136,8 +170,8 @@ class HashEncoding(nn.Module):
             feature = self._trilinear_interpolation(hash_table, hash_coords, weights, resolution)
             features.append(feature)
         
-        features = torch.cat(features, dim=-1)
-        return features.view(*batch_shape, -1)
+        features = torch.cat(features, dim=-1)  # [batch, num_levels * features_per_level]
+        return features.reshape(*batch_shape, -1)
     
     def _hash_coords(self, coords: Int[Tensor, "batch 3"], resolution: int) -> Int[Tensor, "batch"]:
         """Hash 3D coordinates to 1D indices."""
@@ -147,11 +181,7 @@ class HashEncoding(nn.Module):
         return hash_coords % len(self.hash_tables[0].weight)
     
     def _trilinear_interpolation(
-        self, 
-        hash_table: nn.Embedding, 
-        hash_coords: Int[Tensor, "batch"], 
-        weights: Float[Tensor, "batch 3"],
-        resolution: int
+        self, hash_table: nn.Embedding, hash_coords: Int[Tensor, "batch"], weights: Float[Tensor, "batch 3"], resolution: int
     ) -> Float[Tensor, "batch features"]:
         """Perform trilinear interpolation."""
         # For simplicity, use the hashed coordinates directly
@@ -173,94 +203,125 @@ class NerfactoFieldConfig:
 
 
 class NerfactoField(nn.Module):
-    """Neural radiance field for nerfacto."""
+    """Neural field for Nerfacto."""
     
     def __init__(self, config: NerfactoFieldConfig, aabb: Tensor):
         super().__init__()
         self.config = config
-        self.aabb = nn.Parameter(aabb, requires_grad=False)
+        self.aabb = aabb
         
-        # Hash encoding
-        self.position_encoding = HashEncoding()
+        # Position encoding
+        self.position_encoding = HashEncoding(
+            num_levels=16,
+            min_res=16,
+            max_res=2048,
+            log2_hashmap_size=19,
+            features_per_level=2
+        )
         
         # Direction encoding (spherical harmonics)
-        self.direction_encoding = nn.Sequential(
-            nn.Linear(3, 16),
-            nn.ReLU(),
-            nn.Linear(16, 16)
-        )
+        self.direction_encoding = SHEncoding(degree=4)  # 16 features
+        
+        # Calculate input dimensions
+        position_features = self.position_encoding.output_dim  # 32 = 16 * 2
         
         # Density network
-        self.density_net = nn.Sequential(
-            nn.Linear(self.position_encoding.num_levels * self.position_encoding.features_per_level, config.hidden_dim),
-            nn.ReLU(),
-            *[nn.Sequential(nn.Linear(config.hidden_dim, config.hidden_dim), nn.ReLU()) 
-              for _ in range(config.num_layers - 1)],
-            nn.Linear(config.hidden_dim, 1 + config.geo_feat_dim)
-        )
+        density_layers = []
+        for _ in range(config.num_layers - 1):
+            density_layers.extend([
+                nn.Linear(position_features if _ == 0 else config.hidden_dim, config.hidden_dim),
+                nn.ReLU()
+            ])
+        density_layers.append(nn.Linear(config.hidden_dim, 1 + config.geo_feat_dim))
+        self.density_net = nn.Sequential(*density_layers)
         
         # Color network
-        color_input_dim = config.geo_feat_dim + 16  # geo features + direction encoding
+        # Input: geometry features + encoded directions + (optional) appearance embedding
+        color_input_dim = config.geo_feat_dim + 16  # geo_features + encoded_directions
         if config.use_appearance_embedding:
             color_input_dim += config.appearance_embed_dim
             
+        # Build color network with proper dimensions
         self.color_net = nn.Sequential(
             nn.Linear(color_input_dim, config.hidden_dim_color),
             nn.ReLU(),
-            *[nn.Sequential(nn.Linear(config.hidden_dim_color, config.hidden_dim_color), nn.ReLU()) 
-              for _ in range(config.num_layers_color - 1)],
+            nn.Linear(config.hidden_dim_color, config.hidden_dim_color),
+            nn.ReLU(),
             nn.Linear(config.hidden_dim_color, 3)
         )
         
         # Appearance embedding
         if config.use_appearance_embedding:
-            self.appearance_embedding = nn.Embedding(1000, config.appearance_embed_dim)  # Max 1000 images
-    
-    def get_density(self, ray_samples: Float[Tensor, "*batch 3"]) -> Float[Tensor, "*batch 1"]:
-        """Get density at given positions."""
-        # Normalize positions to [0, 1]
-        positions = (ray_samples - self.aabb[0]) / (self.aabb[1] - self.aabb[0])
-        positions = positions.clamp(0, 1)
+            self.appearance_embedding = nn.Embedding(1000, config.appearance_embed_dim)
+            
+    def _check_shapes(self, **tensors: Dict[str, torch.Tensor]) -> None:
+        """Check if tensor shapes are compatible.
         
-        # Encode positions
-        encoded_positions = self.position_encoding(positions)
-        
-        # Get density and geometry features
-        density_features = self.density_net(encoded_positions)
-        density = density_features[..., 0:1]
-        
-        return F.relu(density)
+        Args:
+            **tensors: Dictionary of tensors to check
+            
+        Raises:
+            ValueError: If tensor shapes are incompatible
+        """
+        batch_shape = None
+        for name, tensor in tensors.items():
+            if tensor is None:
+                continue
+                
+            if batch_shape is None:
+                batch_shape = tensor.shape[:-1]
+            else:
+                current_shape = tensor.shape[:-1]
+                if current_shape != batch_shape:
+                    raise ValueError(
+                        f"Incompatible batch shapes: {name} has shape {tensor.shape}, "
+                        f"expected batch shape {batch_shape}"
+                    )
     
     def get_outputs(
-        self, 
-        ray_samples: Float[Tensor, "*batch 3"], 
-        directions: Float[Tensor, "*batch 3"],
-        camera_indices: Optional[Int[Tensor, "*batch 1"]] = None
-    ) -> Dict[str, Float[Tensor, "*batch channels"]]:
+        self, ray_samples: Float[Tensor, "*batch 3"], directions: Float[Tensor, "*batch 3"], camera_indices: Optional[Int[Tensor, "*batch 1"]] = None
+    ) -> dict[str, Float[Tensor, "*batch channels"]]:
         """Get color and density outputs."""
+        # Check input shapes
+        self._check_shapes(ray_samples=ray_samples, directions=directions)
+        
+        # Get original batch shape for reshaping later
+        batch_shape = ray_samples.shape[:-1]
+        
+        # Flatten batch dimensions for network processing
+        flat_samples = ray_samples.reshape(-1, 3)
+        flat_directions = directions.reshape(-1, 3)
+        
         # Normalize positions
-        positions = (ray_samples - self.aabb[0]) / (self.aabb[1] - self.aabb[0])
+        positions = (flat_samples - self.aabb[0]) / (self.aabb[1] - self.aabb[0])
         positions = positions.clamp(0, 1)
         
         # Encode positions and directions
-        encoded_positions = self.position_encoding(positions)
-        encoded_directions = self.direction_encoding(directions)
+        encoded_positions = self.position_encoding(positions)  # [flattened_batch, 32]
+        encoded_directions = self.direction_encoding(flat_directions)  # [flattened_batch, 16]
         
         # Get density and geometry features
         density_features = self.density_net(encoded_positions)
-        density = F.relu(density_features[..., 0:1])
-        geo_features = density_features[..., 1:]
+        density = F.relu(density_features[..., 0:1])  # [flattened_batch, 1]
+        geo_features = density_features[..., 1:self.config.geo_feat_dim+1]  # [flattened_batch, geo_feat_dim]
         
         # Prepare color network input
-        color_input = torch.cat([geo_features, encoded_directions], dim=-1)
+        color_input = torch.cat([geo_features, encoded_directions], dim=-1)  # [flattened_batch, geo_feat_dim + 16]
         
         # Add appearance embedding if used
         if self.config.use_appearance_embedding and camera_indices is not None:
-            appearance_embed = self.appearance_embedding(camera_indices.squeeze(-1))
+            # Expand camera indices to match number of samples
+            flat_camera_indices = camera_indices.reshape(-1, 1).expand(-1, ray_samples.shape[1]).reshape(-1)
+            appearance_embed = self.appearance_embedding(flat_camera_indices)
             color_input = torch.cat([color_input, appearance_embed], dim=-1)
         
         # Get colors
-        colors = torch.sigmoid(self.color_net(color_input))
+        colors = torch.sigmoid(self.color_net(color_input))  # [flattened_batch, 3]
+        
+        # Reshape outputs back to original batch shape
+        colors = colors.reshape(*batch_shape, 3)
+        density = density.reshape(*batch_shape, 1)
+        geo_features = geo_features.reshape(*batch_shape, -1)
         
         return {
             "rgb": colors,
@@ -273,41 +334,31 @@ class ProposalNetwork(nn.Module):
     """Proposal network for hierarchical sampling."""
     
     def __init__(
-        self,
-        num_output_coords: int = 8,
-        num_levels: int = 5,
-        max_resolution: int = 128,
-        base_resolution: int = 16,
-        log2_hashmap_size: int = 17,
-        features_per_level: int = 2,
-        num_layers: int = 2,
-        hidden_dim: int = 64,
-    ):
+        self, num_output_coords: int = 8, num_levels: int = 5, max_resolution: int = 128, base_resolution: int = 16, log2_hashmap_size: int = 17, features_per_level: int = 2, num_layers: int = 2, hidden_dim: int = 64, ):
         super().__init__()
         
         # Hash encoding
         self.position_encoding = HashEncoding(
-            num_levels=num_levels,
-            min_res=base_resolution,
-            max_res=max_resolution,
-            log2_hashmap_size=log2_hashmap_size,
-            features_per_level=features_per_level
+            num_levels=num_levels, min_res=base_resolution, max_res=max_resolution, log2_hashmap_size=log2_hashmap_size, features_per_level=features_per_level
         )
         
         # Density network
         input_dim = num_levels * features_per_level
-        self.density_net = nn.Sequential(
-            nn.Linear(input_dim, hidden_dim),
-            nn.ReLU(),
-            *[nn.Sequential(nn.Linear(hidden_dim, hidden_dim), nn.ReLU()) 
-              for _ in range(num_layers - 1)],
-            nn.Linear(hidden_dim, 1)
-        )
+        density_layers = []
+        for _ in range(num_layers - 1):
+            density_layers.extend([
+                nn.Linear(input_dim if _ == 0 else hidden_dim, hidden_dim),
+                nn.ReLU()
+            ])
+        density_layers.append(nn.Linear(hidden_dim, num_output_coords))
+        self.density_net = nn.Sequential(*density_layers)
     
     def get_density(self, positions: Float[Tensor, "*batch 3"]) -> Float[Tensor, "*batch 1"]:
         """Get density at given positions."""
         encoded_positions = self.position_encoding(positions)
         density = self.density_net(encoded_positions)
+        # Ensure output is [*batch, 1] by taking mean across output coordinates
+        density = density.mean(dim=-1, keepdim=True)
         return F.relu(density)
 
 
@@ -343,14 +394,42 @@ class NerfactoRenderer(nn.Module):
         else:
             self.background_color = None
     
+    def _check_shapes(self, **tensors: Dict[str, torch.Tensor]) -> None:
+        """Check if tensor shapes are compatible.
+        
+        Args:
+            **tensors: Dictionary of tensors to check
+            
+        Raises:
+            ValueError: If tensor shapes are incompatible
+        """
+        batch_shape = None
+        for name, tensor in tensors.items():
+            if tensor is None:
+                continue
+                
+            if batch_shape is None:
+                batch_shape = tensor.shape[:-2] if len(tensor.shape) > 2 else tensor.shape[:-1]
+            else:
+                current_shape = tensor.shape[:-2] if len(tensor.shape) > 2 else tensor.shape[:-1]
+                if current_shape != batch_shape:
+                    raise ValueError(
+                        f"Incompatible batch shapes: {name} has shape {tensor.shape}, "
+                        f"expected batch shape {batch_shape}"
+                    )
+    
     def render_weights(
-        self, 
-        ray_samples: Float[Tensor, "*batch num_samples 3"],
-        densities: Float[Tensor, "*batch num_samples 1"],
-        ray_indices: Optional[Int[Tensor, "*batch"]] = None,
-        num_rays: Optional[int] = None
-    ) -> Tuple[Float[Tensor, "*batch num_samples 1"], Float[Tensor, "*batch 1"]]:
+        self, ray_samples: Float[Tensor, "*batch num_samples 3"], densities: Float[Tensor, "*batch num_samples 1"], ray_indices: Optional[Int[Tensor, "*batch"]] = None, num_rays: Optional[int] = None
+    ) -> tuple[Float[Tensor, "*batch num_samples 1"], Float[Tensor, "*batch 1"]]:
         """Render weights from densities using volumetric rendering."""
+        # Check shapes
+        self._check_shapes(ray_samples=ray_samples, densities=densities)
+        if ray_samples.shape[-2] != densities.shape[-2]:
+            raise ValueError(
+                f"Number of samples mismatch: ray_samples has {ray_samples.shape[-2]} samples, "
+                f"but densities has {densities.shape[-2]} samples"
+            )
+        
         # Compute delta (distance between samples)
         delta = ray_samples[..., 1:, :] - ray_samples[..., :-1, :]
         delta = torch.norm(delta, dim=-1, keepdim=True)
@@ -360,8 +439,8 @@ class NerfactoRenderer(nn.Module):
         alpha = 1.0 - torch.exp(-F.relu(densities) * delta)
         
         # Compute transmittance
-        transmittance = torch.cumprod(1.0 - alpha + 1e-10, dim=-2)
-        transmittance = torch.cat([torch.ones_like(transmittance[..., :1, :]), transmittance[..., :-1, :]], dim=-2)
+        transmittance = torch.cumprod(torch.cat([torch.ones_like(alpha[..., :1, :]), 1.0 - alpha + 1e-10], dim=-2), dim=-2)
+        transmittance = transmittance[..., :-1, :]
         
         # Compute weights
         weights = alpha * transmittance
@@ -372,23 +451,35 @@ class NerfactoRenderer(nn.Module):
         return weights, accumulated_transmittance
     
     def composite_with_background(
-        self,
-        image: Float[Tensor, "*batch channels"],
-        background: Float[Tensor, "*batch channels"],
-        accumulated_alpha: Float[Tensor, "*batch 1"]
+        self, image: Float[Tensor, "*batch channels"], background: Float[Tensor, "*batch channels"], accumulated_alpha: Float[Tensor, "*batch 1"]
     ) -> Float[Tensor, "*batch channels"]:
         """Composite image with background."""
+        # Check shapes
+        self._check_shapes(image=image, background=background, accumulated_alpha=accumulated_alpha)
+        if image.shape[-1] != background.shape[-1]:
+            raise ValueError(
+                f"Channel dimension mismatch: image has {image.shape[-1]} channels, "
+                f"but background has {background.shape[-1]} channels"
+            )
+        
         return image + background * (1.0 - accumulated_alpha)
     
     def forward(
-        self,
-        rgb: Float[Tensor, "*batch num_samples 3"],
-        weights: Float[Tensor, "*batch num_samples 1"],
-        ray_indices: Optional[Int[Tensor, "*batch"]] = None,
-        num_rays: Optional[int] = None,
-        background_color: Optional[Float[Tensor, "*batch 3"]] = None
-    ) -> Dict[str, Float[Tensor, "*batch channels"]]:
+        self, rgb: Float[Tensor, "*batch num_samples 3"], weights: Float[Tensor, "*batch num_samples 1"], ray_indices: Optional[Int[Tensor, "*batch"]] = None, num_rays: Optional[int] = None, background_color: Optional[Float[Tensor, "*batch 3"]] = None
+    ) -> dict[str, Float[Tensor, "*batch channels"]]:
         """Render RGB image from samples."""
+        # Check shapes
+        self._check_shapes(rgb=rgb, weights=weights)
+        if rgb.shape[-2] != weights.shape[-2]:
+            raise ValueError(
+                f"Number of samples mismatch: rgb has {rgb.shape[-2]} samples, "
+                f"but weights has {weights.shape[-2]} samples"
+            )
+        if rgb.shape[-1] != 3:
+            raise ValueError(f"RGB tensor must have 3 channels, got {rgb.shape[-1]}")
+        if weights.shape[-1] != 1:
+            raise ValueError(f"Weights tensor must have 1 channel, got {weights.shape[-1]}")
+        
         # Composite RGB
         rendered_rgb = torch.sum(weights * rgb, dim=-2)
         
@@ -396,7 +487,16 @@ class NerfactoRenderer(nn.Module):
         accumulated_alpha = torch.sum(weights, dim=-2, keepdim=True)
         
         if background_color is not None:
-            rendered_rgb = self.composite_with_background(rendered_rgb, background_color, accumulated_alpha)
+            # Check background color shape
+            if background_color.shape[-1] != 3:
+                raise ValueError(
+                    f"Background color must have 3 channels, got {background_color.shape[-1]}"
+                )
+            rendered_rgb = self.composite_with_background(
+                rendered_rgb,
+                background_color,
+                accumulated_alpha
+            )
         elif self.background_color is not None:
             bg_color = self.background_color.to(rendered_rgb.device)
             rendered_rgb = self.composite_with_background(rendered_rgb, bg_color, accumulated_alpha)
@@ -417,10 +517,8 @@ class NerfactoLoss(nn.Module):
         self.mse_loss = nn.MSELoss()
     
     def forward(
-        self,
-        outputs: Dict[str, Any],
-        batch: Dict[str, Any]
-    ) -> Dict[str, Float[Tensor, ""]]:
+        self, outputs: dict[str, Any], batch: dict[str, Any]
+    ) -> dict[str, Float[Tensor, ""]]:
         """Compute loss."""
         losses = {}
         
@@ -455,10 +553,7 @@ class NerfactoLoss(nn.Module):
         return losses
     
     def _compute_distortion_loss(
-        self, 
-        weights: Float[Tensor, "*batch num_samples 1"],
-        mid_points: Float[Tensor, "*batch num_samples-1"],
-        intervals: Float[Tensor, "*batch num_samples-1"]
+        self, weights: Float[Tensor, "*batch num_samples 1"], mid_points: Float[Tensor, "*batch num_samples-1"], intervals: Float[Tensor, "*batch num_samples-1"]
     ) -> Float[Tensor, ""]:
         """Compute distortion loss."""
         # Simplified distortion loss
@@ -467,9 +562,7 @@ class NerfactoLoss(nn.Module):
         return torch.mean(loss)
     
     def _compute_interlevel_loss(
-        self, 
-        weights_list: List[Float[Tensor, "*batch num_samples 1"]],
-        ray_samples_list: List[Float[Tensor, "*batch num_samples 3"]]
+        self, weights_list: list[Float[Tensor, "*batch num_samples 1"]], ray_samples_list: list[Float[Tensor, "*batch num_samples 3"]]
     ) -> Float[Tensor, ""]:
         """Compute interlevel loss between proposal networks."""
         # Simplified interlevel loss
@@ -499,13 +592,7 @@ class NerfactoModel(nn.Module):
         
         # Neural field
         field_config = NerfactoFieldConfig(
-            num_layers=config.num_layers,
-            hidden_dim=config.hidden_dim,
-            geo_feat_dim=config.geo_feat_dim,
-            num_layers_color=config.num_layers_color,
-            hidden_dim_color=config.hidden_dim_color,
-            appearance_embed_dim=config.appearance_embed_dim,
-            use_appearance_embedding=config.use_appearance_embedding
+            num_layers=config.num_layers, hidden_dim=config.hidden_dim, geo_feat_dim=config.geo_feat_dim, num_layers_color=config.num_layers_color, hidden_dim_color=config.hidden_dim_color, appearance_embed_dim=config.appearance_embed_dim, use_appearance_embedding=config.use_appearance_embedding
         )
         self.field = NerfactoField(field_config, scene_box)
         
@@ -525,14 +612,12 @@ class NerfactoModel(nn.Module):
             self.appearance_embedding = AppearanceEmbedding(config.num_images, config.appearance_embed_dim)
     
     def sample_and_forward(
-        self,
-        ray_bundle: Dict[str, Any],
-        return_samples: bool = False
-    ) -> Dict[str, Any]:
+        self, ray_bundle: dict[str, Any], return_samples: bool = False
+    ) -> dict[str, Any]:
         """Sample points along rays and forward through networks."""
         # Extract ray information
-        ray_origins = ray_bundle["origins"]
-        ray_directions = ray_bundle["directions"]
+        ray_origins = ray_bundle["origins"]  # [batch_size, 3]
+        ray_directions = ray_bundle["directions"]  # [batch_size, 3]
         near = ray_bundle.get("near", self.config.near_plane)
         far = ray_bundle.get("far", self.config.far_plane)
         
@@ -542,18 +627,31 @@ class NerfactoModel(nn.Module):
         ray_samples_list = []
         
         # Initial uniform sampling
-        t_vals = torch.linspace(0.0, 1.0, self.config.num_proposal_samples_per_ray[0], device=ray_origins.device)
-        z_vals = near * (1.0 - t_vals) + far * t_vals
+        t_vals = torch.linspace(
+            0.0,
+            1.0,
+            self.config.num_proposal_samples_per_ray[0],
+            device=ray_origins.device
+        )  # [num_samples]
+        
+        # Expand t_vals to match batch size
+        t_vals = t_vals.expand(ray_origins.shape[0], -1)  # [batch_size, num_samples]
+        
+        # Convert to distances
+        z_vals = near * (1.0 - t_vals) + far * t_vals  # [batch_size, num_samples]
         
         # Add jitter
         if self.training and self.config.use_single_jitter:
             z_vals = z_vals + torch.rand_like(z_vals) * (far - near) / self.config.num_proposal_samples_per_ray[0]
         
-        ray_samples = ray_origins.unsqueeze(-2) + ray_directions.unsqueeze(-2) * z_vals.unsqueeze(-1)
+        # Sample points along rays
+        # [batch_size, num_samples, 3] = [batch_size, 1, 3] + [batch_size, 1, 3] * [batch_size, num_samples, 1]
+        ray_samples = ray_origins.unsqueeze(1) + ray_directions.unsqueeze(1) * z_vals.unsqueeze(-1)
         
         # Forward through proposal networks
         for i, proposal_network in enumerate(self.proposal_networks):
-            densities = proposal_network.get_density(ray_samples)
+            # Get densities from proposal network
+            densities = proposal_network.get_density(ray_samples)  # [batch_size, num_samples, 1]
             weights, _ = self.renderer.render_weights(ray_samples, densities)
             
             weights_list.append(weights)
@@ -570,13 +668,17 @@ class NerfactoModel(nn.Module):
             ray_samples, weights, self.config.num_nerf_samples_per_ray
         )
         
+        # Broadcast ray directions to match sampled points
+        # [batch_size, num_samples, 3] = [batch_size, 1, 3].expand([batch_size, num_samples, 3])
+        ray_directions_expanded = ray_directions.unsqueeze(1).expand_as(ray_samples)
+        
         # Forward through main field
         camera_indices = ray_bundle.get("camera_indices", None)
-        field_outputs = self.field.get_outputs(ray_samples, ray_directions, camera_indices)
+        field_outputs = self.field.get_outputs(ray_samples, ray_directions_expanded, camera_indices)
         
         # Render final image
-        rgb = field_outputs["rgb"]
-        density = field_outputs["density"]
+        rgb = field_outputs["rgb"]  # [batch_size, num_samples, 3]
+        density = field_outputs["density"]  # [batch_size, num_samples, 1]
         weights, accumulated_transmittance = self.renderer.render_weights(ray_samples, density)
         
         # Get background color
@@ -598,20 +700,62 @@ class NerfactoModel(nn.Module):
         return outputs
     
     def _resample_along_ray(
-        self, 
+        self,
         ray_samples: Float[Tensor, "*batch num_samples 3"],
         weights: Float[Tensor, "*batch num_samples 1"],
         num_samples: int
     ) -> Float[Tensor, "*batch new_num_samples 3"]:
         """Resample points along ray based on weights."""
-        # Simplified resampling - in practice, you'd use proper PDF sampling
-        # For now, just return the same samples
-        return ray_samples
+        # Get batch shape
+        batch_shape = ray_samples.shape[:-2]
+        num_rays = np.prod(batch_shape)
+        
+        # Flatten batch dimensions
+        flat_samples = ray_samples.reshape(num_rays, -1, 3)  # [num_rays, num_samples, 3]
+        flat_weights = weights.reshape(num_rays, -1, 1)  # [num_rays, num_samples, 1]
+        
+        # Create CDF for sampling
+        weights_sum = flat_weights.sum(dim=1, keepdim=True)  # [num_rays, 1, 1]
+        weights_normalized = flat_weights / (weights_sum + 1e-10)  # [num_rays, num_samples, 1]
+        cdf = torch.cumsum(weights_normalized.squeeze(-1), dim=-1)  # [num_rays, num_samples]
+        cdf = torch.cat([torch.zeros_like(cdf[:, :1]), cdf], dim=-1)  # [num_rays, num_samples+1]
+        
+        # Sample uniformly
+        u = torch.linspace(0.0, 1.0, num_samples + 1, device=ray_samples.device)[:-1]  # [num_samples]
+        u = u.expand(num_rays, -1)  # [num_rays, num_samples]
+        u = u + torch.rand_like(u) / num_samples  # Add jitter
+        u = u.clamp(0.0, 1.0)  # [num_rays, num_samples]
+        
+        # Invert CDF
+        inds = torch.searchsorted(cdf, u, right=True)  # [num_rays, num_samples]
+        below = torch.clamp(inds - 1, 0, flat_samples.shape[1] - 1)  # [num_rays, num_samples]
+        above = torch.clamp(inds, 0, flat_samples.shape[1] - 1)  # [num_rays, num_samples]
+        
+        # Get samples
+        cdf_g0 = torch.gather(cdf, 1, below)  # [num_rays, num_samples]
+        cdf_g1 = torch.gather(cdf, 1, above)  # [num_rays, num_samples]
+        samples_g0 = torch.gather(flat_samples, 1, below.unsqueeze(-1).expand(-1, -1, 3))  # [num_rays, num_samples, 3]
+        samples_g1 = torch.gather(flat_samples, 1, above.unsqueeze(-1).expand(-1, -1, 3))  # [num_rays, num_samples, 3]
+        
+        # Linear interpolation
+        t = ((u - cdf_g0) / (cdf_g1 - cdf_g0 + 1e-10)).unsqueeze(-1)  # [num_rays, num_samples, 1]
+        samples = samples_g0 + t * (samples_g1 - samples_g0)  # [num_rays, num_samples, 3]
+        
+        # Reshape back to original batch shape
+        samples = samples.reshape(*batch_shape, num_samples, 3)
+        
+        return samples
     
-    def forward(self, ray_bundle: Dict[str, Any]) -> Dict[str, Any]:
+    def forward(self, ray_bundle: dict[str, Any]) -> dict[str, Any]:
         """Forward pass through the model."""
         return self.sample_and_forward(ray_bundle, return_samples=True)
     
-    def get_loss_dict(self, outputs: Dict[str, Any], batch: Dict[str, Any]) -> Dict[str, Float[Tensor, ""]]:
+    def get_loss_dict(
+        self,
+        outputs: dict[str,
+        Any],
+        batch: dict[str,
+        Any],
+    ) -> dict[str, Float[Tensor, ""]]:
         """Get loss dictionary."""
         return self.loss_fn(outputs, batch)

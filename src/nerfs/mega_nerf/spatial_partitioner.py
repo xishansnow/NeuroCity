@@ -7,7 +7,7 @@ into manageable subregions for parallel training and rendering.
 
 import numpy as np
 import torch
-from typing import List, Tuple, Dict, Optional, Union, Any
+from typing import Dict, List, Optional, Tuple, Any, Union
 from dataclasses import dataclass
 import logging
 from abc import ABC, abstractmethod
@@ -18,12 +18,12 @@ logger = logging.getLogger(__name__)
 class SpatialPartitioner(ABC):
     """Base class for spatial partitioning strategies"""
     
-    def __init__(self, scene_bounds: Tuple[float, ...], config: Dict[str, Any]):
+    def __init__(self, scene_bounds: tuple[float, ...], config: dict[str, Any]):
         self.scene_bounds = scene_bounds
         self.config = config
         
     @abstractmethod
-    def create_partitions(self) -> List[Dict[str, Any]]:
+    def create_partitions(self) -> list[dict[str, Any]]:
         """Create spatial partitions"""
         pass
     
@@ -33,7 +33,7 @@ class SpatialPartitioner(ABC):
         pass
     
     @abstractmethod
-    def get_partition_bounds(self, partition_idx: int) -> Tuple[float, ...]:
+    def get_partition_bounds(self, partition_idx: int) -> tuple[float, ...]:
         """Get bounds for a specific partition"""
         pass
 
@@ -41,10 +41,17 @@ class SpatialPartitioner(ABC):
 class GridPartitioner(SpatialPartitioner):
     """Grid-based spatial partitioner"""
     
-    def __init__(self, 
-                 scene_bounds: Tuple[float, float, float, float, float, float],
-                 grid_size: Tuple[int, int] = (4, 2),
-                 overlap_factor: float = 0.15):
+    def __init__(
+        self,
+        scene_bounds: tuple[float,
+        float,
+        float,
+        float,
+        float,
+        float],
+        grid_size: tuple[int,int] = (16, 16),
+        overlap_factor: float = 0.15
+    ):
         """
         Initialize grid partitioner
         
@@ -54,8 +61,7 @@ class GridPartitioner(SpatialPartitioner):
             overlap_factor: Overlap ratio between adjacent partitions
         """
         config = {
-            'grid_size': grid_size,
-            'overlap_factor': overlap_factor
+            'grid_size': grid_size, 'overlap_factor': overlap_factor
         }
         super().__init__(scene_bounds, config)
         
@@ -63,7 +69,7 @@ class GridPartitioner(SpatialPartitioner):
         self.overlap_factor = overlap_factor
         self.partitions = self.create_partitions()
         
-    def create_partitions(self) -> List[Dict[str, Any]]:
+    def create_partitions(self) -> list[dict[str, Any]]:
         """Create grid-based partitions"""
         x_min, y_min, z_min, x_max, y_max, z_max = self.scene_bounds
         grid_x, grid_y = self.grid_size
@@ -95,19 +101,16 @@ class GridPartitioner(SpatialPartitioner):
                 
                 # Centroid
                 centroid = np.array([
-                    (part_x_min + part_x_max) / 2,
-                    (part_y_min + part_y_max) / 2,
-                    (z_min + z_max) / 2
+                    (
+                        part_x_min + part_x_max,
+                    )
                 ])
                 
                 partition = {
-                    'idx': partition_idx,
-                    'grid_coords': (i, j),
-                    'bounds': (part_x_min, part_y_min, z_min, part_x_max, part_y_max, z_max),
-                    'bounds_with_overlap': (part_x_min_overlap, part_y_min_overlap, z_min, 
-                                          part_x_max_overlap, part_y_max_overlap, z_max),
-                    'centroid': centroid,
-                    'size': (x_step, y_step, z_max - z_min)
+                    'idx': partition_idx, 'grid_coords': (
+                        i,
+                        j,
+                    )
                 }
                 
                 partitions.append(partition)
@@ -128,14 +131,14 @@ class GridPartitioner(SpatialPartitioner):
         
         return assignments
     
-    def get_partition_bounds(self, partition_idx: int) -> Tuple[float, ...]:
+    def get_partition_bounds(self, partition_idx: int) -> tuple[float, ...]:
         """Get bounds for a specific partition"""
         if partition_idx >= len(self.partitions):
             raise ValueError(f"Partition index {partition_idx} out of range")
         
         return self.partitions[partition_idx]['bounds']
     
-    def get_partition_bounds_with_overlap(self, partition_idx: int) -> Tuple[float, ...]:
+    def get_partition_bounds_with_overlap(self, partition_idx: int) -> tuple[float, ...]:
         """Get bounds with overlap for a specific partition"""
         if partition_idx >= len(self.partitions):
             raise ValueError(f"Partition index {partition_idx} out of range")
@@ -149,7 +152,7 @@ class GridPartitioner(SpatialPartitioner):
         
         return self.partitions[partition_idx]['centroid'].copy()
     
-    def get_adjacent_partitions(self, partition_idx: int) -> List[int]:
+    def get_adjacent_partitions(self, partition_idx: int) -> list[int]:
         """Get indices of adjacent partitions"""
         if partition_idx >= len(self.partitions):
             raise ValueError(f"Partition index {partition_idx} out of range")
@@ -187,8 +190,10 @@ class GridPartitioner(SpatialPartitioner):
             
             # Draw partition rectangle
             rect = patches.Rectangle(
-                (x_min, y_min), x_max - x_min, y_max - y_min,
-                linewidth=2, edgecolor='blue', facecolor='lightblue', alpha=0.3
+                (
+                    x_min,
+                    y_min,
+                )
             )
             ax.add_patch(rect)
             
@@ -197,8 +202,11 @@ class GridPartitioner(SpatialPartitioner):
             ax.plot(centroid[0], centroid[1], 'ro', markersize=8)
             
             # Add partition index
-            ax.text(centroid[0], centroid[1], str(partition['idx']), 
-                   ha='center', va='center', fontweight='bold')
+            ax.text(
+                centroid[0],
+                centroid[1],
+                str,
+            )
         
         # Set axis properties
         x_min, y_min, _, x_max, y_max, _ = self.scene_bounds
@@ -220,12 +228,19 @@ class GridPartitioner(SpatialPartitioner):
 class GeometryAwarePartitioner(SpatialPartitioner):
     """Geometry-aware spatial partitioner that considers scene structure"""
     
-    def __init__(self,
-                 scene_bounds: Tuple[float, float, float, float, float, float],
-                 camera_positions: np.ndarray,
-                 num_partitions: int = 8,
-                 overlap_factor: float = 0.15,
-                 use_kmeans: bool = True):
+    def __init__(
+        self,
+        scene_bounds: tuple[float,
+        float,
+        float,
+        float,
+        float,
+        float],
+        camera_positions: np.ndarray,
+        num_partitions: int = 8,
+        overlap_factor: float = 0.15,
+        use_kmeans: bool = True
+    ):
         """
         Initialize geometry-aware partitioner
         
@@ -237,9 +252,7 @@ class GeometryAwarePartitioner(SpatialPartitioner):
             use_kmeans: Whether to use k-means clustering for partitioning
         """
         config = {
-            'num_partitions': num_partitions,
-            'overlap_factor': overlap_factor,
-            'use_kmeans': use_kmeans
+            'num_partitions': num_partitions, 'overlap_factor': overlap_factor, 'use_kmeans': use_kmeans
         }
         super().__init__(scene_bounds, config)
         
@@ -250,14 +263,14 @@ class GeometryAwarePartitioner(SpatialPartitioner):
         
         self.partitions = self.create_partitions()
     
-    def create_partitions(self) -> List[Dict[str, Any]]:
+    def create_partitions(self) -> list[dict[str, Any]]:
         """Create geometry-aware partitions"""
         if self.use_kmeans:
             return self._create_kmeans_partitions()
         else:
             return self._create_density_based_partitions()
     
-    def _create_kmeans_partitions(self) -> List[Dict[str, Any]]:
+    def _create_kmeans_partitions(self) -> list[dict[str, Any]]:
         """Create partitions using k-means clustering on camera positions"""
         from sklearn.cluster import KMeans
         
@@ -298,11 +311,14 @@ class GeometryAwarePartitioner(SpatialPartitioner):
             centroid = np.array([centroid_2d[0], centroid_2d[1], (z_min + z_max) / 2])
             
             partition = {
-                'idx': i,
-                'bounds': (part_x_min, part_y_min, z_min, part_x_max, part_y_max, z_max),
-                'centroid': centroid,
-                'cluster_points': cluster_points,
-                'num_cameras': len(cluster_points)
+                'idx': i, 'bounds': (
+                    part_x_min,
+                    part_y_min,
+                    z_min,
+                    part_x_max,
+                    part_y_max,
+                    z_max,
+                )
             }
             
             partitions.append(partition)
@@ -310,7 +326,7 @@ class GeometryAwarePartitioner(SpatialPartitioner):
         logger.info(f"Created {len(partitions)} k-means based partitions")
         return partitions
     
-    def _create_density_based_partitions(self) -> List[Dict[str, Any]]:
+    def _create_density_based_partitions(self) -> list[dict[str, Any]]:
         """Create partitions based on camera density"""
         # Create a 2D histogram of camera positions
         x_min, y_min, z_min, x_max, y_max, z_max = self.scene_bounds
@@ -321,9 +337,7 @@ class GeometryAwarePartitioner(SpatialPartitioner):
         y_edges = np.linspace(y_min, y_max, grid_resolution + 1)
         
         density, _, _ = np.histogram2d(
-            self.camera_positions[:, 0],
-            self.camera_positions[:, 1],
-            bins=[x_edges, y_edges]
+            self.camera_positions[:, 0], self.camera_positions[:, 1], bins=[x_edges, y_edges]
         )
         
         # Find high-density regions
@@ -372,13 +386,15 @@ class GeometryAwarePartitioner(SpatialPartitioner):
             centroid = np.array([centroid_2d[0], centroid_2d[1], (z_min + z_max) / 2])
             
             partition = {
-                'idx': i,
-                'bounds': (part_x_min, part_y_min, z_min, part_x_max, part_y_max, z_max),
-                'centroid': centroid,
-                'density_score': density_smooth[
-                    min(int((centroid_2d[0] - x_min) / (x_max - x_min) * grid_resolution), grid_resolution - 1),
-                    min(int((centroid_2d[1] - y_min) / (y_max - y_min) * grid_resolution), grid_resolution - 1)
-                ]
+                'idx': i, 
+                'bounds': (
+                    part_x_min,
+                    part_y_min,
+                    z_min,
+                    part_x_max,
+                    part_y_max,
+                    z_max
+                )
             }
             
             partitions.append(partition)
@@ -398,14 +414,14 @@ class GeometryAwarePartitioner(SpatialPartitioner):
         
         return assignments
     
-    def get_partition_bounds(self, partition_idx: int) -> Tuple[float, ...]:
+    def get_partition_bounds(self, partition_idx: int) -> tuple[float, ...]:
         """Get bounds for a specific partition"""
         if partition_idx >= len(self.partitions):
             raise ValueError(f"Partition index {partition_idx} out of range")
         
         return self.partitions[partition_idx]['bounds']
     
-    def get_camera_coverage_stats(self) -> Dict[str, Any]:
+    def get_camera_coverage_stats(self) -> dict[str, Any]:
         """Get statistics about camera coverage for each partition"""
         stats = {}
         
@@ -424,10 +440,9 @@ class GeometryAwarePartitioner(SpatialPartitioner):
                 camera_density = 0
             
             stats[f'partition_{i}'] = {
-                'num_cameras': int(num_cameras),
-                'camera_density': float(camera_density),
-                'bounds': partition['bounds'],
-                'centroid': partition['centroid'].tolist()
+                'num_cameras': int(
+                    num_cameras,
+                )
             }
         
         return stats
@@ -440,8 +455,16 @@ class GeometryAwarePartitioner(SpatialPartitioner):
         fig, ax = plt.subplots(1, 1, figsize=(12, 8))
         
         # Plot camera positions
-        ax.scatter(self.camera_positions[:, 0], self.camera_positions[:, 1], 
-                  c='red', s=10, alpha=0.6, label='Cameras')
+        ax.scatter(
+            self.camera_positions[:,
+            0],
+            self.camera_positions[:,
+            1],
+            c='red',
+            s=10,
+            alpha=0.6,
+            label='Cameras',
+        )
         
         # Plot partitions
         colors = plt.cm.Set3(np.linspace(0, 1, len(self.partitions)))
@@ -452,16 +475,21 @@ class GeometryAwarePartitioner(SpatialPartitioner):
             
             # Draw partition rectangle
             rect = patches.Rectangle(
-                (x_min, y_min), x_max - x_min, y_max - y_min,
-                linewidth=2, edgecolor='blue', facecolor=color, alpha=0.3
+                (
+                    x_min,
+                    y_min,
+                )
             )
             ax.add_patch(rect)
             
             # Draw centroid
             centroid = partition['centroid']
             ax.plot(centroid[0], centroid[1], 'ko', markersize=10)
-            ax.text(centroid[0], centroid[1], str(partition['idx']), 
-                   ha='center', va='center', fontweight='bold', color='white')
+            ax.text(
+                centroid[0],
+                centroid[1],
+                str,
+            )
         
         # Set axis properties
         x_min, y_min, _, x_max, y_max, _ = self.scene_bounds

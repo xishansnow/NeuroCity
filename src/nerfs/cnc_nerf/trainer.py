@@ -61,9 +61,13 @@ class CNCNeRFTrainerConfig:
 class CNCNeRFTrainer:
     """Trainer for CNC-NeRF model."""
     
-    def __init__(self, model: CNCNeRF, train_dataset: CNCNeRFDataset,
-                 val_dataset: Optional[CNCNeRFDataset] = None,
-                 config: CNCNeRFTrainerConfig = None):
+    def __init__(
+        self,
+        model: CNCNeRF,
+        train_dataset: CNCNeRFDataset,
+        val_dataset: Optional[CNCNeRFDataset] = None,
+        config: CNCNeRFTrainerConfig = None,
+    ) -> None:
         self.model = model
         self.train_dataset = train_dataset
         self.val_dataset = val_dataset
@@ -75,15 +79,15 @@ class CNCNeRFTrainer:
         
         # Optimizer
         self.optimizer = optim.AdamW(
-            self.model.parameters(),
-            lr=self.config.learning_rate,
-            weight_decay=self.config.weight_decay
+            self.model.parameters(
+            )
         )
         
         # Learning rate scheduler
         self.scheduler = optim.lr_scheduler.ExponentialLR(
-            self.optimizer,
-            gamma=np.exp(np.log(self.config.lr_decay_rate) / self.config.lr_decay_steps)
+            self.optimizer, gamma=np.exp(
+                np.log,
+            )
         )
         
         # Training state
@@ -98,15 +102,13 @@ class CNCNeRFTrainer:
         # Setup wandb if available
         if self.config.use_wandb and WANDB_AVAILABLE:
             wandb.init(
-                project=self.config.project_name,
-                name=self.config.experiment_name,
-                config=self.config.__dict__
+                project=self.config.project_name, name=self.config.experiment_name, config=self.config.__dict__
             )
         
         print(f"Trainer initialized on device: {self.device}")
-        print(f"Model parameters: {sum(p.numel() for p in self.model.parameters()):,}")
+        print(f"Model parameters: {sum(p.numel() for p in self.model.parameters()):, }")
     
-    def volume_render(self, rays: torch.Tensor, num_samples: int = 64) -> Dict[str, torch.Tensor]:
+    def volume_render(self, rays: torch.Tensor, num_samples: int = 64) -> dict[str, torch.Tensor]:
         """Volume rendering with the CNC model."""
         rays_o, rays_d = rays[..., :3], rays[..., 3:6]
         near, far = rays[..., 6:7], rays[..., 7:8]
@@ -144,10 +146,7 @@ class CNCNeRFTrainer:
         dists = torch.cat([dists, torch.full_like(dists[..., :1], 1e10)], dim=-1)
         
         alpha = 1.0 - torch.exp(-F.relu(density) * dists)
-        transmittance = torch.cumprod(
-            torch.cat([torch.ones(*alpha.shape[:-1], 1, device=alpha.device), 1.0 - alpha[..., :-1]], dim=-1),
-            dim=-1
-        )
+        transmittance = torch.cumprod(torch.cat([torch.ones_like(alpha[..., :1]), 1.0 - alpha], dim=-1), dim=-1)
         
         weights = alpha * transmittance
         rgb = (weights[..., None] * color).sum(dim=-2)
@@ -155,15 +154,16 @@ class CNCNeRFTrainer:
         opacity = weights.sum(dim=-1)
         
         return {
-            'rgb': rgb,
-            'depth': depth,
-            'opacity': opacity,
-            'weights': weights,
-            'z_vals': z_vals
+            'rgb': rgb, 'depth': depth, 'opacity': opacity, 'weights': weights, 'z_vals': z_vals
         }
     
-    def compute_losses(self, batch: Dict[str, torch.Tensor], 
-                      outputs: Dict[str, torch.Tensor]) -> Dict[str, torch.Tensor]:
+    def compute_losses(
+        self,
+        batch: dict[str,
+        torch.Tensor],
+        outputs: dict[str,
+        torch.Tensor],
+    ) -> dict[str, torch.Tensor]:
         """Compute all losses."""
         losses = {}
         
@@ -190,7 +190,13 @@ class CNCNeRFTrainer:
             
             loss_uni = (1/3) * (intervals * weights.pow(2)).sum(dim=-1).mean()
             loss_bi = (weights[..., None, :] * weights[..., :, None] * 
-                      torch.abs(mid_points[..., None, :] - mid_points[..., :, None])).sum(dim=(-2, -1)).mean()
+                      torch.abs(
+                          mid_points[...,
+                          None,
+                          :] - mid_points[...,
+                          :,
+                          None],
+                      )).sum(dim=-1).mean() 
             
             distortion_loss = loss_uni + loss_bi
             losses['distortion_loss'] = distortion_loss
@@ -206,17 +212,16 @@ class CNCNeRFTrainer:
         
         return losses
     
-    def compute_metrics(self, predictions: torch.Tensor, targets: torch.Tensor) -> Dict[str, float]:
+    def compute_metrics(self, predictions: torch.Tensor, targets: torch.Tensor) -> dict[str, float]:
         """Compute evaluation metrics."""
         mse = F.mse_loss(predictions, targets).item()
         psnr = -10.0 * np.log10(mse) if mse > 0 else 100.0
         
         return {
-            'mse': mse,
-            'psnr': psnr
+            'mse': mse, 'psnr': psnr
         }
     
-    def train_step(self, batch: Dict[str, torch.Tensor]) -> Dict[str, float]:
+    def train_step(self, batch: dict[str, torch.Tensor]) -> dict[str, float]:
         """Single training step."""
         self.model.train()
         
@@ -252,7 +257,7 @@ class CNCNeRFTrainer:
         
         return result
     
-    def validate(self) -> Dict[str, float]:
+    def validate(self) -> dict[str, float]:
         """Run validation."""
         if self.val_dataset is None:
             return {}
@@ -269,8 +274,7 @@ class CNCNeRFTrainer:
                 if len(batch['rays']) > self.config.val_num_rays:
                     indices = torch.randperm(len(batch['rays']))[:self.config.val_num_rays]
                     batch = {
-                        'rays': batch['rays'][indices],
-                        'colors': batch['colors'][indices]
+                        'rays': batch['rays'][indices], 'colors': batch['colors'][indices]
                     }
                 
                 # Move to device
@@ -292,17 +296,11 @@ class CNCNeRFTrainer:
         
         return avg_metrics
     
-    def save_checkpoint(self, metrics: Dict[str, float]):
+    def save_checkpoint(self, metrics: dict[str, float]):
         """Save model checkpoint."""
         checkpoint = {
-            'epoch': self.epoch,
-            'global_step': self.global_step,
-            'model_state_dict': self.model.state_dict(),
-            'optimizer_state_dict': self.optimizer.state_dict(),
-            'scheduler_state_dict': self.scheduler.state_dict(),
-            'best_val_psnr': self.best_val_psnr,
-            'config': self.config.__dict__,
-            'metrics': metrics
+            'epoch': self.epoch, 'global_step': self.global_step, 'model_state_dict': self.model.state_dict(
+            )
         }
         
         # Save latest checkpoint
@@ -403,14 +401,15 @@ class CNCNeRFTrainer:
         print(f"  Size reduction: {stats['size_reduction_percent']:.1f}%")
         
         return {
-            'compression_info': compression_info,
-            'compression_stats': stats
+            'compression_info': compression_info, 'compression_stats': stats
         }
 
 
-def create_cnc_nerf_trainer(model_config: CNCNeRFConfig,
-                           dataset_config: CNCNeRFDatasetConfig,
-                           trainer_config: CNCNeRFTrainerConfig = None) -> CNCNeRFTrainer:
+def create_cnc_nerf_trainer(
+    model_config: CNCNeRFConfig,
+    dataset_config: CNCNeRFDatasetConfig,
+    trainer_config: CNCNeRFTrainerConfig = None,
+) -> CNCNeRFTrainer:
     """Create a CNC-NeRF trainer with datasets."""
     # Create model
     model = CNCNeRF(model_config)

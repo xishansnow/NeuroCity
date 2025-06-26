@@ -13,11 +13,7 @@ from .core import GlobalHashConfig, GlobalFeatureLibrary
 from .dataset import GlobalFeatureDataset, MultiScaleDataset
 from .trainer import GFVTrainer, GFVLightningModule
 from .utils import (
-    plot_coverage_map, 
-    plot_feature_distribution,
-    visualize_global_features,
-    lat_lon_to_tile,
-    calculate_distance
+    plot_coverage_map, plot_feature_distribution, visualize_global_features, lat_lon_to_tile, calculate_distance
 )
 
 logging.basicConfig(level=logging.INFO)
@@ -30,12 +26,7 @@ def basic_gfv_example():
     
     # 1. 创建配置
     config = GlobalHashConfig(
-        num_levels=16,
-        max_hash=2**14,
-        base_resolution=16,
-        finest_resolution=512,
-        feature_dim=2,
-        db_path="gfv_example.db"
+        num_levels=16, max_hash=2**14, base_resolution=16, finest_resolution=512, feature_dim=2, db_path="gfv_example.db"
     )
     
     # 2. 创建全球特征库
@@ -43,13 +34,13 @@ def basic_gfv_example():
     
     # 3. 查询全球城市特征
     test_coords = [
-        (39.9042, 116.4074),  # 北京
-        (31.2304, 121.4737),  # 上海
-        (23.1291, 113.2644),  # 广州
-        (40.7128, -74.0060),  # 纽约
-        (51.5074, -0.1278),   # 伦敦
-        (35.6762, 139.6503),  # 东京
-        (48.8566, 2.3522),    # 巴黎
+        (39.9042, 116.4074), # 北京
+        (31.2304, 121.4737), # 上海
+        (23.1291, 113.2644), # 广州
+        (40.7128, -74.0060), # 纽约
+        (51.5074, -0.1278), # 伦敦
+        (35.6762, 139.6503), # 东京
+        (48.8566, 2.3522), # 巴黎
         (-33.8688, 151.2093), # 悉尼
     ]
     
@@ -80,12 +71,7 @@ def training_example():
     
     # 1. 创建配置
     config = GlobalHashConfig(
-        num_levels=8,
-        max_hash=2**12,
-        base_resolution=16,
-        finest_resolution=128,
-        feature_dim=4,
-        db_path="gfv_training.db"
+        num_levels=8, max_hash=2**12, base_resolution=16, finest_resolution=128, feature_dim=4, db_path="gfv_training.db"
     )
     
     # 2. 创建模拟训练数据
@@ -101,10 +87,9 @@ def training_example():
         
         # 生成模拟特征（基于位置的简单函数）
         feature = np.array([
-            np.sin(lat * np.pi / 180),
-            np.cos(lon * np.pi / 180),
-            (lat + 90) / 180,
-            (lon + 180) / 360
+            np.sin(
+                lat * np.pi / 180,
+            )
         ]) + np.random.normal(0, 0.1, 4)
         features.append(feature)
     
@@ -124,9 +109,7 @@ def training_example():
     # 5. 创建训练器
     gfv_library = GlobalFeatureLibrary(config)
     trainer_config = {
-        'learning_rate': 1e-3,
-        'num_epochs': 50,
-        'batch_size': 32
+        'learning_rate': 1e-3, 'num_epochs': 50, 'batch_size': 32
     }
     trainer = GFVTrainer(gfv_library, trainer_config)
     
@@ -143,18 +126,15 @@ def multiscale_example():
     
     # 1. 创建配置
     config = GlobalHashConfig(
-        num_levels=12,
-        max_hash=2**13,
-        feature_dim=3,
-        db_path="gfv_multiscale.db"
+        num_levels=12, max_hash=2**13, feature_dim=3, db_path="gfv_multiscale.db"
     )
     
     # 2. 定义感兴趣的区域
     poi_coords = [
-        (39.9042, 116.4074),  # 北京
-        (31.2304, 121.4737),  # 上海
-        (40.7128, -74.0060),  # 纽约
-        (51.5074, -0.1278),   # 伦敦
+        (39.9042, 116.4074), # 北京
+        (31.2304, 121.4737), # 上海
+        (40.7128, -74.0060), # 纽约
+        (51.5074, -0.1278), # 伦敦
     ]
     
     # 3. 创建多尺度数据集
@@ -186,13 +166,13 @@ def visualization_example():
     
     # 1. 创建示例数据
     coords = [
-        (39.9042, 116.4074),  # 北京
-        (31.2304, 121.4737),  # 上海
-        (23.1291, 113.2644),  # 广州
-        (40.7128, -74.0060),  # 纽约
-        (51.5074, -0.1278),   # 伦敦
-        (35.6762, 139.6503),  # 东京
-        (48.8566, 2.3522),    # 巴黎
+        (39.9042, 116.4074), # 北京
+        (31.2304, 121.4737), # 上海
+        (23.1291, 113.2644), # 广州
+        (40.7128, -74.0060), # 纽约
+        (51.5074, -0.1278), # 伦敦
+        (35.6762, 139.6503), # 东京
+        (48.8566, 2.3522), # 巴黎
         (-33.8688, 151.2093), # 悉尼
     ]
     
@@ -201,23 +181,28 @@ def visualization_example():
     for lat, lon in coords:
         # 基于纬度的简单特征
         feature = np.array([
-            abs(lat) / 90,  # 纬度特征
-            (lon + 180) / 360,  # 经度特征
-            np.random.random(),  # 随机特征
+            abs(lat) / 90, # 纬度特征
+            (lon + 180) / 360, # 经度特征
+            np.random.random(), # 随机特征
         ])
         features.append(feature)
     
     # 3. 创建特征分布图
     all_features = np.array(features)
-    plot_feature_distribution(all_features, 
-                            title="全球城市特征分布", 
-                            save_path="gfv_feature_distribution.png")
+    plot_feature_distribution(
+        all_features,
+        title="全球城市特征分布",
+        save_path="gfv_feature_distribution.png",
+    )
     
     # 4. 创建全球特征可视化
-    visualize_global_features(coords, features, 
-                            feature_dim=0,
-                            title="全球城市纬度特征",
-                            save_path="gfv_global_features.png")
+    visualize_global_features(
+        coords,
+        features,
+        feature_dim=0,
+        title="全球城市纬度特征",
+        save_path="gfv_global_features.png",
+    )
     
     logger.info("可视化图表已保存")
 
@@ -230,10 +215,7 @@ def performance_analysis_example():
     
     # 1. 创建配置
     config = GlobalHashConfig(
-        num_levels=16,
-        max_hash=2**14,
-        feature_dim=2,
-        db_path="gfv_performance.db"
+        num_levels=16, max_hash=2**14, feature_dim=2, db_path="gfv_performance.db"
     )
     
     gfv_library = GlobalFeatureLibrary(config)
@@ -268,9 +250,7 @@ def performance_analysis_example():
     logger.info(f"北京到上海距离: {distance:.2f} km")
     
     return {
-        'single_query_time': single_query_time,
-        'batch_query_time': batch_query_time,
-        'distance_km': distance
+        'single_query_time': single_query_time, 'batch_query_time': batch_query_time, 'distance_km': distance
     }
 
 

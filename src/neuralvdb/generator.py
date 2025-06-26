@@ -8,7 +8,7 @@ synthetic volumetric datasets for training and testing.
 import numpy as np
 import json
 import os
-from typing import List, Tuple, Dict, Optional, Union, Any
+from typing import Dict, List, Optional, Tuple, Any
 import random
 import logging
 
@@ -18,11 +18,12 @@ logger = logging.getLogger(__name__)
 class TileCityGenerator:
     """瓦片城市生成器 - 用于生成大规模城市场景"""
     
-    def __init__(self, 
-                 city_size: Tuple[int, int, int] = (10000, 10000, 100),
-                 tile_size: Tuple[int, int] = (1000, 1000),
-                 voxel_size: float = 1.0,
-                 output_dir: str = "tiles"):
+    def __init__(
+        self,
+        city_size: tuple[int,
+        int,
+        int] =,
+    )
         """
         初始化瓦片城市生成器
         
@@ -39,9 +40,9 @@ class TileCityGenerator:
         
         # 计算体素网格尺寸
         self.grid_size = (
-            int(tile_size[0] / voxel_size),
-            int(tile_size[1] / voxel_size),
-            int(city_size[2] / voxel_size)
+            int(
+                tile_size[0] / voxel_size,
+            )
         )
         
         # 计算瓦片数量
@@ -56,11 +57,18 @@ class TileCityGenerator:
         logger.info(f"瓦片数量: {self.tiles_x} x {self.tiles_y} = {self.tiles_x * self.tiles_y}")
         logger.info(f"体素网格尺寸: {self.grid_size}")
     
-    def create_building(self, 
-                       center: Tuple[float, float, float],
-                       size: Tuple[float, float, float],
-                       building_type: str = 'residential',
-                       tile_origin: Tuple[float, float] = (0, 0)) -> np.ndarray:
+    def create_building(
+        self,
+        center: tuple[float,
+        float,
+        float],
+        size: tuple[float,
+        float,
+        float],
+        building_type: str = 'residential',
+        tile_origin: tuple[float,
+        float] =,
+    )
         """
         创建建筑物体素
         
@@ -75,15 +83,14 @@ class TileCityGenerator:
         """
         # 转换为瓦片内体素坐标
         center_voxel = (
-            int((center[0] - tile_origin[0]) / self.voxel_size),
-            int((center[1] - tile_origin[1]) / self.voxel_size),
-            int(center[2] / self.voxel_size)
+            int(
+            )
         )
         
         size_voxel = (
-            int(size[0] / self.voxel_size),
-            int(size[1] / self.voxel_size),
-            int(size[2] / self.voxel_size)
+            int(
+                size[0] / self.voxel_size,
+            )
         )
         
         # 创建建筑体素网格
@@ -117,7 +124,7 @@ class TileCityGenerator:
         
         return building
     
-    def create_road_network(self, tile_origin: Tuple[float, float]) -> np.ndarray:
+    def create_road_network(self, tile_origin: tuple[float, float]) -> np.ndarray:
         """
         创建瓦片内道路网络
         
@@ -161,7 +168,7 @@ class TileCityGenerator:
         
         return roads
     
-    def create_vegetation(self, tile_origin: Tuple[float, float]) -> np.ndarray:
+    def create_vegetation(self, tile_origin: tuple[float, float]) -> np.ndarray:
         """
         创建植被（公园、绿地等）
         
@@ -196,7 +203,12 @@ class TileCityGenerator:
         
         return vegetation
     
-    def generate_tile(self, tile_x: int, tile_y: int, buildings: List[Dict]) -> Tuple[np.ndarray, List[Dict]]:
+    def generate_tile(
+        self,
+        tile_x: int,
+        tile_y: int,
+        buildings: list[Dict],
+    )
         """
         生成单个瓦片的体素网格和建筑信息
         
@@ -219,10 +231,10 @@ class TileCityGenerator:
                 
                 # 创建建筑体素
                 building_voxels = self.create_building(
-                    building['center'], 
-                    building['size'], 
-                    building.get('type', 'residential'),
-                    tile_origin
+                    building['center'], building['size'], building.get(
+                        'type',
+                        'residential',
+                    )
                 )
                 
                 # 添加到瓦片网格
@@ -239,7 +251,7 @@ class TileCityGenerator:
         
         return tile_grid, tile_buildings
     
-    def generate_global_buildings(self, density: str = 'medium') -> List[Dict]:
+    def generate_global_buildings(self, density: str = 'medium') -> list[Dict]:
         """
         生成全局建筑信息
         
@@ -270,10 +282,14 @@ class TileCityGenerator:
                 for i in range(n_buildings):
                     # 建筑位置（避免边界）
                     margin = 20  # 20米边界
-                    x = random.uniform(tile_origin[0] + margin, 
-                                     tile_origin[0] + self.tile_size[0] - margin)
-                    y = random.uniform(tile_origin[1] + margin, 
-                                     tile_origin[1] + self.tile_size[1] - margin)
+                    x = random.uniform(
+                        tile_origin[0] + margin,
+                        tile_origin[0] + self.tile_size[0] - margin,
+                    )
+                    y = random.uniform(
+                        tile_origin[1] + margin,
+                        tile_origin[1] + self.tile_size[1] - margin,
+                    )
                     z = 0  # 地面高度
                     
                     # 建筑类型和尺寸
@@ -293,11 +309,10 @@ class TileCityGenerator:
                         height = random.uniform(8, 25)
                     
                     buildings.append({
-                        'id': f"building_{building_id}",
-                        'type': building_type,
-                        'center': (x, y, z + height/2),  # 中心点
-                        'size': (width, length, height),
-                        'tile_index': (tx, ty)
+                        'id': f"building_{
+                            building_id,
+                        }
+                        'size': (width, length, height), 'tile_index': (tx, ty)
                     })
                     
                     building_id += 1
@@ -305,8 +320,13 @@ class TileCityGenerator:
         logger.info(f"生成了 {len(buildings)} 个建筑，密度: {density}")
         return buildings
     
-    def save_tile(self, tile_grid: np.ndarray, tile_buildings: List[Dict], 
-                 tile_x: int, tile_y: int):
+    def save_tile(
+        self,
+        tile_grid: np.ndarray,
+        tile_buildings: list[Dict],
+        tile_x: int,
+        tile_y: int,
+    )
         """
         保存瓦片体素和元数据
         
@@ -322,20 +342,13 @@ class TileCityGenerator:
         # 保存元数据
         json_path = os.path.join(self.output_dir, f"tile_{tile_x}_{tile_y}.json")
         metadata = {
-            'tile_index': (tile_x, tile_y),
-            'tile_origin': (tile_x * self.tile_size[0], tile_y * self.tile_size[1]),
-            'tile_size': self.tile_size,
-            'voxel_size': self.voxel_size,
-            'grid_size': self.grid_size,
-            'buildings': tile_buildings,
-            'building_count': len(tile_buildings),
-            'statistics': {
-                'total_voxels': tile_grid.size,
-                'occupied_voxels': np.count_nonzero(tile_grid),
-                'occupancy_ratio': np.count_nonzero(tile_grid) / tile_grid.size,
-                'min_value': float(np.min(tile_grid)),
-                'max_value': float(np.max(tile_grid)),
-                'mean_value': float(np.mean(tile_grid))
+            'tile_index': (
+                tile_x,
+                tile_y,
+            )
+                'total_voxels': tile_grid.size, 'occupied_voxels': np.count_nonzero(
+                    tile_grid,
+                )
             }
         }
         
@@ -371,15 +384,9 @@ class TileCityGenerator:
         
         # 保存全局信息
         global_info = {
-            'city_size': self.city_size,
-            'tile_size': self.tile_size,
-            'voxel_size': self.voxel_size,
-            'tiles_x': self.tiles_x,
-            'tiles_y': self.tiles_y,
-            'total_tiles': total_tiles,
-            'total_buildings': len(buildings),
-            'density': density,
-            'generation_complete': True
+            'city_size': self.city_size, 'tile_size': self.tile_size, 'voxel_size': self.voxel_size, 'tiles_x': self.tiles_x, 'tiles_y': self.tiles_y, 'total_tiles': total_tiles, 'total_buildings': len(
+                buildings,
+            )
         }
         
         global_info_path = os.path.join(self.output_dir, 'city_info.json')
@@ -392,9 +399,7 @@ class TileCityGenerator:
 class SimpleVDBGenerator:
     """简单VDB生成器 - 用于生成基础几何体"""
     
-    def __init__(self, 
-                 grid_size: Tuple[int, int, int] = (128, 128, 128),
-                 voxel_size: float = 1.0):
+    def __init__(self, grid_size: tuple[int, int, int] = (128, 128, 128), voxel_size: float = 1.0):
         """
         初始化简单VDB生成器
         
@@ -407,10 +412,14 @@ class SimpleVDBGenerator:
         
         logger.info(f"简单VDB生成器初始化完成，网格尺寸: {grid_size}")
     
-    def create_sphere(self, 
-                     center: Tuple[float, float, float],
-                     radius: float,
-                     density: float = 1.0) -> np.ndarray:
+    def create_sphere(
+        self,
+        center: tuple[float,
+        float,
+        float],
+        radius: float,
+        density: float = 1.0,
+    )
         """
         创建球体
         
@@ -426,10 +435,9 @@ class SimpleVDBGenerator:
         
         # 创建坐标网格
         x, y, z = np.meshgrid(
-            np.arange(self.grid_size[0]) * self.voxel_size,
-            np.arange(self.grid_size[1]) * self.voxel_size,
-            np.arange(self.grid_size[2]) * self.voxel_size,
-            indexing='ij'
+            np.arange(
+                self.grid_size[0],
+            )
         )
         
         # 计算到球心的距离
@@ -441,10 +449,16 @@ class SimpleVDBGenerator:
         
         return grid
     
-    def create_box(self, 
-                  center: Tuple[float, float, float],
-                  size: Tuple[float, float, float],
-                  density: float = 1.0) -> np.ndarray:
+    def create_box(
+        self,
+        center: tuple[float,
+        float,
+        float],
+        size: tuple[float,
+        float,
+        float],
+        density: float = 1.0,
+    )
         """
         创建立方体
         
@@ -472,18 +486,20 @@ class SimpleVDBGenerator:
         max_voxel = np.minimum(max_voxel, self.grid_size)
         
         # 填充立方体
-        grid[min_voxel[0]:max_voxel[0], 
-             min_voxel[1]:max_voxel[1], 
-             min_voxel[2]:max_voxel[2]] = density
+        grid[min_voxel[0]:max_voxel[0], min_voxel[1]:max_voxel[1], min_voxel[2]:max_voxel[2]] = density
         
         return grid
     
-    def create_cylinder(self, 
-                       center: Tuple[float, float, float],
-                       radius: float,
-                       height: float,
-                       axis: int = 2,
-                       density: float = 1.0) -> np.ndarray:
+    def create_cylinder(
+        self,
+        center: tuple[float,
+        float,
+        float],
+        radius: float,
+        height: float,
+        axis: int = 2,
+        density: float = 1.0,
+    )
         """
         创建圆柱体
         
@@ -501,10 +517,9 @@ class SimpleVDBGenerator:
         
         # 创建坐标网格
         x, y, z = np.meshgrid(
-            np.arange(self.grid_size[0]) * self.voxel_size,
-            np.arange(self.grid_size[1]) * self.voxel_size,
-            np.arange(self.grid_size[2]) * self.voxel_size,
-            indexing='ij'
+            np.arange(
+                self.grid_size[0],
+            )
         )
         
         coords = [x, y, z]
@@ -526,12 +541,16 @@ class SimpleVDBGenerator:
         
         return grid
     
-    def create_torus(self, 
-                    center: Tuple[float, float, float],
-                    major_radius: float,
-                    minor_radius: float,
-                    axis: int = 2,
-                    density: float = 1.0) -> np.ndarray:
+    def create_torus(
+        self,
+        center: tuple[float,
+        float,
+        float],
+        major_radius: float,
+        minor_radius: float,
+        axis: int = 2,
+        density: float = 1.0,
+    )
         """
         创建环形体
         
@@ -549,10 +568,9 @@ class SimpleVDBGenerator:
         
         # 创建坐标网格
         x, y, z = np.meshgrid(
-            np.arange(self.grid_size[0]) * self.voxel_size,
-            np.arange(self.grid_size[1]) * self.voxel_size,
-            np.arange(self.grid_size[2]) * self.voxel_size,
-            indexing='ij'
+            np.arange(
+                self.grid_size[0],
+            )
         )
         
         # 相对坐标
@@ -607,7 +625,13 @@ class SimpleVDBGenerator:
             
             # 圆柱体
             cyl_center = center + np.array([0, scale * 0.8, 0])
-            cylinder = self.create_cylinder(cyl_center, scale * 0.2, scale * 0.8, axis=2, density=0.6)
+            cylinder = self.create_cylinder(
+                cyl_center,
+                scale * 0.2,
+                scale * 0.8,
+                axis=2,
+                density=0.6,
+            )
             grid = np.maximum(grid, cylinder)
             
         elif scene_type == 'architectural':
@@ -618,7 +642,13 @@ class SimpleVDBGenerator:
             
             # 塔楼
             tower_center = center + np.array([scale * 0.4, scale * 0.4, scale * 0.3])
-            tower = self.create_cylinder(tower_center, scale * 0.15, scale * 0.9, axis=2, density=0.9)
+            tower = self.create_cylinder(
+                tower_center,
+                scale * 0.15,
+                scale * 0.9,
+                axis=2,
+                density=0.9,
+            )
             grid = np.maximum(grid, tower)
             
             # 附属建筑
@@ -666,15 +696,9 @@ class SimpleVDBGenerator:
             metadata = {}
         
         metadata.update({
-            'grid_size': self.grid_size,
-            'voxel_size': self.voxel_size,
-            'total_voxels': grid.size,
-            'occupied_voxels': np.count_nonzero(grid),
-            'occupancy_ratio': np.count_nonzero(grid) / grid.size,
-            'min_value': float(np.min(grid)),
-            'max_value': float(np.max(grid)),
-            'mean_value': float(np.mean(grid)),
-            'std_value': float(np.std(grid))
+            'grid_size': self.grid_size, 'voxel_size': self.voxel_size, 'total_voxels': grid.size, 'occupied_voxels': np.count_nonzero(
+                grid,
+            )
         })
         
         metadata_path = filepath.replace('.npy', '_metadata.json')
@@ -685,10 +709,13 @@ class SimpleVDBGenerator:
         logger.info(f"元数据已保存到: {metadata_path}")
 
 
-def generate_sample_dataset(output_dir: str,
-                           num_samples: int = 1000,
-                           grid_size: Tuple[int, int, int] = (64, 64, 64),
-                           scene_types: List[str] = ['mixed', 'architectural', 'organic']) -> None:
+def generate_sample_dataset(
+    output_dir: str,
+    num_samples: int = 1000,
+    grid_size: tuple[int,
+    int,
+    int] =,
+)
     """
     生成示例数据集
     
@@ -727,22 +754,19 @@ def generate_sample_dataset(output_dir: str,
         
         # 保存样本
         sample_path = os.path.join(output_dir, f'sample_{i:04d}.npz')
-        np.savez_compressed(sample_path, 
-                           coords=all_coords, 
-                           occupancies=all_occupancies,
-                           scene_type=scene_type)
+        np.savez_compressed(
+            sample_path,
+            coords=all_coords,
+            occupancies=all_occupancies,
+            scene_type=scene_type,
+        )
         
         if (i + 1) % 100 == 0:
             logger.info(f"已生成 {i + 1}/{num_samples} 个样本")
     
     # 保存数据集信息
     dataset_info = {
-        'num_samples': num_samples,
-        'grid_size': grid_size,
-        'scene_types': scene_types,
-        'total_files': num_samples,
-        'file_format': 'npz',
-        'data_fields': ['coords', 'occupancies', 'scene_type']
+        'num_samples': num_samples, 'grid_size': grid_size, 'scene_types': scene_types, 'total_files': num_samples, 'file_format': 'npz', 'data_fields': ['coords', 'occupancies', 'scene_type']
     }
     
     info_path = os.path.join(output_dir, 'dataset_info.json')

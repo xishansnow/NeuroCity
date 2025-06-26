@@ -45,15 +45,13 @@ class InstantNGPTrainer:
         hash_params = list(self.model.position_encoder.parameters())
         
         self.optimizer = optim.Adam([
-            {'params': hash_params, 'lr': config.learning_rate * 10},  # Higher LR for hash grids
+            {'params': hash_params, 'lr': config.learning_rate * 10}, # Higher LR for hash grids
             {'params': mlp_params, 'lr': config.learning_rate}
         ], weight_decay=config.weight_decay)
         
         # Scheduler
         self.scheduler = optim.lr_scheduler.StepLR(
-            self.optimizer, 
-            step_size=config.decay_step,
-            gamma=config.learning_rate_decay
+            self.optimizer, step_size=config.decay_step, gamma=config.learning_rate_decay
         )
         
         self.global_step = 0
@@ -88,8 +86,14 @@ class InstantNGPTrainer:
         
         return {k: v.item() if torch.is_tensor(v) else v for k, v in losses.items()}
     
-    def train(self, train_loader: DataLoader, num_epochs: int = 20,
-              log_dir: str = None, ckpt_dir: str = None, save_interval: int = 10):
+    def train(
+        self,
+        train_loader: DataLoader,
+        num_epochs: int = 20,
+        log_dir: str = None,
+        ckpt_dir: str = None,
+        save_interval: int = 10,
+    ) -> None:
         """Train the model."""
         if log_dir:
             self.setup_logging(log_dir)
@@ -98,7 +102,7 @@ class InstantNGPTrainer:
             os.makedirs(ckpt_dir, exist_ok=True)
         
         print(f"Training Instant NGP for {num_epochs} epochs")
-        print(f"Model parameters: {sum(p.numel() for p in self.model.parameters()):,}")
+        print(f"Model parameters: {sum(p.numel() for p in self.model.parameters()):,d}")
         
         for epoch in range(num_epochs):
             epoch_losses = []
@@ -111,9 +115,7 @@ class InstantNGPTrainer:
                 self.global_step += 1
                 
                 pbar.set_postfix({
-                    'loss': f"{losses['total_loss']:.4f}",
-                    'psnr': f"{losses['psnr']:.2f}",
-                    'lr': f"{self.optimizer.param_groups[0]['lr']:.2e}"
+                    'loss': f"{losses['total_loss']:.4f}"
                 })
                 
                 # Log to tensorboard
@@ -147,11 +149,8 @@ class InstantNGPTrainer:
         ckpt_path = os.path.join(ckpt_dir, ckpt_name)
         
         torch.save({
-            'epoch': epoch,
-            'model_state_dict': self.model.state_dict(),
-            'optimizer_state_dict': self.optimizer.state_dict(),
-            'scheduler_state_dict': self.scheduler.state_dict(),
-            'config': self.config
+            'epoch': epoch, 'model_state_dict': self.model.state_dict(
+            )
         }, ckpt_path)
         
         print(f"Checkpoint saved: {ckpt_path}")
@@ -174,8 +173,8 @@ class InstantNGPTrainer:
             # Generate rays
             i, j = np.meshgrid(np.arange(W), np.arange(H), indexing='xy')
             dirs = np.stack([(i-K[0][2])/K[0][0], -(j-K[1][2])/K[1][1], -np.ones_like(i)], -1)
-            rays_d = np.sum(dirs[..., np.newaxis, :] * c2w[:3,:3], -1)
-            rays_o = np.broadcast_to(c2w[:3,-1], np.shape(rays_d))
+            rays_d = np.sum(dirs[..., np.newaxis, :] * c2w[:3, :3], -1)
+            rays_o = np.broadcast_to(c2w[:3, -1], np.shape(rays_d))
             
             rays_o = torch.from_numpy(rays_o).float().to(self.device).reshape(-1, 3)
             rays_d = torch.from_numpy(rays_d).float().to(self.device).reshape(-1, 3)

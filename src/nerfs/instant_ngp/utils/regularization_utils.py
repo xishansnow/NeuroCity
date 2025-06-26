@@ -1,8 +1,7 @@
 """
 Regularization utilities for Instant NGP.
 
-This module provides regularization functions including total variation loss,
-entropy loss, and other regularization techniques used in neural rendering.
+This module provides regularization functions including total variation loss, entropy loss, and other regularization techniques used in neural rendering.
 """
 
 import torch
@@ -43,8 +42,7 @@ def compute_tv_loss(grid: torch.Tensor, loss_type: str = 'l2') -> torch.Tensor:
     return tv_loss
 
 
-def compute_entropy_loss(weights: torch.Tensor, 
-                        eps: float = 1e-8) -> torch.Tensor:
+def compute_entropy_loss(weights: torch.Tensor, eps: float = 1e-8) -> torch.Tensor:
     """
     Compute entropy loss to encourage weight sparsity.
     
@@ -66,8 +64,7 @@ def compute_entropy_loss(weights: torch.Tensor,
     return -entropy.mean()
 
 
-def compute_distortion_loss(weights: torch.Tensor,
-                           z_vals: torch.Tensor) -> torch.Tensor:
+def compute_distortion_loss(weights: torch.Tensor, z_vals: torch.Tensor) -> torch.Tensor:
     """
     Compute distortion loss to encourage compact weight distributions.
     
@@ -94,8 +91,7 @@ def compute_distortion_loss(weights: torch.Tensor,
     return variance.mean()
 
 
-def compute_sparsity_loss(features: torch.Tensor,
-                         loss_type: str = 'l1') -> torch.Tensor:
+def compute_sparsity_loss(features: torch.Tensor, loss_type: str = 'l1') -> torch.Tensor:
     """
     Compute sparsity loss to encourage sparse feature representations.
     
@@ -114,9 +110,11 @@ def compute_sparsity_loss(features: torch.Tensor,
         raise ValueError(f"Unknown loss type: {loss_type}")
 
 
-def compute_smoothness_loss(positions: torch.Tensor,
-                           features: torch.Tensor,
-                           num_neighbors: int = 8) -> torch.Tensor:
+def compute_smoothness_loss(
+    positions: torch.Tensor,
+    features: torch.Tensor,
+    num_neighbors: int = 8,
+) -> torch.Tensor:
     """
     Compute smoothness loss based on feature similarity of nearby positions.
     
@@ -137,8 +135,7 @@ def compute_smoothness_loss(positions: torch.Tensor,
     dists = torch.cdist(positions, positions)  # [N, N]
     
     # Get nearest neighbors (excluding self)
-    _, neighbor_indices = torch.topk(dists, num_neighbors + 1, 
-                                   dim=-1, largest=False)
+    _, neighbor_indices = torch.topk(dists, num_neighbors + 1, dim=-1, largest=False)
     neighbor_indices = neighbor_indices[:, 1:]  # Exclude self
     
     # Get neighbor features
@@ -153,8 +150,10 @@ def compute_smoothness_loss(positions: torch.Tensor,
     return smoothness
 
 
-def compute_elastic_loss(positions: torch.Tensor,
-                        reference_positions: torch.Tensor) -> torch.Tensor:
+def compute_elastic_loss(
+    positions: torch.Tensor,
+    reference_positions: torch.Tensor,
+) -> torch.Tensor:
     """
     Compute elastic regularization loss to maintain spatial relationships.
     
@@ -171,9 +170,11 @@ def compute_elastic_loss(positions: torch.Tensor,
     return elastic_energy
 
 
-def compute_occupancy_loss(density: torch.Tensor,
-                          positions: torch.Tensor,
-                          scene_bounds: torch.Tensor) -> torch.Tensor:
+def compute_occupancy_loss(
+    density: torch.Tensor,
+    positions: torch.Tensor,
+    scene_bounds: torch.Tensor,
+) -> torch.Tensor:
     """
     Compute occupancy loss to penalize density outside scene bounds.
     
@@ -199,9 +200,11 @@ def compute_occupancy_loss(density: torch.Tensor,
         return torch.tensor(0.0, device=density.device)
 
 
-def compute_color_smoothness_loss(colors: torch.Tensor,
-                                 positions: torch.Tensor,
-                                 num_neighbors: int = 4) -> torch.Tensor:
+def compute_color_smoothness_loss(
+    colors: torch.Tensor,
+    positions: torch.Tensor,
+    num_neighbors: int = 4,
+) -> torch.Tensor:
     """
     Compute color smoothness loss for spatially nearby points.
     
@@ -216,9 +219,11 @@ def compute_color_smoothness_loss(colors: torch.Tensor,
     return compute_smoothness_loss(positions, colors, num_neighbors)
 
 
-def compute_density_smoothness_loss(density: torch.Tensor,
-                                   positions: torch.Tensor,
-                                   num_neighbors: int = 4) -> torch.Tensor:
+def compute_density_smoothness_loss(
+    density: torch.Tensor,
+    positions: torch.Tensor,
+    num_neighbors: int = 4,
+) -> torch.Tensor:
     """
     Compute density smoothness loss for spatially nearby points.
     
@@ -233,8 +238,7 @@ def compute_density_smoothness_loss(density: torch.Tensor,
     return compute_smoothness_loss(positions, density, num_neighbors)
 
 
-def apply_gradient_clipping(model: torch.nn.Module,
-                           max_norm: float = 1.0) -> float:
+def apply_gradient_clipping(model: torch.nn.Module, max_norm: float = 1.0) -> float:
     """
     Apply gradient clipping to model parameters.
     
@@ -248,8 +252,7 @@ def apply_gradient_clipping(model: torch.nn.Module,
     return torch.nn.utils.clip_grad_norm_(model.parameters(), max_norm)
 
 
-def compute_hash_collision_loss(hash_indices: torch.Tensor,
-                               table_size: int) -> torch.Tensor:
+def compute_hash_collision_loss(hash_indices: torch.Tensor, table_size: int) -> torch.Tensor:
     """
     Compute hash collision regularization loss.
     
@@ -261,8 +264,7 @@ def compute_hash_collision_loss(hash_indices: torch.Tensor,
         Hash collision loss
     """
     # Count frequency of each hash index
-    hist = torch.histc(hash_indices.float(), bins=table_size, 
-                      min=0, max=table_size-1)
+    hist = torch.histc(hash_indices.float(), bins=table_size, min=0, max=table_size-1)
     
     # Compute variance of histogram (high variance = many collisions)
     collision_loss = hist.var()
@@ -273,11 +275,13 @@ def compute_hash_collision_loss(hash_indices: torch.Tensor,
 class RegularizationScheduler:
     """Scheduler for regularization weights during training."""
     
-    def __init__(self, 
-                 initial_weights: dict,
-                 schedule_type: str = 'exponential',
-                 decay_rate: float = 0.95,
-                 decay_steps: int = 1000):
+    def __init__(
+        self,
+        initial_weights: dict,
+        schedule_type: str = 'exponential',
+        decay_rate: float = 0.95,
+        decay_steps: int = 1000,
+    ) -> None:
         """
         Initialize regularization scheduler.
         
@@ -313,7 +317,7 @@ class RegularizationScheduler:
         return self.current_weights
 
 
-def test_regularization_functions():
+def test_regularization_functions() -> None:
     """Test regularization function implementations."""
     print("Testing regularization functions...")
     

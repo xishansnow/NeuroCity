@@ -5,7 +5,7 @@
 """
 
 import numpy as np
-from typing import Dict, List, Tuple, Optional, Any
+from typing import Dict, List, Optional, Tuple, Any
 import logging
 
 logger = logging.getLogger(__name__)
@@ -14,10 +14,12 @@ logger = logging.getLogger(__name__)
 class PointCloudSampler:
     """点云采样器类"""
     
-    def __init__(self,
-                 downsample_ratio: float = 0.1,
-                 noise_level: float = 0.01,
-                 normal_estimation: bool = True):
+    def __init__(
+        self,
+        downsample_ratio: float = 0.1,
+        noise_level: float = 0.01,
+        normal_estimation: bool = True,
+    )
         """
         初始化点云采样器
         
@@ -30,11 +32,13 @@ class PointCloudSampler:
         self.noise_level = noise_level
         self.normal_estimation = normal_estimation
     
-    def sample_from_point_cloud(self,
-                               points: np.ndarray,
-                               normals: Optional[np.ndarray] = None,
-                               colors: Optional[np.ndarray] = None,
-                               n_samples: int = 10000) -> Dict[str, np.ndarray]:
+    def sample_from_point_cloud(
+        self,
+        points: np.ndarray,
+        normals: Optional[np.ndarray] = None,
+        colors: Optional[np.ndarray] = None,
+        n_samples: int = 10000,
+    )
         """
         从点云中采样
         
@@ -99,10 +103,12 @@ class PointCloudSampler:
         
         return normals
     
-    def uniform_sampling(self,
-                        points: np.ndarray,
-                        grid_size: float = 1.0,
-                        **kwargs) -> Dict[str, np.ndarray]:
+    def uniform_sampling(
+        self,
+        points: np.ndarray,
+        grid_size: float = 1.0,
+        **kwargs,
+    )
         """
         均匀网格采样
         
@@ -141,19 +147,19 @@ class PointCloudSampler:
         valid_indices = indices[valid_mask]
         
         result = {
-            'coordinates': valid_grid_points,
-            'original_indices': valid_indices,
-            'distances': distances[valid_mask]
+            'coordinates': valid_grid_points, 'original_indices': valid_indices, 'distances': distances[valid_mask]
         }
         
         logger.info(f"均匀采样生成了 {len(valid_grid_points)} 个点")
         return result
     
-    def density_based_sampling(self,
-                              points: np.ndarray,
-                              radius: float = 2.0,
-                              min_samples: int = 5,
-                              **kwargs) -> Dict[str, np.ndarray]:
+    def density_based_sampling(
+        self,
+        points: np.ndarray,
+        radius: float = 2.0,
+        min_samples: int = 5,
+        **kwargs,
+    )
         """
         基于密度的采样
         
@@ -179,7 +185,9 @@ class PointCloudSampler:
         
         # 根据密度进行分层采样
         high_density_mask = densities > np.percentile(densities, 75)
-        medium_density_mask = (densities > np.percentile(densities, 25)) & (densities <= np.percentile(densities, 75))
+        medium_density_mask = (
+            densities > np.percentile,
+        )
         low_density_mask = densities <= np.percentile(densities, 25)
         
         # 从不同密度区域采样
@@ -211,19 +219,21 @@ class PointCloudSampler:
             density_labels.extend([0] * n_low)  # 低密度
         
         result = {
-            'coordinates': np.array(selected_points),
-            'density_labels': np.array(density_labels),
-            'densities': densities
+            'coordinates': np.array(
+                selected_points,
+            )
         }
         
         logger.info(f"密度采样生成了 {len(selected_points)} 个点")
         return result
     
-    def curvature_based_sampling(self,
-                                points: np.ndarray,
-                                k: int = 10,
-                                curvature_threshold: float = 0.1,
-                                **kwargs) -> Dict[str, np.ndarray]:
+    def curvature_based_sampling(
+        self,
+        points: np.ndarray,
+        k: int = 10,
+        curvature_threshold: float = 0.1,
+        **kwargs,
+    )
         """
         基于曲率的采样
         
@@ -259,9 +269,7 @@ class PointCloudSampler:
         high_curvature_values = curvatures[high_curvature_mask]
         
         result = {
-            'coordinates': high_curvature_points,
-            'curvatures': high_curvature_values,
-            'all_curvatures': curvatures
+            'coordinates': high_curvature_points, 'curvatures': high_curvature_values, 'all_curvatures': curvatures
         }
         
         logger.info(f"曲率采样生成了 {len(high_curvature_points)} 个点")
@@ -290,10 +298,14 @@ class PointCloudSampler:
         
         return curvature
     
-    def multi_scale_sampling(self,
-                           points: np.ndarray,
-                           scales: List[float] = [1.0, 0.5, 0.25],
-                           samples_per_scale: int = 3000) -> Dict[str, np.ndarray]:
+    def multi_scale_sampling(
+        self,
+        points: np.ndarray,
+        scales: list[float] = [1.0,
+        0.5,
+        0.25],
+        samples_per_scale: int = 3000,
+    )
         """
         多尺度采样
         
@@ -327,9 +339,9 @@ class PointCloudSampler:
             scale_labels.extend([scale_idx] * len(sampled_points))
         
         result = {
-            'coordinates': np.vstack(all_coords),
-            'scale_labels': np.array(scale_labels),
-            'scales': scales
+            'coordinates': np.vstack(
+                all_coords,
+            )
         }
         
         logger.info(f"多尺度采样生成了 {len(result['coordinates'])} 个点")

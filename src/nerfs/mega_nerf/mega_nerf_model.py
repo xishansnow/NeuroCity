@@ -9,7 +9,7 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 import numpy as np
-from typing import List, Tuple, Dict, Optional, Union
+from typing import Dict, List, Optional, Tuple, Union
 from dataclasses import dataclass
 import logging
 
@@ -21,13 +21,13 @@ class MegaNeRFConfig:
     """Mega-NeRF配置参数"""
     # 场景分解参数
     num_submodules: int = 8
-    grid_size: Tuple[int, int] = (4, 2)  # 2D网格分解
+    grid_size: tuple[int, int] = (4, 2)  # 2D网格分解
     overlap_factor: float = 0.15
     
     # 网络参数
     hidden_dim: int = 256
     num_layers: int = 8
-    skip_connections: List[int] = None
+    skip_connections: list[int] = None
     use_viewdirs: bool = True
     
     # 训练参数
@@ -47,7 +47,7 @@ class MegaNeRFConfig:
     appearance_dim: int = 48
     
     # 边界参数
-    scene_bounds: Tuple[float, float, float, float, float, float] = (-100, -100, -10, 100, 100, 50)
+    scene_bounds: tuple[float, float, float, float, float, float] = (-100, -100, -10, 100, 100, 50)
     foreground_ratio: float = 0.8
     
     def __post_init__(self):
@@ -89,7 +89,11 @@ class MegaNeRFSubmodule(nn.Module):
         
         # 位置编码
         self.pos_encoder = PositionalEncoding(3, max_freq_log2=10, num_freqs=10)
-        self.dir_encoder = PositionalEncoding(3, max_freq_log2=4, num_freqs=4) if config.use_viewdirs else None
+        self.dir_encoder = PositionalEncoding(
+            3,
+            max_freq_log2=4,
+            num_freqs=4,
+        )
         
         # 计算输入维度
         pos_dim = self.pos_encoder.output_dim
@@ -126,15 +130,14 @@ class MegaNeRFSubmodule(nn.Module):
             self.feature_head = nn.Linear(config.hidden_dim, config.hidden_dim)
             color_input_dim = config.hidden_dim + dir_dim
             self.color_layers = nn.Sequential(
-                nn.Linear(color_input_dim, config.hidden_dim // 2),
-                nn.ReLU(inplace=True),
-                nn.Linear(config.hidden_dim // 2, 3),
-                nn.Sigmoid()
+                nn.Linear(
+                    color_input_dim,
+                    config.hidden_dim // 2,
+                )
             )
         else:
             self.color_head = nn.Sequential(
-                nn.Linear(config.hidden_dim, 3),
-                nn.Sigmoid()
+                nn.Linear(config.hidden_dim, 3), nn.Sigmoid()
             )
     
     def forward(self, points, viewdirs=None, appearance_idx=None):
@@ -238,11 +241,12 @@ class MegaNeRF(nn.Module):
         # 缩小边界作为前景区域
         ratio = self.config.foreground_ratio
         center_x, center_y, center_z = (x_min + x_max) / 2, (y_min + y_max) / 2, (z_min + z_max) / 2
-        width_x, width_y, width_z = (x_max - x_min) * ratio, (y_max - y_min) * ratio, (z_max - z_min) * ratio
+        width_x, width_y, width_z = (
+            x_max - x_min,
+        )
         
         return (
-            center_x - width_x / 2, center_y - width_y / 2, center_z - width_z / 2,
-            center_x + width_x / 2, center_y + width_y / 2, center_z + width_z / 2
+            center_x - width_x / 2, center_y - width_y / 2, center_z - width_z / 2, center_x + width_x / 2, center_y + width_y / 2, center_z + width_z / 2
         )
     
     def _assign_points_to_submodules(self, points):
@@ -370,7 +374,11 @@ class MegaNeRF(nn.Module):
             scene_size = max(bounds[3] - bounds[0], bounds[4] - bounds[1])
             max_distance = scene_size * 0.5
         
-        centroids = torch.tensor(self.spatial_grid, device=camera_position.device, dtype=camera_position.dtype)
+        centroids = torch.tensor(
+            self.spatial_grid,
+            device=camera_position.device,
+            dtype=camera_position.dtype,
+        )
         distances = torch.norm(camera_position[None, :] - centroids, dim=1)
         
         relevant_mask = distances <= max_distance
@@ -385,10 +393,8 @@ class MegaNeRF(nn.Module):
         
         submodule = self.submodules[submodule_idx]
         torch.save({
-            'state_dict': submodule.state_dict(),
-            'config': self.config,
-            'centroid': self.spatial_grid[submodule_idx],
-            'submodule_idx': submodule_idx
+            'state_dict': submodule.state_dict(
+            )
         }, path)
     
     def load_submodule(self, submodule_idx: int, path: str):
@@ -411,10 +417,7 @@ class MegaNeRF(nn.Module):
         trainable_params = sum(p.numel() for p in self.parameters() if p.requires_grad)
         
         return {
-            'num_submodules': len(self.submodules),
-            'grid_size': self.config.grid_size,
-            'scene_bounds': self.config.scene_bounds,
-            'total_parameters': total_params,
-            'trainable_parameters': trainable_params,
-            'config': self.config
+            'num_submodules': len(
+                self.submodules,
+            )
         } 

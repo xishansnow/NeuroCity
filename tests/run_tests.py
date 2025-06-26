@@ -17,10 +17,16 @@ import os
 import argparse
 import subprocess
 from pathlib import Path
+import pytest
+import platform
 
-# Add the project root to Python path
-project_root = Path(__file__).parent.parent
-sys.path.append(str(project_root / 'src'))
+def check_python_version():
+    """Check if Python version is compatible."""
+    if sys.version_info < (3, 10):
+        print("Error: Python 3.10 or higher is required")
+        sys.exit(1)
+    elif sys.version_info >= (3, 11):
+        print("Warning: Project is optimized for Python 3.10. Some features may not work as expected in Python 3.11+")
 
 def list_available_tests():
     """List all available test modules and files."""
@@ -42,8 +48,10 @@ def run_test_file(test_file):
     print('='*60)
     
     try:
-        result = subprocess.run([sys.executable, str(test_file)], 
-                              capture_output=True, text=True, cwd=project_root)
+        result = subprocess.run(
+            [sys.executable,
+            str,
+        )
         
         if result.stdout:
             print("STDOUT:")
@@ -135,22 +143,13 @@ def run_all_tests():
 
 def main():
     """Main function."""
-    parser = argparse.ArgumentParser(description='NeuroCity Test Runner')
-    parser.add_argument('module', nargs='?', help='Test module to run (nerfs, demos, datagen, gfv, neuralvdb)')
-    parser.add_argument('--list', action='store_true', help='List all available tests')
+    check_python_version()
     
-    args = parser.parse_args()
+    # Add project root to Python path
+    sys.path.insert(0, str(Path(__file__).parent.parent))
     
-    if args.list:
-        list_available_tests()
-        return
-    
-    if args.module:
-        success = run_module_tests(args.module)
-    else:
-        success = run_all_tests()
-    
-    sys.exit(0 if success else 1)
+    # Run tests
+    pytest.main(sys.argv[1:])
 
 if __name__ == '__main__':
     main() 

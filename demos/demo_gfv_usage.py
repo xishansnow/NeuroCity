@@ -17,30 +17,19 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 # 导入GFV库
 from src.gfv import (
-    GlobalHashConfig,
-    GlobalFeatureLibrary,
-    GlobalFeatureDataset,
-    MultiScaleDataset,
-    GFVTrainer,
-    SDFDataset
+    GlobalHashConfig, GlobalFeatureLibrary, GlobalFeatureDataset, MultiScaleDataset, GFVTrainer, SDFDataset
 )
 
 # 导入工具函数
 from src.gfv.utils import (
-    plot_coverage_map,
-    plot_feature_distribution,
-    visualize_global_features,
-    lat_lon_to_tile,
-    calculate_distance,
-    save_feature_cache,
-    load_feature_cache
+    plot_coverage_map, plot_feature_distribution, visualize_global_features, lat_lon_to_tile, calculate_distance, save_feature_cache, load_feature_cache
 )
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 
-def demonstrate_migration_benefits():
+def demonstrate_migration_benefits() -> GlobalFeatureLibrary:
     """演示迁移到GFV包后的优势"""
     logger.info("=== GFV包迁移优势演示 ===")
     
@@ -49,10 +38,7 @@ def demonstrate_migration_benefits():
     
     # 2. 配置更简洁
     config = GlobalHashConfig(
-        num_levels=12,
-        max_hash=2**13,
-        feature_dim=4,
-        db_path="gfv_demo.db"
+        num_levels=12, max_hash=2**13, feature_dim=4, db_path="gfv_demo.db"
     )
     logger.info("✅ 配置管理 - 使用dataclass提供更好的配置管理")
     
@@ -107,9 +93,7 @@ def demonstrate_new_features():
     gfv_library = GlobalFeatureLibrary(config)
     
     trainer = GFVTrainer(gfv_library, {
-        'learning_rate': 1e-3,
-        'num_epochs': 10,
-        'batch_size': 16
+        'learning_rate': 1e-3, 'num_epochs': 10, 'batch_size': 16
     })
     logger.info("   - GFVTrainer: 传统PyTorch训练")
     logger.info("   - GFVLightningModule: PyTorch Lightning支持")
@@ -137,11 +121,7 @@ def demonstrate_performance_improvements():
     import time
     
     config = GlobalHashConfig(
-        num_levels=10,
-        max_hash=2**12,
-        feature_dim=2,
-        db_path="perf_demo.db",
-        cache_size=5000  # 可配置的缓存大小
+        num_levels=10, max_hash=2**12, feature_dim=2, db_path="perf_demo.db", cache_size=5000  # 可配置的缓存大小
     )
     
     gfv_library = GlobalFeatureLibrary(config)

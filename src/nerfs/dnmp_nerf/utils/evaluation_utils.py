@@ -1,21 +1,22 @@
 """
 Evaluation utilities for DNMP.
 
-This module provides functions for model evaluation, metrics computation,
-and result visualization.
+This module provides functions for model evaluation, metrics computation, and result visualization.
 """
 
 import torch
 import torch.nn.functional as F
 import numpy as np
 import matplotlib.pyplot as plt
-from typing import Tuple, List, Optional, Dict, Union
+from typing import Dict, List, Optional, Tuple, Union 
 import cv2
 from pathlib import Path
 
 
-def compute_image_metrics(pred_images: torch.Tensor,
-                         target_images: torch.Tensor) -> Dict[str, float]:
+def compute_image_metrics(
+    pred_images: torch.Tensor,
+    target_images: torch.Tensor
+):
     """
     Compute image quality metrics.
     
@@ -46,15 +47,17 @@ def compute_image_metrics(pred_images: torch.Tensor,
     lpips = torch.tensor(0.0)  # Placeholder
     
     return {
-        'mse': mse.item(),
-        'psnr': psnr.item(),
-        'ssim': ssim.item(),
-        'lpips': lpips.item()
+        'mse': mse.item(), 'psnr': psnr.item(), 'ssim': ssim.item(), 'lpips': lpips.item()
     }
 
 
-def evaluate_novel_view_synthesis(model, test_dataloader, device: torch.device,
-                                num_views: int = 10, save_dir: Optional[str] = None) -> Dict[str, float]:
+def evaluate_novel_view_synthesis(
+    model,
+    test_dataloader,
+    device: torch.device,
+    num_views: int = 10,
+    save_dir: Optional[str] = None
+):
     """
     Evaluate novel view synthesis quality.
     
@@ -158,7 +161,7 @@ def create_video_from_images(image_dir: str, output_path: str, fps: int = 30):
     print(f"Video saved to {output_path}")
 
 
-def visualize_training_progress(log_dict: Dict[str, List[float]], save_path: str):
+def visualize_training_progress(log_dict: dict[str, list[float]], save_path: str):
     """Visualize training progress."""
     fig, axes = plt.subplots(2, 2, figsize=(12, 8))
     
@@ -194,8 +197,10 @@ def visualize_training_progress(log_dict: Dict[str, List[float]], save_path: str
     plt.close()
 
 
-def compute_geometry_metrics(pred_mesh_vertices: torch.Tensor,
-                           target_mesh_vertices: torch.Tensor) -> Dict[str, float]:
+def compute_geometry_metrics(
+    pred_mesh_vertices: torch.Tensor,
+    target_mesh_vertices: torch.Tensor
+):
     """
     Compute geometry reconstruction metrics.
     
@@ -216,14 +221,11 @@ def compute_geometry_metrics(pred_mesh_vertices: torch.Tensor,
     hausdorff_dist = max(dist_matrix.min(dim=1)[0].max(), dist_matrix.min(dim=0)[0].max())
     
     return {
-        'chamfer_distance': cd.item(),
-        'hausdorff_distance': hausdorff_dist.item()
+        'chamfer_distance': cd.item(), 'hausdorff_distance': hausdorff_dist.item()
     }
 
 
-def render_depth_map(depth: torch.Tensor, 
-                    near: float = 0.1, 
-                    far: float = 100.0) -> torch.Tensor:
+def render_depth_map(depth: torch.Tensor, near: float = 0.1, far: float = 100.0) -> torch.Tensor:
     """
     Render depth map as RGB image.
     
@@ -245,9 +247,12 @@ def render_depth_map(depth: torch.Tensor,
     return torch.from_numpy(depth_colored).float()
 
 
-def create_comparison_grid(images_dict: Dict[str, torch.Tensor],
-                         titles: Optional[List[str]] = None,
-                         save_path: Optional[str] = None) -> torch.Tensor:
+def create_comparison_grid(
+    images_dict: dict[str,
+    torch.Tensor],
+    titles: Optional[list[str]] = None,
+    save_path: Optional[str] = None
+):
     """
     Create comparison grid of images.
     
@@ -277,8 +282,9 @@ def create_comparison_grid(images_dict: Dict[str, torch.Tensor],
         resized_images.append(resized.permute(0, 2, 3, 1).squeeze(0))
     
     # Create grid
-    grid = vutils.make_grid([img.permute(2, 0, 1) for img in resized_images], 
-                           nrow=len(images), padding=2, normalize=True)
+    grid = vutils.make_grid(
+        [img.permute(1, 2, 0) for img in resized_images]
+    )
     
     grid_image = grid.permute(1, 2, 0)
     
@@ -288,8 +294,13 @@ def create_comparison_grid(images_dict: Dict[str, torch.Tensor],
     return grid_image
 
 
-def benchmark_rendering_speed(model, test_rays: Tuple[torch.Tensor, torch.Tensor],
-                            device: torch.device, num_runs: int = 10) -> Dict[str, float]:
+def benchmark_rendering_speed(
+    model,
+    test_rays: tuple[torch.Tensor,
+    torch.Tensor],
+    device: torch.device,
+    num_runs: int = 10
+):
     """
     Benchmark rendering speed.
     
@@ -339,17 +350,18 @@ def benchmark_rendering_speed(model, test_rays: Tuple[torch.Tensor, torch.Tensor
     # Compute statistics
     times = np.array(times)
     return {
-        'mean_time': times.mean(),
-        'std_time': times.std(),
-        'min_time': times.min(),
-        'max_time': times.max(),
-        'fps': len(rays_o) / times.mean()
+        'mean_time': times.mean(
+        )
     }
 
 
-def evaluate_view_dependent_effects(model, dataloader, device: torch.device,
-                                  fixed_position: torch.Tensor,
-                                  num_views: int = 36) -> Dict[str, torch.Tensor]:
+def evaluate_view_dependent_effects(
+    model,
+    dataloader,
+    device: torch.device,
+    fixed_position: torch.Tensor,
+    num_views: int = 36
+): 
     """
     Evaluate view-dependent rendering effects.
     
@@ -395,15 +407,17 @@ def evaluate_view_dependent_effects(model, dataloader, device: torch.device,
             
             # Create ray directions
             i, j = torch.meshgrid(
-                torch.linspace(-0.5, 0.5, patch_size, device=device),
-                torch.linspace(-0.5, 0.5, patch_size, device=device),
-                indexing='ij'
+                torch.linspace(
+                    -0.5,
+                    0.5,
+                    patch_size,
+                    device=device,
+                )
             )
             
             dirs = torch.stack([
-                i.flatten() * right[0] + j.flatten() * up_new[0] + view_dir[0],
-                i.flatten() * right[1] + j.flatten() * up_new[1] + view_dir[1],
-                i.flatten() * right[2] + j.flatten() * up_new[2] + view_dir[2]
+                i.flatten(
+                )
             ], dim=1)
             
             rays_d = F.normalize(dirs, dim=1)
@@ -414,6 +428,5 @@ def evaluate_view_dependent_effects(model, dataloader, device: torch.device,
             rendered_views.append(rendered_image)
     
     return {
-        'views': torch.stack(rendered_views),
-        'angles': angles
+        'views': torch.stack(rendered_views), 'angles': angles
     } 

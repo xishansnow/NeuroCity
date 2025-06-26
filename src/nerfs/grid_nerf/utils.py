@@ -17,7 +17,7 @@ import torch.nn.functional as F
 import numpy as np
 import logging
 from pathlib import Path
-from typing import Optional, Union, Tuple, List, Dict, Any
+from typing import Dict, List, Optional, Tuple, Any
 import matplotlib.pyplot as plt
 from PIL import Image
 import json
@@ -46,10 +46,7 @@ def compute_psnr(pred: torch.Tensor, target: torch.Tensor, max_val: float = 1.0)
 
 
 def compute_ssim(
-    pred: torch.Tensor, 
-    target: torch.Tensor,
-    window_size: int = 11,
-    data_range: float = 1.0
+    pred: torch.Tensor, target: torch.Tensor, window_size: int = 11, data_range: float = 1.0
 ) -> float:
     """
     Compute Structural Similarity Index (SSIM) between predicted and target images.
@@ -162,10 +159,7 @@ def compute_lpips(pred: torch.Tensor, target: torch.Tensor, net: str = 'alex') -
 
 # Visualization and I/O
 def save_image(
-    image: torch.Tensor, 
-    path: Union[str, Path], 
-    normalize: bool = True,
-    quality: int = 95
+    image: torch.Tensor, path: str | Path, normalize: bool = True, quality: int = 95
 ) -> None:
     """
     Save a tensor image to file.
@@ -194,13 +188,14 @@ def save_image(
     
     # Save image
     if path.suffix.lower() in ['.jpg', '.jpeg']:
-        cv2.imwrite(str(path), cv2.cvtColor(image, cv2.COLOR_RGB2BGR), 
-                   [cv2.IMWRITE_JPEG_QUALITY, quality])
+        cv2.imwrite(
+            str,
+        )
     else:
         cv2.imwrite(str(path), cv2.cvtColor(image, cv2.COLOR_RGB2BGR))
 
 
-def load_image(path: Union[str, Path], target_size: Optional[Tuple[int, int]] = None) -> np.ndarray:
+def load_image(path: str | Path, target_size: Optional[tuple[int, int]] = None) -> np.ndarray:
     """
     Load an image from file.
     
@@ -227,10 +222,7 @@ def load_image(path: Union[str, Path], target_size: Optional[Tuple[int, int]] = 
 
 
 def create_video_from_images(
-    image_dir: Union[str, Path],
-    output_path: Union[str, Path],
-    fps: int = 30,
-    pattern: str = "*.png"
+    image_dir: str | Path, output_path: str | Path, fps: int = 30, pattern: str = "*.png"
 ) -> None:
     """
     Create a video from a directory of images.
@@ -273,10 +265,10 @@ def create_video_from_images(
 
 
 def create_comparison_grid(
-    images: List[torch.Tensor],
-    titles: Optional[List[str]] = None,
-    output_path: Optional[Union[str, Path]] = None,
-    figsize: Tuple[int, int] = (15, 5)
+    images: list[torch.Tensor], titles: Optional[list[str]] = None, output_path: Optional[str | Path] = None, figsize: tuple[int, int] = (
+        15,
+        5,
+    )
 ) -> Optional[plt.Figure]:
     """
     Create a comparison grid of images.
@@ -323,7 +315,7 @@ def create_comparison_grid(
 
 
 # Logging and Configuration
-def setup_logging(log_file: Optional[Union[str, Path]] = None, level: int = logging.INFO) -> None:
+def setup_logging(log_file: Optional[str | Path] = None, level: int = logging.INFO) -> None:
     """Setup logging configuration."""
     handlers = [logging.StreamHandler()]
     
@@ -333,14 +325,14 @@ def setup_logging(log_file: Optional[Union[str, Path]] = None, level: int = logg
         handlers.append(logging.FileHandler(log_file))
     
     logging.basicConfig(
-        level=level,
-        format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
-        handlers=handlers
+        level=level, format='%(
+            asctime,
+        )
     )
 
 
-def load_config(config_path: Union[str, Path]) -> Dict[str, Any]:
-    """Load configuration from YAML or JSON file."""
+def load_config(config_path: str | Path) -> dict[str, Any]:
+    """Load configuration from file."""
     config_path = Path(config_path)
     
     with open(config_path, 'r') as f:
@@ -352,8 +344,8 @@ def load_config(config_path: Union[str, Path]) -> Dict[str, Any]:
             raise ValueError(f"Unsupported config file format: {config_path.suffix}")
 
 
-def save_config(config: Dict[str, Any], output_path: Union[str, Path]) -> None:
-    """Save configuration to YAML or JSON file."""
+def save_config(config: dict[str, Any], output_path: str | Path) -> None:
+    """Save configuration to file."""
     output_path = Path(output_path)
     output_path.parent.mkdir(parents=True, exist_ok=True)
     
@@ -371,12 +363,7 @@ class CosineAnnealingWarmRestarts(_LRScheduler):
     """Cosine Annealing with Warm Restarts scheduler."""
     
     def __init__(
-        self,
-        optimizer,
-        T_0: int,
-        T_mult: int = 1,
-        eta_min: float = 0,
-        last_epoch: int = -1
+        self, optimizer, T_0: int, T_mult: int = 1, eta_min: float = 0, last_epoch: int = -1
     ):
         self.T_0 = T_0
         self.T_i = T_0
@@ -417,11 +404,7 @@ class CosineAnnealingWarmRestarts(_LRScheduler):
 
 
 def get_learning_rate_scheduler(
-    optimizer,
-    scheduler_type: str = 'cosine',
-    max_steps: int = 100000,
-    warmup_steps: int = 1000,
-    **kwargs
+    optimizer, scheduler_type: str = 'cosine', max_steps: int = 100000, warmup_steps: int = 1000, **kwargs
 ):
     """Get learning rate scheduler."""
     if scheduler_type == 'cosine':
@@ -474,7 +457,7 @@ def positional_encoding(x: torch.Tensor, L: int = 10) -> torch.Tensor:
     encoded = torch.cat(encoded, dim=-1)  # [N, D * (2 * L + 1)]
     
     # Reshape back to original shape
-    new_shape = shape[:-1] + (encoded.shape[-1],)
+    new_shape = shape[:-1] + (encoded.shape[-1], )
     return encoded.view(new_shape)
 
 
@@ -483,7 +466,12 @@ def safe_normalize(x: torch.Tensor, dim: int = -1, eps: float = 1e-8) -> torch.T
     return F.normalize(x, dim=dim, eps=eps)
 
 
-def get_ray_directions(H: int, W: int, focal: float, center: Optional[Tuple[float, float]] = None) -> torch.Tensor:
+def get_ray_directions(
+    H: int,
+    W: int,
+    focal: float,
+    center: Optional[tuple[float, float]] = None,
+) -> torch.Tensor:
     """
     Get ray directions for a pinhole camera.
     
@@ -502,16 +490,13 @@ def get_ray_directions(H: int, W: int, focal: float, center: Optional[Tuple[floa
     cx, cy = center
     
     i, j = torch.meshgrid(
-        torch.linspace(0, W-1, W),
-        torch.linspace(0, H-1, H),
-        indexing='ij'
+        torch.linspace(0, W-1, W), torch.linspace(0, H-1, H), indexing='ij'
     )
     i = i.t()  # [H, W]
     j = j.t()  # [H, W]
     
     directions = torch.stack([
-        (i - cx) / focal,
-        -(j - cy) / focal,  # Negative for right-handed coordinate system
+        (i - cx) / focal, -(j - cy) / focal, # Negative for right-handed coordinate system
         -torch.ones_like(i)
     ], dim=-1)  # [H, W, 3]
     
@@ -519,13 +504,8 @@ def get_ray_directions(H: int, W: int, focal: float, center: Optional[Tuple[floa
 
 
 def sample_along_rays(
-    rays_o: torch.Tensor,
-    rays_d: torch.Tensor,
-    near: float,
-    far: float,
-    n_samples: int,
-    perturb: bool = True
-) -> Tuple[torch.Tensor, torch.Tensor]:
+    rays_o: torch.Tensor, rays_d: torch.Tensor, near: float, far: float, n_samples: int, perturb: bool = True
+) -> tuple[torch.Tensor, torch.Tensor]:
     """
     Sample points along rays.
     
@@ -566,12 +546,8 @@ def sample_along_rays(
 
 
 def volume_rendering(
-    rgb: torch.Tensor,
-    density: torch.Tensor,
-    z_vals: torch.Tensor,
-    rays_d: torch.Tensor,
-    white_background: bool = False
-) -> Dict[str, torch.Tensor]:
+    rgb: torch.Tensor, density: torch.Tensor, z_vals: torch.Tensor, rays_d: torch.Tensor, white_background: bool = False
+) -> dict[str, torch.Tensor]:
     """
     Perform volume rendering.
     
@@ -588,8 +564,7 @@ def volume_rendering(
     # Compute distances between adjacent samples
     dists = z_vals[..., 1:] - z_vals[..., :-1]  # [N, n_samples-1]
     dists = torch.cat([
-        dists,
-        torch.full_like(dists[..., :1], 1e10)  # Last sample has infinite distance
+        dists, torch.full_like(dists[..., :1], 1e10)  # Last sample has infinite distance
     ], dim=-1)  # [N, n_samples]
     
     # Multiply by ray direction norm to get real distances
@@ -620,10 +595,5 @@ def volume_rendering(
     disp = 1.0 / torch.max(1e-10 * torch.ones_like(depth), depth / torch.sum(weights, dim=-1))
     
     return {
-        'rgb': rgb_rendered,
-        'depth': depth,
-        'disp': disp,
-        'weights': weights,
-        'alpha': alpha,
-        'transmittance': T
+        'rgb': rgb_rendered, 'depth': depth, 'disp': disp, 'weights': weights, 'alpha': alpha, 'transmittance': T
     } 

@@ -27,44 +27,21 @@ def train_plenoxel(args):
     
     # Model configuration
     model_config = PlenoxelConfig(
-        grid_resolution=(args.resolution, args.resolution, args.resolution),
-        scene_bounds=(-1.0, -1.0, -1.0, 1.0, 1.0, 1.0),
-        sh_degree=args.sh_degree,
-        use_coarse_to_fine=args.coarse_to_fine,
-        sparsity_threshold=args.sparsity_threshold,
-        tv_lambda=args.tv_lambda,
-        l1_lambda=args.l1_lambda,
-        near_plane=args.near,
-        far_plane=args.far
+        grid_resolution=(
+            args.resolution,
+            args.resolution,
+            args.resolution,
+        )
     )
     
     # Dataset configuration
     dataset_config = create_plenoxel_dataset(
-        data_dir=args.data_dir,
-        dataset_type=args.dataset_type,
-        downsample_factor=args.downsample,
-        white_background=args.white_background,
-        num_rays_train=args.num_rays,
-        near=args.near,
-        far=args.far
+        data_dir=args.data_dir, dataset_type=args.dataset_type, downsample_factor=args.downsample, white_background=args.white_background, num_rays_train=args.num_rays, near=args.near, far=args.far
     )
     
     # Trainer configuration
     trainer_config = PlenoxelTrainerConfig(
-        max_epochs=args.max_epochs,
-        learning_rate=args.learning_rate,
-        weight_decay=args.weight_decay,
-        color_loss_weight=1.0,
-        tv_loss_weight=args.tv_lambda,
-        l1_loss_weight=args.l1_lambda,
-        pruning_threshold=args.sparsity_threshold,
-        pruning_interval=args.pruning_interval,
-        eval_interval=args.eval_interval,
-        save_interval=args.save_interval,
-        log_interval=args.log_interval,
-        experiment_name=args.experiment_name,
-        output_dir=args.output_dir,
-        resume_from=args.resume_from
+        max_epochs=args.max_epochs, learning_rate=args.learning_rate, weight_decay=args.weight_decay, color_loss_weight=1.0, tv_loss_weight=args.tv_lambda, l1_loss_weight=args.l1_lambda, pruning_threshold=args.sparsity_threshold, pruning_interval=args.pruning_interval, eval_interval=args.eval_interval, save_interval=args.save_interval, log_interval=args.log_interval, experiment_name=args.experiment_name, output_dir=args.output_dir, resume_from=args.resume_from
     )
     
     # Create trainer and start training
@@ -89,9 +66,7 @@ def render_plenoxel(args):
     
     # Create dataset for rendering
     dataset_config = create_plenoxel_dataset(
-        data_dir=args.data_dir,
-        dataset_type=args.dataset_type,
-        downsample_factor=args.downsample
+        data_dir=args.data_dir, dataset_type=args.dataset_type, downsample_factor=args.downsample
     )
     
     # Generate novel view poses
@@ -121,19 +96,17 @@ def render_plenoxel(args):
             
             # Generate rays
             i_coords, j_coords = np.meshgrid(
-                np.arange(W, dtype=np.float32),
-                np.arange(H, dtype=np.float32),
-                indexing='xy'
+                np.arange(W, dtype=np.float32), np.arange(H, dtype=np.float32), indexing='xy'
             )
             
             dirs = np.stack([
-                (i_coords - W * 0.5) / focal,
-                -(j_coords - H * 0.5) / focal,
-                -np.ones_like(i_coords)
+                (i_coords - W * 0.5) / focal, -(j_coords - H * 0.5) / focal, -np.ones_like(i_coords)
             ], -1)
             
             rays_d = torch.from_numpy(dirs @ pose[:3, :3].T).float().to(device)
-            rays_o = torch.from_numpy(np.broadcast_to(pose[:3, -1], rays_d.shape)).float().to(device)
+            rays_o = torch.from_numpy(
+                np.broadcast_to,
+            )
             
             # Render in chunks
             chunk_size = 1024
@@ -179,9 +152,7 @@ def evaluate_plenoxel(args):
     
     # Create dataset
     dataset_config = create_plenoxel_dataset(
-        data_dir=args.data_dir,
-        dataset_type=args.dataset_type,
-        downsample_factor=args.downsample
+        data_dir=args.data_dir, dataset_type=args.dataset_type, downsample_factor=args.downsample
     )
     
     from .dataset import PlenoxelDataset, create_plenoxel_dataloader
@@ -231,7 +202,7 @@ def evaluate_plenoxel(args):
     logger.info(f"Average PSNR: {avg_psnr:.2f}")
 
 
-def demo_plenoxels():
+def demo_plenoxels() -> None:
     """Demonstrate Plenoxel on a simple scene."""
     logger.info("Running Plenoxel demo...")
     
@@ -239,9 +210,7 @@ def demo_plenoxels():
     
     # Model configuration
     model_config = PlenoxelConfig(
-        grid_resolution=(64, 64, 64),
-        scene_bounds=(-1.0, -1.0, -1.0, 1.0, 1.0, 1.0),
-        sh_degree=1
+        grid_resolution=(64, 64, 64), scene_bounds=(-1.0, -1.0, -1.0, 1.0, 1.0, 1.0), sh_degree=1
     )
     
     # Create model
@@ -268,20 +237,15 @@ def train_plenoxels():
     
     # Configuration
     model_config = PlenoxelConfig(
-        grid_resolution=(128, 128, 128),
-        sh_degree=2
+        grid_resolution=(128, 128, 128), sh_degree=2
     )
     
     dataset_config = PlenoxelDatasetConfig(
-        data_dir="data/nerf_synthetic/lego",
-        dataset_type="blender",
-        num_rays_train=1024
+        data_dir="data/nerf_synthetic/lego", dataset_type="blender", num_rays_train=1024
     )
     
     trainer_config = PlenoxelTrainerConfig(
-        max_epochs=1000,
-        learning_rate=0.1,
-        experiment_name="plenoxel_demo"
+        max_epochs=1000, learning_rate=0.1, experiment_name="plenoxel_demo"
     )
     
     # Create and run trainer
@@ -292,8 +256,14 @@ def train_plenoxels():
 def main():
     """Main entry point."""
     parser = argparse.ArgumentParser(description='Plenoxels Example')
-    parser.add_argument('--mode', type=str, choices=['demo', 'train'], 
-                       default='demo', help='Mode to run')
+    parser.add_argument(
+        '--mode',
+        type=str,
+        choices=['demo',
+        'train'],
+        default='demo',
+        help='Mode to run',
+    )
     
     args = parser.parse_args()
     

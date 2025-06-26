@@ -10,8 +10,7 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 import numpy as np
-from typing import Dict, List, Tuple, Optional, Union
-
+from typing import List, Optional, Tuple, Any, Union
 
 class SDFNetwork(nn.Module):
     """SDF网络模型
@@ -32,17 +31,7 @@ class SDFNetwork(nn.Module):
     """
     
     def __init__(
-        self,
-        dim_input: int = 3,
-        dim_latent: int = 256,
-        dim_hidden: int = 512,
-        num_layers: int = 8,
-        skip_connections: List[int] = [4],
-        geometric_init: bool = True,
-        beta: float = 100,
-        bias: float = 0.5,
-        weight_norm: bool = True,
-        **kwargs
+        self, dim_input: int = 3, dim_latent: int = 256, dim_hidden: int = 512, num_layers: int = 8, skip_connections: list[int] = [4], geometric_init: bool = True, beta: float = 100, bias: float = 0.5, weight_norm: bool = True, **kwargs
     ):
         super().__init__()
         
@@ -89,7 +78,10 @@ class SDFNetwork(nn.Module):
         """几何初始化"""
         if is_output:
             # 输出层初始化
-            torch.nn.init.normal_(layer.weight, mean=np.sqrt(np.pi) / np.sqrt(layer.in_features), std=0.0001)
+            torch.nn.init.normal_(
+                layer.weight,
+                mean=np.sqrt,
+            )
             torch.nn.init.constant_(layer.bias, -self.bias)
         else:
             # 隐藏层初始化
@@ -97,9 +89,7 @@ class SDFNetwork(nn.Module):
             torch.nn.init.normal_(layer.weight, 0.0, np.sqrt(2) / np.sqrt(layer.out_features))
     
     def forward(
-        self, 
-        points: torch.Tensor,
-        latent_code: torch.Tensor
+        self, points: torch.Tensor, latent_code: torch.Tensor
     ) -> torch.Tensor:
         """前向传播
         
@@ -151,10 +141,7 @@ class SDFNetwork(nn.Module):
         return sdf
     
     def predict_sdf(
-        self,
-        points: torch.Tensor,
-        latent_code: torch.Tensor,
-        chunk_size: int = 100000
+        self, points: torch.Tensor, latent_code: torch.Tensor, chunk_size: int = 100000
     ) -> torch.Tensor:
         """预测SDF值（支持大批量推理）
         
@@ -185,13 +172,8 @@ class SDFNetwork(nn.Module):
         return torch.cat(sdf_list, dim=0)
     
     def extract_mesh(
-        self,
-        latent_code: torch.Tensor,
-        resolution: int = 256,
-        threshold: float = 0.0,
-        bbox: Optional[Tuple[float, float]] = None,
-        use_marching_cubes: bool = True
-    ) -> Dict:
+        self, latent_code: torch.Tensor, resolution: int = 256, threshold: float = 0.0, bbox: Optional[tuple[float, float]] = None, use_marching_cubes: bool = True
+    ) -> dict[str, torch.Tensor]:
         """提取网格表面
         
         Args:
@@ -231,12 +213,10 @@ class SDFNetwork(nn.Module):
                 
                 sdf_np = sdf.cpu().numpy()
                 vertices, faces, _, _ = measure.marching_cubes(
-                    sdf_np,
-                    level=threshold,
-                    spacing=(
-                        (bbox[1] - bbox[0]) / (resolution - 1),
-                        (bbox[1] - bbox[0]) / (resolution - 1),
-                        (bbox[1] - bbox[0]) / (resolution - 1)
+                    sdf_np, level=threshold, spacing=(
+                        (
+                            bbox[1] - bbox[0],
+                        )
                     )
                 )
                 
@@ -244,9 +224,7 @@ class SDFNetwork(nn.Module):
                 vertices = vertices + bbox[0]
                 
                 return {
-                    'vertices': vertices,
-                    'faces': faces,
-                    'sdf_grid': sdf_np
+                    'vertices': vertices, 'faces': faces, 'sdf_grid': sdf_np
                 }
                 
             except ImportError:
@@ -257,11 +235,7 @@ class SDFNetwork(nn.Module):
         }
     
     def compute_sdf_loss(
-        self,
-        pred_sdf: torch.Tensor,
-        gt_sdf: torch.Tensor,
-        loss_type: str = 'l1',
-        reduction: str = 'mean'
+        self, pred_sdf: torch.Tensor, gt_sdf: torch.Tensor, loss_type: str = 'l1', reduction: str = 'mean'
     ) -> torch.Tensor:
         """计算SDF预测损失
         
@@ -289,10 +263,7 @@ class SDFNetwork(nn.Module):
         return loss
     
     def compute_gradient_penalty(
-        self,
-        points: torch.Tensor,
-        latent_code: torch.Tensor,
-        lambda_gp: float = 0.1
+        self, points: torch.Tensor, latent_code: torch.Tensor, lambda_gp: float = 0.1
     ) -> torch.Tensor:
         """计算梯度惩罚项（Eikonal约束）
         
@@ -310,12 +281,9 @@ class SDFNetwork(nn.Module):
         
         # 计算梯度
         gradients = torch.autograd.grad(
-            outputs=sdf,
-            inputs=points,
-            grad_outputs=torch.ones_like(sdf),
-            create_graph=True,
-            retain_graph=True,
-            only_inputs=True
+            outputs=sdf, inputs=points, grad_outputs=torch.ones_like(
+                sdf,
+            )
         )[0]
         
         # Eikonal约束：||∇f|| = 1
@@ -324,7 +292,7 @@ class SDFNetwork(nn.Module):
         
         return gradient_penalty
     
-    def get_model_size(self) -> Dict[str, Union[int, float]]:
+    def get_model_size(self) -> dict[str, int | float]:
         """获取模型大小信息"""
         total_params = sum(p.numel() for p in self.parameters())
         trainable_params = sum(p.numel() for p in self.parameters() if p.requires_grad)
@@ -333,9 +301,7 @@ class SDFNetwork(nn.Module):
         model_size_mb = total_params * 4 / (1024 * 1024)  # 假设float32
         
         return {
-            'total_parameters': total_params,
-            'trainable_parameters': trainable_params,
-            'model_size_mb': model_size_mb
+            'total_parameters': total_params, 'trainable_parameters': trainable_params, 'model_size_mb': model_size_mb
         }
 
 
@@ -346,10 +312,7 @@ class LatentSDFNetwork(nn.Module):
     """
     
     def __init__(
-        self,
-        dim_latent: int = 256,
-        num_shapes: Optional[int] = None,
-        **sdf_kwargs
+        self, dim_latent: int = 256, num_shapes: Optional[int] = None, **sdf_kwargs
     ):
         super().__init__()
         
@@ -366,10 +329,7 @@ class LatentSDFNetwork(nn.Module):
             nn.init.normal_(self.latent_codes.weight, 0.0, 1e-4)
     
     def forward(
-        self,
-        points: torch.Tensor,
-        shape_ids: Optional[torch.Tensor] = None,
-        latent_code: Optional[torch.Tensor] = None
+        self, points: torch.Tensor, shape_ids: Optional[torch.Tensor] = None, latent_code: Optional[torch.Tensor] = None
     ) -> torch.Tensor:
         """前向传播
         
@@ -431,18 +391,14 @@ class MultiScaleSDFNetwork(SDFNetwork):
     """
     
     def __init__(
-        self,
-        scales: List[float] = [1.0, 0.5, 0.25],
-        **kwargs
+        self, scales: list[float] = [1.0, 0.5, 0.25], **kwargs
     ):
         super().__init__(**kwargs)
         self.scales = scales
     
     def forward_multiscale(
-        self,
-        points: torch.Tensor,
-        latent_code: torch.Tensor
-    ) -> Dict[str, torch.Tensor]:
+        self, points: torch.Tensor, latent_code: torch.Tensor
+    ) -> dict[str, torch.Tensor]:
         """多尺度前向传播
         
         Args:

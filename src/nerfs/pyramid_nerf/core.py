@@ -6,7 +6,7 @@ Implements the main PyNeRF model with pyramidal representation
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-from typing import Dict, List, Optional, Tuple, Union
+from typing import Dict, List, Optional, Tuple, Any, Union
 from dataclasses import dataclass
 import numpy as np
 import logging
@@ -75,25 +75,20 @@ class PyNeRF(nn.Module):
         
         for level in range(config.num_levels):
             resolution = min(
-                config.base_resolution * (config.scale_factor ** level),
-                config.max_resolution
+                config.base_resolution * (config.scale_factor ** level), config.max_resolution
             )
             
             # Hash encoder for this level
             encoder = HashEncoder(
-                resolution=int(resolution),
-                hash_table_size=config.hash_table_size,
-                features_per_level=config.features_per_level,
-                num_levels=1  # Single level per encoder
+                resolution=int(
+                    resolution,
+                )
             )
             self.encoders[f"level_{level}"] = encoder
             
             # MLP head for this level
             mlp = PyNeRFMLP(
-                input_dim=config.features_per_level,
-                hidden_dim=config.hidden_dim,
-                num_layers=config.num_layers,
-                use_viewdirs=config.use_viewdirs
+                input_dim=config.features_per_level, hidden_dim=config.hidden_dim, num_layers=config.num_layers, use_viewdirs=config.use_viewdirs
             )
             self.mlps[f"level_{level}"] = mlp
         
@@ -102,24 +97,21 @@ class PyNeRF(nn.Module):
         
         logger.info(f"Initialized PyNeRF with {config.num_levels} pyramid levels")
     
-    def _create_pyramid_levels(self) -> List[int]:
+    def _create_pyramid_levels(self) -> list[int]:
         """Create list of pyramid level resolutions"""
         levels = []
         for level in range(self.config.num_levels):
             resolution = min(
-                self.config.base_resolution * (self.config.scale_factor ** level),
-                self.config.max_resolution
+                self.config.base_resolution * (
+                    self.config.scale_factor ** level,
+                )
             )
             levels.append(int(resolution))
         return levels
     
     def forward(
-        self,
-        rays_o: torch.Tensor,
-        rays_d: torch.Tensor,
-        bounds: torch.Tensor,
-        **kwargs
-    ) -> Dict[str, torch.Tensor]:
+        self, rays_o: torch.Tensor, rays_d: torch.Tensor, bounds: torch.Tensor, **kwargs
+    ) -> dict[str, torch.Tensor]:
         """
         Forward pass through PyNeRF
         
@@ -167,11 +159,8 @@ class PyNeRF(nn.Module):
         return outputs
     
     def _query_pyramid(
-        self,
-        pts: torch.Tensor,
-        rays_d: torch.Tensor,
-        sample_areas: torch.Tensor
-    ) -> Dict[str, torch.Tensor]:
+        self, pts: torch.Tensor, rays_d: torch.Tensor, sample_areas: torch.Tensor
+    ) -> dict[str, torch.Tensor]:
         """
         Query pyramid levels based on sample areas
         
@@ -188,9 +177,7 @@ class PyNeRF(nn.Module):
         
         # Determine pyramid levels for each sample
         pyramid_levels = get_pyramid_level(
-            sample_areas.flatten(),
-            self.pyramid_levels,
-            self.config.scale_factor
+            sample_areas.flatten(), self.pyramid_levels, self.config.scale_factor
         )
         
         # Initialize outputs
@@ -229,17 +216,15 @@ class PyNeRF(nn.Module):
         )
         
         return {
-            "rgb": final_rgb,
-            "sigma": final_sigma
+            "rgb": final_rgb, "sigma": final_sigma
         }
     
-    def get_pyramid_info(self) -> Dict[str, any]:
+    def get_pyramid_info(self) -> dict[str, any]:
         """Get information about pyramid structure"""
         return {
-            "num_levels": self.config.num_levels,
-            "resolutions": self.pyramid_levels,
-            "scale_factor": self.config.scale_factor,
-            "total_parameters": sum(p.numel() for p in self.parameters())
+            "num_levels": self.config.num_levels, "resolutions": self.pyramid_levels, "scale_factor": self.config.scale_factor, "total_parameters": sum(
+                p.numel,
+            )
         }
 
 
@@ -247,11 +232,7 @@ class PyNeRFMLP(nn.Module):
     """MLP head for PyNeRF pyramid level"""
     
     def __init__(
-        self,
-        input_dim: int,
-        hidden_dim: int = 64,
-        num_layers: int = 2,
-        use_viewdirs: bool = True
+        self, input_dim: int, hidden_dim: int = 64, num_layers: int = 2, use_viewdirs: bool = True
     ):
         super().__init__()
         self.use_viewdirs = use_viewdirs
@@ -289,10 +270,8 @@ class PyNeRFMLP(nn.Module):
         self.feature_linear = nn.Linear(input_dim, hidden_dim)
     
     def forward(
-        self,
-        encoded_pts: torch.Tensor,
-        viewdirs: Optional[torch.Tensor] = None
-    ) -> Tuple[torch.Tensor, torch.Tensor]:
+        self, encoded_pts: torch.Tensor, viewdirs: Optional[torch.Tensor] = None
+    ) -> tuple[torch.Tensor, torch.Tensor]:
         """
         Forward pass through MLP
         
@@ -331,10 +310,8 @@ class PyNeRFLoss(nn.Module):
         self.mse_loss = nn.MSELoss()
     
     def forward(
-        self,
-        predictions: Dict[str, torch.Tensor],
-        targets: Dict[str, torch.Tensor]
-    ) -> Dict[str, torch.Tensor]:
+        self, predictions: dict[str, torch.Tensor], targets: dict[str, torch.Tensor]
+    ) -> dict[str, torch.Tensor]:
         """
         Compute PyNeRF loss
         

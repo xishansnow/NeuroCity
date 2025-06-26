@@ -1,15 +1,14 @@
 """
 Mathematical utility functions for Mip-NeRF
 
-This module contains mathematical utilities specifically for Mip-NeRF implementation,
-including safe mathematical operations and specialized functions for integrated
+This module contains mathematical utilities specifically for Mip-NeRF implementation, including safe mathematical operations and specialized functions for integrated
 positional encoding.
 """
 
 import torch
 import torch.nn.functional as F
 import numpy as np
-from typing import Tuple, Optional
+from typing import Optional, Tuple
 
 
 def safe_exp(x: torch.Tensor, threshold: float = 10.0) -> torch.Tensor:
@@ -59,8 +58,12 @@ def expected_cos(x: torch.Tensor, x_var: torch.Tensor) -> torch.Tensor:
     return torch.exp(-0.5 * x_var) * torch.cos(x)
 
 
-def integrated_pos_enc(x_coord: torch.Tensor, x_cov: torch.Tensor, 
-                      min_deg: int, max_deg: int) -> torch.Tensor:
+def integrated_pos_enc(
+    x_coord: torch.Tensor,
+    x_cov: torch.Tensor,
+    min_deg: int,
+    max_deg: int,
+)
     """
     Compute integrated positional encoding for multivariate Gaussians
     
@@ -80,8 +83,10 @@ def integrated_pos_enc(x_coord: torch.Tensor, x_cov: torch.Tensor,
         x_var = torch.diagonal(x_cov, dim1=-2, dim2=-1)
     
     # Generate frequency bands
-    scales = torch.pow(2.0, torch.arange(min_deg, max_deg, 
-                                       device=x_coord.device, dtype=x_coord.dtype))
+    scales = torch.pow(
+        2.0,
+        torch.arange,
+    )
     
     # Scale coordinates and variances
     scaled_x = x_coord[..., None, :] * scales[None, :, None]  # [..., num_freqs, 3]
@@ -96,8 +101,12 @@ def integrated_pos_enc(x_coord: torch.Tensor, x_cov: torch.Tensor,
     return encoding.reshape(*encoding.shape[:-2], -1)  # [..., 2*3*num_freqs]
 
 
-def lift_gaussian(directions: torch.Tensor, t_mean: torch.Tensor, 
-                 t_var: torch.Tensor, r_var: torch.Tensor) -> Tuple[torch.Tensor, torch.Tensor]:
+def lift_gaussian(
+    directions: torch.Tensor,
+    t_mean: torch.Tensor,
+    t_var: torch.Tensor,
+    r_var: torch.Tensor,
+)
     """
     Lift a Gaussian defined along a ray to 3D coordinates
     
@@ -151,7 +160,10 @@ def compute_depth_variance(t_samples: torch.Tensor, weights: torch.Tensor) -> to
     return depth_var
 
 
-def compute_alpha_weights(density: torch.Tensor, dists: torch.Tensor) -> Tuple[torch.Tensor, torch.Tensor]:
+def compute_alpha_weights(
+    density: torch.Tensor,
+    dists: torch.Tensor,
+)
     """
     Compute alpha values and transmittance weights from density and distances
     
@@ -168,8 +180,7 @@ def compute_alpha_weights(density: torch.Tensor, dists: torch.Tensor) -> Tuple[t
     # Compute transmittance (cumulative product of (1-alpha))
     transmittance = torch.cumprod(1.0 - alpha + 1e-10, dim=-1)
     transmittance = torch.cat([
-        torch.ones_like(transmittance[..., :1]), 
-        transmittance[..., :-1]
+        torch.ones_like(transmittance[..., :1]), transmittance[..., :-1]
     ], dim=-1)
     
     # Compute weights
@@ -178,8 +189,12 @@ def compute_alpha_weights(density: torch.Tensor, dists: torch.Tensor) -> Tuple[t
     return alpha, weights
 
 
-def piecewise_constant_pdf(t_vals: torch.Tensor, weights: torch.Tensor, 
-                          num_samples: int, randomized: bool = True) -> torch.Tensor:
+def piecewise_constant_pdf(
+    t_vals: torch.Tensor,
+    weights: torch.Tensor,
+    num_samples: int,
+    randomized: bool = True,
+)
     """
     Sample from piecewise constant PDF defined by t_vals and weights
     
@@ -227,9 +242,15 @@ def piecewise_constant_pdf(t_vals: torch.Tensor, weights: torch.Tensor,
     return samples
 
 
-def sample_along_rays(origins: torch.Tensor, directions: torch.Tensor,
-                     num_samples: int, near: float, far: float, 
-                     randomized: bool = True, lindisp: bool = False) -> torch.Tensor:
+def sample_along_rays(
+    origins: torch.Tensor,
+    directions: torch.Tensor,
+    num_samples: int,
+    near: float,
+    far: float,
+    randomized: bool = True,
+    lindisp: bool = False,
+)
     """
     Sample points along rays
     
@@ -266,8 +287,14 @@ def sample_along_rays(origins: torch.Tensor, directions: torch.Tensor,
     return t_vals.expand(*origins.shape[:-1], num_samples)
 
 
-def compute_multiscale_loss(pred_rgb: torch.Tensor, target_rgb: torch.Tensor,
-                           resolutions: list = [1, 2, 4, 8]) -> torch.Tensor:
+def compute_multiscale_loss(
+    pred_rgb: torch.Tensor,
+    target_rgb: torch.Tensor,
+    resolutions: list = [1,
+    2,
+    4,
+    8],
+)
     """
     Compute multiscale loss by downsampling images at different resolutions
     
@@ -289,13 +316,11 @@ def compute_multiscale_loss(pred_rgb: torch.Tensor, target_rgb: torch.Tensor,
         else:
             # Downsample
             pred_down = F.avg_pool2d(
-                pred_rgb.permute(2, 0, 1).unsqueeze(0), 
-                kernel_size=res, stride=res
+                pred_rgb.permute(2, 0, 1).unsqueeze(0), kernel_size=res, stride=res
             ).squeeze(0).permute(1, 2, 0)
             
             target_down = F.avg_pool2d(
-                target_rgb.permute(2, 0, 1).unsqueeze(0),
-                kernel_size=res, stride=res
+                target_rgb.permute(2, 0, 1).unsqueeze(0), kernel_size=res, stride=res
             ).squeeze(0).permute(1, 2, 0)
         
         # Compute MSE loss at this resolution

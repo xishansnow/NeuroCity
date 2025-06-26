@@ -7,7 +7,7 @@ DataGen 核心模块
 import torch
 import numpy as np
 from dataclasses import dataclass
-from typing import Dict, List, Optional, Tuple, Union, Any
+from typing import Dict, List, Optional, Tuple, Any
 from pathlib import Path
 import logging
 
@@ -25,8 +25,15 @@ class DataGenConfig:
     
     # 体素配置
     voxel_size: float = 1.0
-    grid_size: Tuple[int, int, int] = (64, 64, 64)
-    scene_bounds: Tuple[float, float, float, float, float, float] = (-32.0, -32.0, -32.0, 32.0, 32.0, 32.0)
+    grid_size: tuple[int, int, int] = (64, 64, 64)
+    scene_bounds: tuple[float, float, float, float, float, float] = (
+        -32.0,
+        -32.0,
+        -32.0,
+        32.0,
+        32.0,
+        32.0,
+    )
     
     # 采样配置
     sample_ratio: float = 0.1
@@ -36,7 +43,7 @@ class DataGenConfig:
     
     # SDF配置
     sdf_truncation: float = 5.0
-    sdf_clamp: Tuple[float, float] = (-1.0, 1.0)
+    sdf_clamp: tuple[float, float] = (-1.0, 1.0)
     
     # 训练配置
     batch_size: int = 1024
@@ -90,14 +97,12 @@ class DataGenPipeline:
         
         # 初始化统计信息
         self.stats = {
-            'total_samples': 0,
-            'processing_time': 0.0,
-            'memory_usage': 0.0
+            'total_samples': 0, 'processing_time': 0.0, 'memory_usage': 0.0
         }
         
         logger.info(f"DataGen管道初始化完成，设备: {self.device}")
     
-    def _set_random_seed(self, seed: int):
+    def _set_random_seed(self, seed: int) -> None:
         """设置随机种子"""
         np.random.seed(seed)
         torch.manual_seed(seed)
@@ -112,19 +117,12 @@ class DataGenPipeline:
         else:
             return torch.device(device)
     
-    def generate_voxel_data(self, 
-                           scene_params: Dict[str, Any],
-                           save_path: Optional[str] = None) -> Dict[str, np.ndarray]:
-        """
-        生成体素数据
-        
-        Args:
-            scene_params: 场景参数
-            save_path: 保存路径
-            
-        Returns:
-            生成的体素数据
-        """
+    def generate_voxel_data(
+        self,
+        scene_params: dict[str, Any],
+        save_path: Optional[str] = None,
+    ) -> dict[str, np.ndarray]:
+        """生成体素数据"""
         logger.info("开始生成体素数据...")
         
         # 根据场景类型生成体素
@@ -147,15 +145,27 @@ class DataGenPipeline:
         logger.info(f"体素数据生成完成，形状: {voxel_data['occupancy'].shape}")
         return voxel_data
     
-    def _generate_sphere_voxels(self, params: Dict[str, Any]) -> Dict[str, np.ndarray]:
+    def _generate_sphere_voxels(self, params: dict[str, Any]) -> dict[str, np.ndarray]:
         """生成球体体素"""
         center = params.get('center', (0, 0, 0))
         radius = params.get('radius', 10.0)
         
         # 创建坐标网格
-        x = np.linspace(self.config.scene_bounds[0], self.config.scene_bounds[3], self.config.grid_size[0])
-        y = np.linspace(self.config.scene_bounds[1], self.config.scene_bounds[4], self.config.grid_size[1])
-        z = np.linspace(self.config.scene_bounds[2], self.config.scene_bounds[5], self.config.grid_size[2])
+        x = np.linspace(
+            self.config.scene_bounds[0],
+            self.config.scene_bounds[3],
+            self.config.grid_size[0],
+        )
+        y = np.linspace(
+            self.config.scene_bounds[1],
+            self.config.scene_bounds[4],
+            self.config.grid_size[1],
+        )
+        z = np.linspace(
+            self.config.scene_bounds[2],
+            self.config.scene_bounds[5],
+            self.config.grid_size[2],
+        )
         
         X, Y, Z = np.meshgrid(x, y, z, indexing='ij')
         
@@ -168,20 +178,30 @@ class DataGenPipeline:
         sdf = np.clip(sdf, self.config.sdf_clamp[0], self.config.sdf_clamp[1])
         
         return {
-            'occupancy': occupancy,
-            'sdf': sdf,
-            'coordinates': np.stack([X, Y, Z], axis=-1)
+            'occupancy': occupancy, 'sdf': sdf, 'coordinates': np.stack([X, Y, Z], axis=-1)
         }
     
-    def _generate_cube_voxels(self, params: Dict[str, Any]) -> Dict[str, np.ndarray]:
+    def _generate_cube_voxels(self, params: dict[str, Any]) -> dict[str, np.ndarray]:
         """生成立方体体素"""
         center = params.get('center', (0, 0, 0))
         size = params.get('size', 20.0)
         
         # 创建坐标网格
-        x = np.linspace(self.config.scene_bounds[0], self.config.scene_bounds[3], self.config.grid_size[0])
-        y = np.linspace(self.config.scene_bounds[1], self.config.scene_bounds[4], self.config.grid_size[1])
-        z = np.linspace(self.config.scene_bounds[2], self.config.scene_bounds[5], self.config.grid_size[2])
+        x = np.linspace(
+            self.config.scene_bounds[0],
+            self.config.scene_bounds[3],
+            self.config.grid_size[0],
+        )
+        y = np.linspace(
+            self.config.scene_bounds[1],
+            self.config.scene_bounds[4],
+            self.config.grid_size[1],
+        )
+        z = np.linspace(
+            self.config.scene_bounds[2],
+            self.config.scene_bounds[5],
+            self.config.grid_size[2],
+        )
         
         X, Y, Z = np.meshgrid(x, y, z, indexing='ij')
         
@@ -196,16 +216,14 @@ class DataGenPipeline:
         
         # 内部距离
         internal_dist = np.minimum(np.minimum(
-            half_size - np.abs(X - center[0]),
-            half_size - np.abs(Y - center[1])
+            half_size - np.abs(X - center[0]), half_size - np.abs(Y - center[1])
         ), half_size - np.abs(Z - center[2]))
         
         # 组合SDF
         sdf = np.where(
             (np.abs(X - center[0]) <= half_size) & 
             (np.abs(Y - center[1]) <= half_size) & 
-            (np.abs(Z - center[2]) <= half_size),
-            -internal_dist,  # 内部为负
+            (np.abs(Z - center[2]) <= half_size), -internal_dist, # 内部为负
             external_dist    # 外部为正
         )
         
@@ -213,19 +231,29 @@ class DataGenPipeline:
         sdf = np.clip(sdf, self.config.sdf_clamp[0], self.config.sdf_clamp[1])
         
         return {
-            'occupancy': occupancy,
-            'sdf': sdf,
-            'coordinates': np.stack([X, Y, Z], axis=-1)
+            'occupancy': occupancy, 'sdf': sdf, 'coordinates': np.stack([X, Y, Z], axis=-1)
         }
     
-    def _generate_complex_scene_voxels(self, params: Dict[str, Any]) -> Dict[str, np.ndarray]:
+    def _generate_complex_scene_voxels(self, params: dict[str, Any]) -> dict[str, np.ndarray]:
         """生成复杂场景体素"""
         objects = params.get('objects', [])
         
         # 初始化空场景
-        x = np.linspace(self.config.scene_bounds[0], self.config.scene_bounds[3], self.config.grid_size[0])
-        y = np.linspace(self.config.scene_bounds[1], self.config.scene_bounds[4], self.config.grid_size[1])
-        z = np.linspace(self.config.scene_bounds[2], self.config.scene_bounds[5], self.config.grid_size[2])
+        x = np.linspace(
+            self.config.scene_bounds[0],
+            self.config.scene_bounds[3],
+            self.config.grid_size[0],
+        )
+        y = np.linspace(
+            self.config.scene_bounds[1],
+            self.config.scene_bounds[4],
+            self.config.grid_size[1],
+        )
+        z = np.linspace(
+            self.config.scene_bounds[2],
+            self.config.scene_bounds[5],
+            self.config.grid_size[2],
+        )
         
         X, Y, Z = np.meshgrid(x, y, z, indexing='ij')
         
@@ -245,20 +273,18 @@ class DataGenPipeline:
             combined_sdf = np.minimum(combined_sdf, obj_data['sdf'])
         
         # 处理无限值
-        combined_sdf = np.where(combined_sdf == float('inf'), 
-                               self.config.sdf_clamp[1], 
-                               combined_sdf)
+        combined_sdf = np.where(
+            combined_sdf == float,
+        )
         
         occupancy = (combined_sdf <= 0).astype(np.float32)
         combined_sdf = np.clip(combined_sdf, self.config.sdf_clamp[0], self.config.sdf_clamp[1])
         
         return {
-            'occupancy': occupancy,
-            'sdf': combined_sdf,
-            'coordinates': np.stack([X, Y, Z], axis=-1)
+            'occupancy': occupancy, 'sdf': combined_sdf, 'coordinates': np.stack([X, Y, Z], axis=-1)
         }
     
-    def _save_voxel_data(self, voxel_data: Dict[str, np.ndarray], save_path: str):
+    def _save_voxel_data(self, voxel_data: dict[str, np.ndarray], save_path: str) -> None:
         """保存体素数据"""
         save_path = Path(save_path)
         save_path.parent.mkdir(parents=True, exist_ok=True)
@@ -267,19 +293,12 @@ class DataGenPipeline:
         np.savez_compressed(save_path, **voxel_data)
         logger.info(f"体素数据已保存到: {save_path}")
     
-    def generate_training_samples(self, 
-                                 voxel_data: Dict[str, np.ndarray],
-                                 sampling_strategy: str = "stratified") -> Dict[str, np.ndarray]:
-        """
-        从体素数据生成训练样本
-        
-        Args:
-            voxel_data: 体素数据
-            sampling_strategy: 采样策略
-            
-        Returns:
-            训练样本
-        """
+    def generate_training_samples(
+        self,
+        voxel_data: dict[str, np.ndarray],
+        sampling_strategy: str = "stratified",
+    ) -> dict[str, np.ndarray]:
+        """从体素数据生成训练样本"""
         logger.info(f"使用{sampling_strategy}策略生成训练样本...")
         
         coordinates = voxel_data['coordinates']
@@ -308,8 +327,7 @@ class DataGenPipeline:
         sample_occupancy = occupancy_flat[indices]
         
         result = {
-            'coordinates': sample_coords,
-            'occupancy': sample_occupancy
+            'coordinates': sample_coords, 'occupancy': sample_occupancy
         }
         
         if sdf is not None:
@@ -349,14 +367,12 @@ class DataGenPipeline:
         # 这里简化实现，实际应该检测边界
         return self._stratified_sampling(coords, occupancy)
     
-    def get_statistics(self) -> Dict[str, Any]:
+    def get_statistics(self) -> dict[str, Any]:
         """获取生成统计信息"""
         return self.stats.copy()
     
-    def reset_statistics(self):
+    def reset_statistics(self) -> None:
         """重置统计信息"""
         self.stats = {
-            'total_samples': 0,
-            'processing_time': 0.0,
-            'memory_usage': 0.0
+            'total_samples': 0, 'processing_time': 0.0, 'memory_usage': 0.0
         } 

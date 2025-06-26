@@ -82,7 +82,7 @@ class NeRFLightningModule(pl.LightningModule):
         encoded.append(x)  # 原始坐标
         return torch.cat(encoded, dim=-1)
     
-    def forward(self, positions: torch.Tensor) -> Dict[str, torch.Tensor]:
+    def forward(self, positions: torch.Tensor) -> dict[str, torch.Tensor]:
         """前向传播"""
         # 位置编码
         encoded_pos = self.positional_encoding(positions)
@@ -95,11 +95,10 @@ class NeRFLightningModule(pl.LightningModule):
         color = torch.sigmoid(output[..., 1:])  # 颜色 [0, 1]
         
         return {
-            'density': density,
-            'color': color
+            'density': density, 'color': color
         }
     
-    def training_step(self, batch: Dict[str, torch.Tensor], batch_idx: int) -> torch.Tensor:
+    def training_step(self, batch: dict[str, torch.Tensor], batch_idx: int) -> torch.Tensor:
         """训练步骤"""
         positions = batch['positions']  # [N, 3]
         target_colors = batch['colors']  # [N, 3]
@@ -119,7 +118,12 @@ class NeRFLightningModule(pl.LightningModule):
         
         return color_loss
     
-    def validation_step(self, batch: Dict[str, torch.Tensor], batch_idx: int) -> Dict[str, torch.Tensor]:
+    def validation_step(
+        self,
+        batch: dict[str,
+        torch.Tensor],
+        batch_idx: int,
+    )
         """验证步骤"""
         positions = batch['positions']
         target_colors = batch['colors']
@@ -139,8 +143,9 @@ class NeRFLightningModule(pl.LightningModule):
         
         # 计算指标
         psnr = self.val_psnr(outputs['color'], target_colors)
-        ssim = self.val_ssim(outputs['color'].unsqueeze(0).unsqueeze(0), 
-                            target_colors.unsqueeze(0).unsqueeze(0))
+        ssim = self.val_ssim(
+            outputs['color'].unsqueeze,
+        )
         
         # 记录验证指标
         self.log('val/loss', val_loss, on_step=False, on_epoch=True, prog_bar=True)
@@ -148,9 +153,7 @@ class NeRFLightningModule(pl.LightningModule):
         self.log('val/ssim', ssim, on_step=False, on_epoch=True, prog_bar=True)
         
         return {
-            'val_loss': val_loss,
-            'val_psnr': psnr,
-            'val_ssim': ssim
+            'val_loss': val_loss, 'val_psnr': psnr, 'val_ssim': ssim
         }
     
     def on_train_epoch_end(self):
@@ -162,15 +165,15 @@ class NeRFLightningModule(pl.LightningModule):
         """更新EMA模型"""
         decay = self.config.ema_decay
         with torch.no_grad():
-            for ema_param, model_param in zip(self.ema_model.parameters(), self.network.parameters()):
+            for ema_param, model_param in zip(
+                self.ema_model.parameters,
+            )
                 ema_param.mul_(decay).add_(model_param, alpha=1 - decay)
     
     def configure_optimizers(self):
         """配置优化器和调度器"""
         optimizer = torch.optim.AdamW(
-            self.parameters(),
-            lr=self.config.learning_rate,
-            weight_decay=1e-4
+            self.parameters(), lr=self.config.learning_rate, weight_decay=1e-4
         )
         
         if self.config.scheduler_type == "cosine":
@@ -178,10 +181,8 @@ class NeRFLightningModule(pl.LightningModule):
                 optimizer, T_max=100, eta_min=1e-6
             )
             return {
-                "optimizer": optimizer,
-                "lr_scheduler": {
-                    "scheduler": scheduler,
-                    "interval": "epoch"
+                "optimizer": optimizer, "lr_scheduler": {
+                    "scheduler": scheduler, "interval": "epoch"
                 }
             }
         else:
@@ -202,11 +203,10 @@ class MockNeRFDataset(torch.utils.data.Dataset):
         position = torch.randn(3) * 2  # [-2, 2] 范围内的位置
         
         # 简单的颜色函数：基于位置生成颜色
-        color = torch.sigmoid(position)  # 将位置映射到[0,1]颜色
+        color = torch.sigmoid(position)  # 将位置映射到[0, 1]颜色
         
         return {
-            'positions': position,
-            'colors': color
+            'positions': position, 'colors': color
         }
 
 
@@ -222,13 +222,7 @@ def demonstrate_complete_lightning():
     
     # 1. 创建配置
     config = NeRFLightningConfig(
-        hidden_dim=128,
-        num_layers=4,
-        learning_rate=1e-3,
-        pe_freq=8,
-        scheduler_type="cosine",
-        use_ema=True,
-        ema_decay=0.999
+        hidden_dim=128, num_layers=4, learning_rate=1e-3, pe_freq=8, scheduler_type="cosine", use_ema=True, ema_decay=0.999
     )
     
     print(f"⚙️  模型配置: {config}")
@@ -236,7 +230,7 @@ def demonstrate_complete_lightning():
     # 2. 创建模型
     model = NeRFLightningModule(config)
     param_count = sum(p.numel() for p in model.parameters())
-    print(f"🧠 模型参数数量: {param_count:,}")
+    print(f"🧠 模型参数数量: {param_count:, }")
     
     # 3. 创建数据集和数据加载器
     train_dataset = MockNeRFDataset(1000)
@@ -256,23 +250,13 @@ def demonstrate_complete_lightning():
     callbacks = [
         # 模型检查点
         ModelCheckpoint(
-            dirpath="checkpoints/final_demo",
-            filename="nerf-{epoch:02d}-{val/psnr:.3f}",
-            monitor="val/psnr",
-            mode="max",
-            save_top_k=3,
-            save_last=True
-        ),
-        
-        # 早停
+            dirpath="checkpoints/final_demo", filename="nerf-{
+                epoch:02d,
+            }
+        ), # 早停
         EarlyStopping(
-            monitor="val/psnr",
-            mode="max",
-            patience=20,
-            min_delta=0.001
-        ),
-        
-        # 学习率监控
+            monitor="val/psnr", mode="max", patience=20, min_delta=0.001
+        ), # 学习率监控
         LearningRateMonitor(
             logging_interval="epoch"
         )
@@ -280,24 +264,13 @@ def demonstrate_complete_lightning():
     
     # 5. 创建日志记录器
     logger = TensorBoardLogger(
-        save_dir="logs",
-        name="final_nerf_demo",
-        version="v1.0"
+        save_dir="logs", name="final_nerf_demo", version="v1.0"
     )
     
     # 6. 创建训练器
     trainer = pl.Trainer(
-        max_epochs=50,
-        devices=1,
-        accelerator="auto",
-        precision="16-mixed" if device == "cuda" else "32",
-        callbacks=callbacks,
-        logger=logger,
-        log_every_n_steps=10,
-        val_check_interval=0.5,  # 每半个epoch验证一次
-        enable_checkpointing=True,
-        enable_progress_bar=True,
-        enable_model_summary=True
+        max_epochs=50, devices=1, accelerator="auto", precision="16-mixed" if device == "cuda" else "32", callbacks=callbacks, logger=logger, log_every_n_steps=10, val_check_interval=0.5, # 每半个epoch验证一次
+        enable_checkpointing=True, enable_progress_bar=True, enable_model_summary=True
     )
     
     print("\n🚀 开始训练...")

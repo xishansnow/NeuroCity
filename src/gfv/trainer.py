@@ -10,7 +10,7 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 import numpy as np
-from typing import Dict, List, Optional, Any, Tuple
+from typing import Dict, List, Optional, Tuple, Any
 import logging
 from tqdm import tqdm
 from torch.optim import Adam, AdamW
@@ -34,9 +34,7 @@ logger = logging.getLogger(__name__)
 class GFVTrainer:
     """GFV传统训练器"""
     
-    def __init__(self, 
-                 model: GlobalFeatureLibrary,
-                 config: Optional[Dict[str, Any]] = None):
+    def __init__(self, model: GlobalFeatureLibrary, config: Optional[dict[str, Any]] = None):
         """
         初始化训练器
         
@@ -85,10 +83,12 @@ class GFVTrainer:
         else:
             self.scheduler = None
     
-    def train(self, 
-              train_dataset: GlobalFeatureDataset,
-              val_dataset: Optional[GlobalFeatureDataset] = None,
-              save_path: Optional[str] = None):
+    def train(
+        self,
+        train_dataset: GlobalFeatureDataset,
+        val_dataset: Optional[GlobalFeatureDataset] = None,
+        save_path: Optional[str] = None,
+    )
         """
         训练模型
         
@@ -104,19 +104,13 @@ class GFVTrainer:
         
         # 数据加载器
         train_loader = DataLoader(
-            train_dataset, 
-            batch_size=self.batch_size, 
-            shuffle=True,
-            num_workers=4
+            train_dataset, batch_size=self.batch_size, shuffle=True, num_workers=4
         )
         
         val_loader = None
         if val_dataset:
             val_loader = DataLoader(
-                val_dataset,
-                batch_size=self.batch_size,
-                shuffle=False,
-                num_workers=4
+                val_dataset, batch_size=self.batch_size, shuffle=False, num_workers=4
             )
         
         # 移动模型到设备
@@ -154,9 +148,7 @@ class GFVTrainer:
         
         logger.info("训练完成")
         return {
-            'train_losses': self.train_losses,
-            'val_losses': self.val_losses,
-            'best_val_loss': best_val_loss
+            'train_losses': self.train_losses, 'val_losses': self.val_losses, 'best_val_loss': best_val_loss
         }
     
     def _train_epoch(self, train_loader: DataLoader) -> float:
@@ -207,11 +199,8 @@ class GFVTrainer:
     def save_checkpoint(self, path: str):
         """保存检查点"""
         checkpoint = {
-            'model_state_dict': self.model.database.hash_encoder.state_dict(),
-            'optimizer_state_dict': self.optimizer.state_dict(),
-            'train_losses': self.train_losses,
-            'val_losses': self.val_losses,
-            'config': self.config
+            'model_state_dict': self.model.database.hash_encoder.state_dict(
+            )
         }
         
         if self.scheduler:
@@ -235,10 +224,12 @@ if LIGHTNING_AVAILABLE:
     class GFVLightningModule(pl.LightningModule):
         """GFV PyTorch Lightning模块"""
         
-        def __init__(self, 
-                     config: GlobalHashConfig,
-                     learning_rate: float = 1e-3,
-                     optimizer_type: str = 'adam'):
+        def __init__(
+            self,
+            config: GlobalHashConfig,
+            learning_rate: float = 1e-3,
+            optimizer_type: str = 'adam',
+        )
             """
             初始化Lightning模块
             
@@ -313,8 +304,7 @@ if LIGHTNING_AVAILABLE:
             scheduler = CosineAnnealingLR(optimizer, T_max=100)
             
             return {
-                'optimizer': optimizer,
-                'lr_scheduler': scheduler
+                'optimizer': optimizer, 'lr_scheduler': scheduler
             }
         
         def on_train_epoch_end(self):
@@ -337,19 +327,19 @@ else:
 class GFVMultiScaleTrainer(GFVTrainer):
     """多尺度GFV训练器"""
     
-    def __init__(self, 
-                 model: GlobalFeatureLibrary,
-                 config: Optional[Dict[str, Any]] = None):
+    def __init__(self, model: GlobalFeatureLibrary, config: Optional[dict[str, Any]] = None):
         super().__init__(model, config)
         
         # 多尺度配置
         self.scale_weights = self.config.get('scale_weights', [1.0, 1.0, 1.0, 1.0])
         self.progressive_training = self.config.get('progressive_training', False)
     
-    def train_multiscale(self, 
-                        train_dataset: MultiScaleDataset,
-                        val_dataset: Optional[MultiScaleDataset] = None,
-                        save_path: Optional[str] = None):
+    def train_multiscale(
+        self,
+        train_dataset: MultiScaleDataset,
+        val_dataset: Optional[MultiScaleDataset] = None,
+        save_path: Optional[str] = None,
+    )
         """
         多尺度训练
         
@@ -365,10 +355,12 @@ class GFVMultiScaleTrainer(GFVTrainer):
         else:
             return self._joint_training(train_dataset, val_dataset, save_path)
     
-    def _progressive_training(self, 
-                            train_dataset: MultiScaleDataset,
-                            val_dataset: Optional[MultiScaleDataset] = None,
-                            save_path: Optional[str] = None):
+    def _progressive_training(
+        self,
+        train_dataset: MultiScaleDataset,
+        val_dataset: Optional[MultiScaleDataset] = None,
+        save_path: Optional[str] = None,
+    )
         """渐进式训练"""
         logger.info("使用渐进式多尺度训练...")
         
@@ -393,10 +385,12 @@ class GFVMultiScaleTrainer(GFVTrainer):
         
         return results
     
-    def _joint_training(self, 
-                       train_dataset: MultiScaleDataset,
-                       val_dataset: Optional[MultiScaleDataset] = None,
-                       save_path: Optional[str] = None):
+    def _joint_training(
+        self,
+        train_dataset: MultiScaleDataset,
+        val_dataset: Optional[MultiScaleDataset] = None,
+        save_path: Optional[str] = None,
+    )
         """联合训练"""
         logger.info("使用联合多尺度训练...")
         

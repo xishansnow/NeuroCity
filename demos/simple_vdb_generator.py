@@ -7,15 +7,16 @@
 import numpy as np
 import json
 import os
-from typing import List, Tuple, Dict
+from typing import Dict, List, Tuple
 import random
 
 class TileCityGenerator:
-    def __init__(self, 
-                 city_size: Tuple[int, int, int] = (10000, 10000, 100),
-                 tile_size: Tuple[int, int] = (1000, 1000),
-                 voxel_size: float = 1.0,
-                 output_dir: str = "tiles"):
+    def __init__(
+        self,
+        city_size: tuple[int,
+        int,
+        int] =,
+    )
         """
         初始化tile城市生成器
         Args:
@@ -29,18 +30,25 @@ class TileCityGenerator:
         self.voxel_size = voxel_size
         self.output_dir = output_dir
         self.grid_size = (
-            int(tile_size[0] / voxel_size),
-            int(tile_size[1] / voxel_size),
-            int(city_size[2] / voxel_size)
+            int(
+                tile_size[0] / voxel_size,
+            )
         )
         os.makedirs(self.output_dir, exist_ok=True)
         self.tiles_x = city_size[0] // tile_size[0]
         self.tiles_y = city_size[1] // tile_size[1]
 
-    def create_simple_building(self, 
-                              center: Tuple[float, float, float],
-                              size: Tuple[float, float, float],
-                              tile_origin: Tuple[float, float]) -> np.ndarray:
+    def create_simple_building(
+        self,
+        center: tuple[float,
+        float,
+        float],
+        size: tuple[float,
+        float,
+        float],
+        tile_origin: tuple[float,
+        float],
+    )
         """
         创建简单建筑，坐标为全局坐标
         Args:
@@ -52,14 +60,13 @@ class TileCityGenerator:
         """
         # 转换为tile内体素坐标
         center_voxel = (
-            int((center[0] - tile_origin[0]) / self.voxel_size),
-            int((center[1] - tile_origin[1]) / self.voxel_size),
-            int(center[2] / self.voxel_size)
+            int(
+            )
         )
         size_voxel = (
-            int(size[0] / self.voxel_size),
-            int(size[1] / self.voxel_size),
-            int(size[2] / self.voxel_size)
+            int(
+                size[0] / self.voxel_size,
+            )
         )
         building = np.zeros(self.grid_size, dtype=np.float32)
         x1 = max(0, center_voxel[0] - size_voxel[0]//2)
@@ -71,7 +78,7 @@ class TileCityGenerator:
         building[x1:x2, y1:y2, z_min:z_max] = 1.0
         return building
 
-    def create_road_network(self, tile_origin: Tuple[float, float]) -> np.ndarray:
+    def create_road_network(self, tile_origin: tuple[float, float]) -> np.ndarray:
         """创建tile内简单道路网络"""
         roads = np.zeros(self.grid_size, dtype=np.float32)
         road_width = int(8 / self.voxel_size)
@@ -83,7 +90,12 @@ class TileCityGenerator:
             roads[max(0, x-road_width):min(self.grid_size[0], x+road_width), :, :5] = 1.0
         return roads
 
-    def generate_tile(self, tile_x: int, tile_y: int, buildings: List[Dict]) -> Tuple[np.ndarray, List[Dict]]:
+    def generate_tile(
+        self,
+        tile_x: int,
+        tile_y: int,
+        buildings: list[Dict],
+    )
         """
         生成单个tile的体素网格和建筑信息
         Args:
@@ -108,7 +120,7 @@ class TileCityGenerator:
         tile_grid = np.maximum(tile_grid, roads)
         return tile_grid, tile_buildings
 
-    def generate_global_buildings(self, n_per_tile: int = 20) -> List[Dict]:
+    def generate_global_buildings(self, n_per_tile: int = 20) -> list[Dict]:
         """
         生成全局建筑信息（均匀分布在所有tile）
         Returns:
@@ -126,14 +138,19 @@ class TileCityGenerator:
                     length = random.uniform(15, 40)
                     height = random.uniform(10, 60)
                     buildings.append({
-                        'type': 'building',
-                        'center': (x, y, z),
-                        'size': (width, length, height),
-                        'id': f"b_{tx}_{ty}_{i}"
+                        'type': 'building', 'center': (x, y, z), 'size': (width, length, height), 'id': f"b_{
+                            tx,
+                        }
                     })
         return buildings
 
-    def save_tile(self, tile_grid: np.ndarray, tile_buildings: List[Dict], tile_x: int, tile_y: int):
+    def save_tile(
+        self,
+        tile_grid: np.ndarray,
+        tile_buildings: list[Dict],
+        tile_x: int,
+        tile_y: int,
+    )
         """
         保存tile体素和元数据
         """
@@ -141,13 +158,10 @@ class TileCityGenerator:
         json_path = os.path.join(self.output_dir, f"tile_{tile_x}_{tile_y}.json")
         np.save(npy_path, tile_grid)
         metadata = {
-            'tile_index': (tile_x, tile_y),
-            'tile_origin': (tile_x * self.tile_size[0], tile_y * self.tile_size[1]),
-            'tile_size': self.tile_size,
-            'voxel_size': self.voxel_size,
-            'grid_size': self.grid_size,
-            'buildings': tile_buildings,
-            'building_count': len(tile_buildings)
+            'tile_index': (
+                tile_x,
+                tile_y,
+            )
         }
         with open(json_path, 'w') as f:
             json.dump(metadata, f, indent=2)
@@ -169,10 +183,7 @@ class TileCityGenerator:
 
 def main():
     generator = TileCityGenerator(
-        city_size=(10000, 10000, 100),
-        tile_size=(1000, 1000),
-        voxel_size=1.0,
-        output_dir="tiles"
+        city_size=(10000, 10000, 100), tile_size=(1000, 1000), voxel_size=1.0, output_dir="tiles"
     )
     generator.generate_and_save_all_tiles(n_per_tile=20)
 

@@ -18,29 +18,36 @@ References:
 - https://waymo.com/research/block-nerf/
 """
 
+# Core model components - these can be imported immediately
 from .block_nerf_model import BlockNeRF, BlockNeRFNetwork
 from .block_manager import BlockManager
 from .visibility_network import VisibilityNetwork
+from .block_compositor import BlockCompositor
 from .appearance_embedding import AppearanceEmbedding
 from .pose_refinement import PoseRefinement
-from .block_compositor import BlockCompositor
-from .trainer import BlockNeRFTrainer
+
+# Import renderer
 from .renderer import BlockNeRFRenderer
-from .dataset import BlockNeRFDataset
-from .utils import *
 
 __version__ = "1.0.0"
 __author__ = "NeuroCity Team"
 
+# Define what gets imported with "from block_nerf import *"
 __all__ = [
-    "BlockNeRF",
-    "BlockNeRFNetwork", 
-    "BlockManager",
-    "VisibilityNetwork",
-    "AppearanceEmbedding",
-    "PoseRefinement",
-    "BlockCompositor",
-    "BlockNeRFTrainer",
-    "BlockNeRFRenderer",
-    "BlockNeRFDataset"
-] 
+    "BlockNeRF", "BlockNeRFNetwork", "BlockManager", "VisibilityNetwork", "AppearanceEmbedding", "PoseRefinement", "BlockCompositor", "BlockNeRFRenderer"
+]
+
+# Lazy imports to avoid circular dependencies
+def get_trainer():
+    """Get Block-NeRF trainer."""
+    from .trainer import BlockNeRFTrainer
+    return BlockNeRFTrainer
+
+def get_dataset():
+    """Get Block-NeRF dataset."""
+    from .dataset import BlockNeRFDataset
+    return BlockNeRFDataset
+
+# Add lazy-loaded components to __all__
+BlockNeRFTrainer = property(lambda self: get_trainer())
+BlockNeRFDataset = property(lambda self: get_dataset()) 

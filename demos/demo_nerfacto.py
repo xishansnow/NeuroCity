@@ -56,9 +56,7 @@ class MockNerfacto(torch.nn.Module):
         
         # 哈希编码网络（简化）
         self.hash_encoding = torch.nn.Sequential(
-            torch.nn.Linear(3, 64),
-            torch.nn.ReLU(),
-            torch.nn.Linear(64, config.geo_feat_dim)
+            torch.nn.Linear(3, 64), torch.nn.ReLU(), torch.nn.Linear(64, config.geo_feat_dim)
         )
         
         # 几何网络
@@ -78,16 +76,16 @@ class MockNerfacto(torch.nn.Module):
         
         # 密度头
         self.density_head = torch.nn.Sequential(
-            torch.nn.Linear(config.hidden_dim, 1),
-            torch.nn.Softplus()
+            torch.nn.Linear(config.hidden_dim, 1), torch.nn.Softplus()
         )
         
         # 颜色网络
         self.color_network = torch.nn.Sequential(
-            torch.nn.Linear(config.hidden_dim + 27, config.hidden_dim // 2),  # +27 for direction encoding
-            torch.nn.ReLU(),
-            torch.nn.Linear(config.hidden_dim // 2, 3),
-            torch.nn.Sigmoid()
+            torch.nn.Linear(
+                config.hidden_dim + 27,
+                config.hidden_dim // 2,
+            )
+            torch.nn.ReLU(), torch.nn.Linear(config.hidden_dim // 2, 3), torch.nn.Sigmoid()
         )
     
     def hash_encode(self, positions: torch.Tensor) -> torch.Tensor:
@@ -113,14 +111,11 @@ class MockNerfacto(torch.nn.Module):
         sh_8 = 0.54627421529 * (x*x - y*y)          # Y_2^2
         
         return torch.stack([
-            sh_0, sh_1, sh_2, sh_3, sh_4, sh_5, sh_6, sh_7, sh_8,
-            # 添加更多项以达到27维
-            x*x, y*y, z*z, x*y, x*z, y*z,
-            x*x*x, y*y*y, z*z*z, x*x*y, x*x*z, y*y*x, y*y*z, z*z*x, z*z*y,
-            x*y*z, x*x*y*y, x*x*z*z, y*y*z*z
+            sh_0, sh_1, sh_2, sh_3, sh_4, sh_5, sh_6, sh_7, sh_8, # 添加更多项以达到27维
+            x*x, y*y, z*z, x*y, x*z, y*z, x*x*x, y*y*y, z*z*z, x*x*y, x*x*z, y*y*x, y*y*z, z*z*x, z*z*y, x*y*z, x*x*y*y, x*x*z*z, y*y*z*z
         ], dim=-1)
     
-    def forward(self, positions: torch.Tensor, directions: torch.Tensor) -> Dict[str, torch.Tensor]:
+    def forward(self, positions: torch.Tensor, directions: torch.Tensor) -> dict[str, torch.Tensor]:
         """前向传播"""
         # 哈希编码
         geo_features = self.hash_encode(positions)
@@ -143,12 +138,14 @@ class MockNerfacto(torch.nn.Module):
         color = self.color_network(color_input)
         
         return {
-            'density': density.squeeze(-1),
-            'color': color
+            'density': density.squeeze(-1), 'color': color
         }
 
 
-def create_realistic_dataset(num_views: int = 100, image_size: int = 64) -> Tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
+def create_realistic_dataset(
+    num_views: int = 100,
+    image_size: int = 64,
+)
     """创建更真实的数据集"""
     print(f"📊 创建真实感数据集: {num_views}个视角, 图像大小{image_size}x{image_size}")
     
@@ -162,9 +159,7 @@ def create_realistic_dataset(num_views: int = 100, image_size: int = 64) -> Tupl
         phi = 0.2 * np.sin(4 * theta)  # 高度变化
         
         cam_pos = torch.tensor([
-            3.0 * np.cos(theta),
-            3.0 * np.sin(theta),
-            2.0 + phi
+            3.0 * np.cos(theta), 3.0 * np.sin(theta), 2.0 + phi
         ])
         
         # 朝向原点
@@ -192,9 +187,9 @@ def create_realistic_dataset(num_views: int = 100, image_size: int = 64) -> Tupl
                 # 复杂的颜色函数
                 distance = torch.norm(cam_pos)
                 color = torch.sigmoid(torch.tensor([
-                    0.8 + 0.2 * ray_dir[0] + 0.1 * np.sin(distance),
-                    0.6 + 0.3 * ray_dir[1] + 0.1 * np.cos(distance),
-                    0.4 + 0.4 * ray_dir[2] + 0.1 * np.sin(2 * distance)
+                    0.8 + 0.2 * ray_dir[0] + 0.1 * np.sin(
+                        distance,
+                    )
                 ]))
                 
                 ray_origins.append(cam_pos)
@@ -202,17 +197,17 @@ def create_realistic_dataset(num_views: int = 100, image_size: int = 64) -> Tupl
                 colors.append(color)
     
     return (
-        torch.stack(ray_origins),
-        torch.stack(ray_directions),
-        torch.stack(colors)
+        torch.stack(ray_origins), torch.stack(ray_directions), torch.stack(colors)
     )
 
 
-def train_nerfacto(model: MockNerfacto,
-                   ray_origins: torch.Tensor,
-                   ray_directions: torch.Tensor,
-                   target_colors: torch.Tensor,
-                   num_epochs: int = 200) -> List[Dict]:
+def train_nerfacto(
+    model: MockNerfacto,
+    ray_origins: torch.Tensor,
+    ray_directions: torch.Tensor,
+    target_colors: torch.Tensor,
+    num_epochs: int = 200,
+)
     """训练Nerfacto模型"""
     print(f"🚀 开始训练Nerfacto模型")
     print(f"📈 训练数据: {len(ray_origins)} 条光线")
@@ -267,11 +262,8 @@ def train_nerfacto(model: MockNerfacto,
                 lr = scheduler.get_last_lr()[0]
                 
                 training_history.append({
-                    'epoch': epoch,
-                    'loss': color_loss.item(),
-                    'total_loss': total_loss.item(),
-                    'psnr': psnr,
-                    'learning_rate': lr
+                    'epoch': epoch, 'loss': color_loss.item(
+                    )
                 })
                 
                 print(f"Epoch {epoch:3d}: Loss={color_loss.item():.6f}, PSNR={psnr:.2f}dB, "
@@ -306,12 +298,11 @@ def demonstrate_nerfacto():
     # 3. 创建模型
     model = MockNerfacto(config)
     total_params = sum(p.numel() for p in model.parameters())
-    print(f"🧠 模型参数数量: {total_params:,}")
+    print(f"🧠 模型参数数量: {total_params:, }")
     
     # 4. 训练模型
     training_history = train_nerfacto(
-        model, ray_origins, ray_directions, target_colors,
-        num_epochs=120
+        model, ray_origins, ray_directions, target_colors, num_epochs=120
     )
     
     # 5. 性能统计
@@ -324,7 +315,7 @@ def demonstrate_nerfacto():
         print(f"   - 最终PSNR: {final_metrics['psnr']:.2f} dB")
         print(f"   - 最终学习率: {final_metrics['learning_rate']:.2e}")
     
-    print(f"   - 总参数量: {total_params:,}")
+    print(f"   - 总参数量: {total_params:, }")
     print(f"   - 模型大小: {total_params * 4 / 1024 / 1024:.2f} MB")
     
     print("\n🎉 Nerfacto演示完成!")

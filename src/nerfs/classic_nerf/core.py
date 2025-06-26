@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 """
 Classic NeRF: Representing Scenes as Neural Radiance Fields for View Synthesis.
 
@@ -17,9 +19,10 @@ import torch.nn as nn
 import torch.nn.functional as F
 import numpy as np
 import math
-from typing import Dict, List, Optional, Tuple, Union
+from typing import Dict, List, Optional, Any, Union, Callable, TypeVar
 from dataclasses import dataclass
 
+T = TypeVar('T', bound=torch.Tensor)
 
 @dataclass
 class NeRFConfig:
@@ -65,67 +68,69 @@ class NeRFConfig:
 class Embedder(nn.Module):
     """Positional encoding embedder for coordinates and directions."""
     
-    def __init__(self, input_dims: int, max_freq_log2: int, num_freqs: int,
-                 log_sampling: bool = True, include_input: bool = True,
-                 periodic_fns: List = [torch.sin, torch.cos]):
+    def __init__(
+        self,
+        input_dims: int,
+        max_freq_log2: int,
+        num_freqs: int,
+        log_sampling: bool = True,
+        include_input: bool = True,
+        periodic_fns: list[Callable[[torch.Tensor],
+        torch.Tensor]] | None = None,
+    ):
         super().__init__()
         
         self.input_dims = input_dims
         self.include_input = include_input
-        self.periodic_fns = periodic_fns
+        self.periodic_fns = [torch.sin, torch.cos] if periodic_fns is None else periodic_fns
         self.max_freq_log2 = max_freq_log2
         self.num_freqs = num_freqs
         self.log_sampling = log_sampling
         
-        self.create_embedding_fn()
-    
-    def create_embedding_fn(self):
-        """Create embedding function."""
-        embed_fns = []
-        d = self.input_dims
-        out_dim = 0
-        
-        if self.include_input:
-            embed_fns.append(lambda x: x)
-            out_dim += d
-        
-        max_freq = self.max_freq_log2
-        N_freqs = self.num_freqs
-        
+        # Create frequency bands
         if self.log_sampling:
-            freq_bands = 2.**torch.linspace(0., max_freq, steps=N_freqs)
+            freq_bands = 2.**torch.linspace(0., max_freq_log2, steps=num_freqs)
         else:
-            freq_bands = torch.linspace(2.**0., 2.**max_freq, steps=N_freqs)
+            freq_bands = torch.linspace(2.**0., 2.**max_freq_log2, steps=num_freqs)
         
-        for freq in freq_bands:
-            for p_fn in self.periodic_fns:
-                embed_fns.append(lambda x, p_fn=p_fn, freq=freq: p_fn(x * freq))
-                out_dim += d
+        # Store frequency bands as parameters
+        self.freq_bands = nn.ParameterList([nn.Parameter(freq.unsqueeze(0), requires_grad=False) 
+                                          for freq in freq_bands])
         
-        self.embed_fns = embed_fns
-        self.out_dim = out_dim
+        # Calculate output dimension
+        self.out_dim = 0
+        if self.include_input:
+            self.out_dim += input_dims
+        self.out_dim += input_dims * num_freqs * len(self.periodic_fns)
     
     def forward(self, inputs: torch.Tensor) -> torch.Tensor:
         """Apply positional encoding to inputs."""
-        return torch.cat([fn(inputs) for fn in self.embed_fns], -1)
+        # Create output tensor
+        embeds = []
+        
+        # Add raw inputs if requested
+        if self.include_input:
+            embeds.append(inputs)
+        
+        # Add encoded inputs
+        for freq_param in self.freq_bands:
+            freq = freq_param[0]  # Get scalar value from parameter
+            for p_fn in self.periodic_fns:
+                embeds.append(p_fn(inputs * freq))
+        
+        # Concatenate all embeddings
+        return torch.cat(embeds, dim=-1)
 
 
-def get_embedder(multires: int, input_dims: int = 3) -> Tuple[Embedder, int]:
+def get_embedder(multires: int, input_dims: int = 3) -> tuple[Embedder | nn.Identity, int]:
     """Get positional encoding embedder."""
     if multires == -1:
         return nn.Identity(), input_dims
     
     embed_kwargs = {
-        'include_input': True,
-        'input_dims': input_dims,
-        'max_freq_log2': multires - 1,
-        'num_freqs': multires,
-        'log_sampling': True,
-        'periodic_fns': [torch.sin, torch.cos],
-    }
+        'include_input': True, 'input_dims': input_dims, 'max_freq_log2': multires - 1, 'num_freqs': multires, 'log_sampling': True, }
     
     embedder_obj = Embedder(**embed_kwargs)
-    embed = lambda x, eo=embedder_obj: eo(x)
     return embedder_obj, embedder_obj.out_dim
 
 
@@ -172,8 +177,7 @@ class NeRF(nn.Module):
         Forward pass through NeRF.
         
         Args:
-            x: Input tensor [N, input_ch + input_ch_views] if use_viewdirs,
-               else [N, input_ch]
+            x: Input tensor [N, input_ch + input_ch_views] if use_viewdirs, else [N, input_ch]
                
         Returns:
             outputs: [N, 4] (RGB + density) 
@@ -208,9 +212,14 @@ class NeRF(nn.Module):
         return outputs
 
 
-def raw2outputs(raw: torch.Tensor, z_vals: torch.Tensor, rays_d: torch.Tensor,
-                raw_noise_std: float = 0.0, white_bkgd: bool = False,
-                pytest: bool = False) -> Dict[str, torch.Tensor]:
+def raw2outputs(
+    raw: torch.Tensor,
+    z_vals: torch.Tensor,
+    rays_d: torch.Tensor,
+    raw_noise_std: float = 0.0,
+    white_bkgd: bool = False,
+    pytest: bool = False,
+) -> dict[str, Any]:
     """
     Transforms model's predictions to semantically meaningful values.
     
@@ -223,17 +232,16 @@ def raw2outputs(raw: torch.Tensor, z_vals: torch.Tensor, rays_d: torch.Tensor,
         pytest: If True, return also intermediate calculations for testing.
         
     Returns:
-        rgb_map: [num_rays, 3]. Estimated RGB color of a ray.
-        disp_map: [num_rays]. Disparity map. Inverse of depth map.
-        acc_map: [num_rays]. Sum of weights along each ray.
-        weights: [num_rays, num_samples]. Weights assigned to each sampled color.
-        depth_map: [num_rays]. Estimated distance to object.
+        dict: Dictionary containing rendered outputs
     """
     raw2alpha = lambda raw, dists, act_fn=F.relu: 1. - torch.exp(-act_fn(raw) * dists)
     
     # Compute distances between adjacent samples
     dists = z_vals[..., 1:] - z_vals[..., :-1]
-    dists = torch.cat([dists, torch.Tensor([1e10]).expand(dists[..., :1].shape).to(dists.device)], -1)
+    dists = torch.cat(
+        [dists, torch.Tensor([1e10]).expand(dists[..., :1].shape).to(dists.device)],
+        dim=-1
+    )
     
     # Multiply each distance by the norm of its corresponding direction ray
     dists = dists * torch.norm(rays_d[..., None, :], dim=-1)
@@ -246,8 +254,10 @@ def raw2outputs(raw: torch.Tensor, z_vals: torch.Tensor, rays_d: torch.Tensor,
     
     # Alpha compositing
     alpha = raw2alpha(raw[..., 3] + noise, dists)  # [N_rays, N_samples]
-    weights = alpha * torch.cumprod(torch.cat([torch.ones((alpha.shape[0], 1), device=alpha.device), 
-                                              1. - alpha + 1e-10], -1), -1)[:, :-1]
+    weights = alpha * torch.cumprod(
+        torch.cat([torch.ones_like(alpha[..., :1]), 1. - alpha + 1e-10], -1),
+        -1
+    )[..., :-1]
     
     # Weighted sum for final RGB
     rgb_map = torch.sum(weights[..., None] * rgb, -2)  # [N_rays, 3]
@@ -256,7 +266,10 @@ def raw2outputs(raw: torch.Tensor, z_vals: torch.Tensor, rays_d: torch.Tensor,
     depth_map = torch.sum(weights * z_vals, -1)
     
     # Disparity map is inverse depth
-    disp_map = 1. / torch.max(1e-10 * torch.ones_like(depth_map), depth_map / torch.sum(weights, -1))
+    disp_map = 1. / torch.max(
+        1e-10 * torch.ones_like(depth_map),
+        depth_map
+    )
     
     # Sum of weights along each ray
     acc_map = torch.sum(weights, -1)
@@ -274,8 +287,13 @@ def raw2outputs(raw: torch.Tensor, z_vals: torch.Tensor, rays_d: torch.Tensor,
     return ret
 
 
-def sample_pdf(bins: torch.Tensor, weights: torch.Tensor, N_samples: int,
-               det: bool = False, pytest: bool = False) -> torch.Tensor:
+def sample_pdf(
+    bins: torch.Tensor,
+    weights: torch.Tensor,
+    N_samples: int,
+    det: bool = False,
+    pytest: bool = False,
+) -> torch.Tensor:
     """
     Sample @N_samples samples from @bins with distribution defined by @weights.
     
@@ -284,9 +302,10 @@ def sample_pdf(bins: torch.Tensor, weights: torch.Tensor, N_samples: int,
         weights: [N_rays, M-2]. where M is the number of bins edges.
         N_samples: Number of samples.
         det: If True, will perform deterministic sampling.
+        pytest: If True, use fixed random numbers for testing.
         
     Returns:
-        samples: [N_rays, N_samples]
+        samples: [N_rays, N_samples] Sampled points.
     """
     # Get pdf
     weights = weights + 1e-5  # prevent nans
@@ -332,17 +351,53 @@ class NeRFRenderer:
     def __init__(self, config: NeRFConfig):
         self.config = config
     
-    def render_rays(self, ray_batch: Dict[str, torch.Tensor],
-                   network_fn: nn.Module,
-                   network_fine: Optional[nn.Module] = None,
-                   retraw: bool = False,
-                   lindisp: bool = False,
-                   perturb: bool = True,
-                   N_importance: int = 0,
-                   network_query_fn: Optional = None,
-                   raw_noise_std: float = 0.,
-                   verbose: bool = False,
-                   pytest: bool = False) -> Dict[str, torch.Tensor]:
+    def run_network(
+        self,
+        inputs: torch.Tensor,
+        viewdirs: torch.Tensor | None,
+        fn: NeRF,
+    ) -> torch.Tensor:
+        """
+        Prepare inputs and apply network.
+        
+        Args:
+            inputs: [N_rays, N_samples, 3] sample coordinates
+            viewdirs: [N_rays, 3] viewing directions
+            fn: Neural network
+            
+        Returns:
+            outputs: [N_rays, N_samples, 4] raw predictions
+        """
+        inputs_flat = torch.reshape(inputs, [-1, inputs.shape[-1]])
+        
+        # Get embedded coordinates
+        embedded = fn.embed_fn(inputs_flat)
+        
+        if viewdirs is not None and fn.embeddirs_fn is not None:
+            input_dirs = viewdirs[:, None].expand(inputs.shape)
+            input_dirs_flat = torch.reshape(input_dirs, [-1, input_dirs.shape[-1]])
+            
+            # Get embedded directions
+            embedded_dirs = fn.embeddirs_fn(input_dirs_flat)
+            embedded = torch.cat([embedded, embedded_dirs], -1)
+        
+        outputs_flat = fn(embedded)
+        outputs = torch.reshape(outputs_flat, list(inputs.shape[:-1]) + [outputs_flat.shape[-1]])
+        return outputs
+    
+    def render_rays(
+        self,
+        ray_batch: dict[str, torch.Tensor],
+        network_fn: NeRF,
+        network_fine: NeRF | None = None,
+        retraw: bool = False,
+        lindisp: bool = False,
+        perturb: bool = True,
+        N_importance: int = 0,
+        raw_noise_std: float = 0.,
+        verbose: bool = False,
+        pytest: bool = False,
+    ) -> dict[str, torch.Tensor]:
         """
         Volumetric rendering.
         
@@ -355,9 +410,16 @@ class NeRFRenderer:
                 far: [N_rays] far bounds
             network_fn: Model for coarse network
             network_fine: Model for fine network
+            retraw: If True, include raw output
+            lindisp: If True, sample linearly in inverse depth
+            perturb: If True, perturb sampling points
+            N_importance: Number of importance samples
+            raw_noise_std: Standard deviation of noise added to raw density
+            verbose: If True, print warnings about numerical errors
+            pytest: If True, use deterministic random numbers
             
         Returns:
-            Dictionary with rendered outputs
+            dict: Dictionary containing rendered outputs
         """
         N_rays = ray_batch['rays_o'].shape[0]
         rays_o, rays_d = ray_batch['rays_o'], ray_batch['rays_d']
@@ -386,10 +448,7 @@ class NeRFRenderer:
         pts = rays_o[..., None, :] + rays_d[..., None, :] * z_vals[..., :, None]  # [N_rays, N_samples, 3]
         
         # Run network
-        if network_query_fn is not None:
-            raw = network_query_fn(pts, viewdirs, network_fn)
-        else:
-            raw = self.run_network(pts, viewdirs, network_fn)
+        raw = self.run_network(pts, viewdirs, network_fn)
         
         ret = raw2outputs(raw, z_vals, rays_d, raw_noise_std, self.config.white_bkgd, pytest=pytest)
         
@@ -398,7 +457,13 @@ class NeRFRenderer:
             ret0 = ret
             
             z_vals_mid = .5 * (z_vals[..., 1:] + z_vals[..., :-1])
-            z_samples = sample_pdf(z_vals_mid, ret['weights'][..., 1:-1], N_importance, det=(perturb==0.), pytest=pytest)
+            z_samples = sample_pdf(
+                z_vals_mid,
+                ret['weights'][...,
+                1:-1],
+                N_importance,
+                det=False,
+            )
             z_samples = z_samples.detach()
             
             z_vals, _ = torch.sort(torch.cat([z_vals, z_samples], -1), -1)
@@ -406,12 +471,16 @@ class NeRFRenderer:
             
             # Run fine network
             run_fn = network_fn if network_fine is None else network_fine
-            if network_query_fn is not None:
-                raw = network_query_fn(pts, viewdirs, run_fn)
-            else:
-                raw = self.run_network(pts, viewdirs, run_fn)
+            raw = self.run_network(pts, viewdirs, run_fn)
             
-            ret = raw2outputs(raw, z_vals, rays_d, raw_noise_std, self.config.white_bkgd, pytest=pytest)
+            ret = raw2outputs(
+                raw,
+                z_vals,
+                rays_d,
+                raw_noise_std,
+                self.config.white_bkgd,
+                pytest=pytest,
+            )
             
             # Store coarse results
             for k in ret0:
@@ -425,69 +494,44 @@ class NeRFRenderer:
                 print(f"! [Numerical Error] {k} contains nan or inf.")
         
         return ret
-    
-    def run_network(self, inputs: torch.Tensor, viewdirs: Optional[torch.Tensor], 
-                   fn: nn.Module) -> torch.Tensor:
-        """
-        Prepare inputs and apply network 'fn'.
-        
-        Args:
-            inputs: [N_rays, N_samples, 3] sample coordinates
-            viewdirs: [N_rays, 3] viewing directions
-            fn: NeRF network
-            
-        Returns:
-            outputs: [N_rays, N_samples, 4] raw predictions
-        """
-        inputs_flat = torch.reshape(inputs, [-1, inputs.shape[-1]])
-        embedded = fn.embed_fn(inputs_flat)
-        
-        if viewdirs is not None:
-            input_dirs = viewdirs[:, None].expand(inputs.shape)
-            input_dirs_flat = torch.reshape(input_dirs, [-1, input_dirs.shape[-1]])
-            embedded_dirs = fn.embeddirs_fn(input_dirs_flat)
-            embedded = torch.cat([embedded, embedded_dirs], -1)
-        
-        outputs_flat = fn(embedded)
-        outputs = torch.reshape(outputs_flat, list(inputs.shape[:-1]) + [outputs_flat.shape[-1]])
-        return outputs
 
 
-def create_nerf(config: NeRFConfig) -> Tuple[NeRF, NeRF, Dict]:
-    """Instantiate NeRF's MLP model."""
+def create_nerf(config: NeRFConfig) -> tuple[NeRF, NeRF | None, dict[str, Any]]:
+    """
+    Create NeRF models.
     
-    # Create coarse and fine networks
+    Args:
+        config: Configuration for NeRF models
+        
+    Returns:
+        tuple: (coarse model, fine model, render kwargs)
+    """
+    # Create coarse network
     model = NeRF(config)
     grad_vars = list(model.parameters())
     
+    # Create fine network
     model_fine = None
     if config.N_importance > 0:
         model_fine = NeRF(config)
         grad_vars += list(model_fine.parameters())
     
+    network_query_fn = lambda inputs, viewdirs, network_fn : network_fn(inputs)
+    
     # Create optimizer
-    optimizer = torch.optim.Adam(params=grad_vars, lr=config.learning_rate, 
-                                betas=(config.beta1, config.beta2), eps=config.epsilon)
+    optimizer = torch.optim.Adam(
+        params=grad_vars,
+        lr=config.learning_rate,
+        betas=(config.beta1, config.beta2),
+        eps=config.epsilon
+    )
     
     start = 0
-    
-    # Load checkpoints
-    ckpts = []
-    if len(ckpts) > 0 and not config.no_reload:
-        ckpt_path = ckpts[-1]
-        print('Reloading from', ckpt_path)
-        ckpt = torch.load(ckpt_path)
-        
-        start = ckpt['global_step']
-        optimizer.load_state_dict(ckpt['optimizer_state_dict'])
-        
-        # Load model
-        model.load_state_dict(ckpt['network_fn_state_dict'])
-        if model_fine is not None:
-            model_fine.load_state_dict(ckpt['network_fine_state_dict'])
+    basedir = './logs'
+    expname = 'nerf'
     
     render_kwargs_train = {
-        'network_query_fn': None,
+        'network_query_fn': network_query_fn,
         'perturb': config.perturb,
         'N_importance': config.N_importance,
         'network_fine': model_fine,
@@ -499,54 +543,69 @@ def create_nerf(config: NeRFConfig) -> Tuple[NeRF, NeRF, Dict]:
     }
     
     # NDC only good for LLFF-style forward facing data
-    render_kwargs_train['ndc'] = False
-    render_kwargs_train['lindisp'] = False
-    
     render_kwargs_test = {k: render_kwargs_train[k] for k in render_kwargs_train}
     render_kwargs_test['perturb'] = False
     render_kwargs_test['raw_noise_std'] = 0.
     
-    return model, model_fine, render_kwargs_train, render_kwargs_test, optimizer, start
+    return model, model_fine, render_kwargs_train
 
 
 class NeRFLoss(nn.Module):
-    """Loss function for NeRF training."""
+    """Loss function for NeRF."""
     
     def __init__(self, config: NeRFConfig):
         super().__init__()
         self.config = config
     
-    def forward(self, pred: Dict[str, torch.Tensor], 
-                target: torch.Tensor) -> Dict[str, torch.Tensor]:
+    def forward(
+        self,
+        pred: dict[str, torch.Tensor],
+        target: torch.Tensor,
+    ) -> dict[str, torch.Tensor]:
         """
-        Compute NeRF losses.
+        Compute loss between prediction and target.
         
         Args:
-            pred: Dictionary with predictions including 'rgb_map' and 'rgb_map0'
-            target: Target RGB values [N_rays, 3]
+            pred: Dictionary containing predicted values
+            target: Ground truth RGB values
             
         Returns:
-            Dictionary with loss components
+            dict: Dictionary containing loss values
         """
-        losses = {}
+        # RGB loss
+        img_loss = torch.mean((pred['rgb_map'] - target) ** 2)
+        loss = self.config.rgb_loss_weight * img_loss
         
-        # Fine network loss
-        img_loss = F.mse_loss(pred['rgb_map'], target)
-        losses['img_loss'] = img_loss * self.config.rgb_loss_weight
-        
-        # Coarse network loss
+        # Add coarse loss if available
         if 'rgb_map0' in pred:
-            img_loss0 = F.mse_loss(pred['rgb_map0'], target)
-            losses['img_loss0'] = img_loss0 * self.config.rgb_loss_weight
+            img_loss0 = torch.mean((pred['rgb_map0'] - target) ** 2)
+            loss = loss + self.config.rgb_loss_weight * img_loss0
         
-        # Total loss
-        total_loss = sum(losses.values())
-        losses['total_loss'] = total_loss
-        
-        # PSNR for monitoring
-        with torch.no_grad():
-            mse = F.mse_loss(pred['rgb_map'], target)
-            psnr = -10. * torch.log10(mse)
-            losses['psnr'] = psnr
-        
-        return losses 
+        return {
+            'loss': loss,
+            'img_loss': img_loss
+        }
+
+
+def create_bungee_nerf(
+    num_views: int = 50,
+    max_resolution: int = 128,
+):
+    """Create Bungee NeRF model."""
+    # ... existing code ...
+
+
+def batch_process_coordinates(
+    coords_list: list[np.ndarray],
+    batch_size: int = 1000,
+):
+    """Process coordinates in batches."""
+    # ... existing code ...
+
+
+def compute_voxel_bounds(
+    voxel_positions: torch.Tensor,
+    voxel_sizes: torch.Tensor,
+):
+    """Compute voxel bounds."""
+    # ... existing code ... 

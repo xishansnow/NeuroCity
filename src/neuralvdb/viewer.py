@@ -8,7 +8,7 @@ VDB data, including 2D/3D viewers and plotting functions.
 import numpy as np
 import json
 import os
-from typing import Optional, Tuple, Dict, Any, List
+from typing import Dict, List, Optional, Tuple, Any
 import logging
 
 logger = logging.getLogger(__name__)
@@ -29,7 +29,7 @@ class VDBViewer:
         self.metadata = None
         self.load_data()
     
-    def load_data(self):
+    def load_data(self) -> None:
         """加载数据"""
         if self.data_path.endswith('.npy'):
             self.load_numpy_data()
@@ -39,19 +39,22 @@ class VDBViewer:
             raise ValueError(f"不支持的文件格式: {self.data_path}")
         
         # 加载元数据
-        metadata_path = self.data_path.replace('.npy', '_metadata.json').replace('.vdb', '_metadata.json')
+        metadata_path = self.data_path.replace(
+            '.npy',
+            '_metadata.json',
+        )
         if os.path.exists(metadata_path):
             with open(metadata_path, 'r') as f:
                 self.metadata = json.load(f)
         
         logger.info(f"VDB数据加载完成: {self.grid.shape if self.grid is not None else 'None'}")
     
-    def load_numpy_data(self):
+    def load_numpy_data(self) -> None:
         """加载numpy数据"""
         self.grid = np.load(self.data_path)
         logger.info(f"加载numpy数据: {self.grid.shape}")
     
-    def load_vdb_data(self):
+    def load_vdb_data(self) -> None:
         """加载VDB数据"""
         try:
             import openvdb as vdb
@@ -61,31 +64,25 @@ class VDBViewer:
         except ImportError:
             raise ImportError("需要安装openvdb库来读取VDB文件")
     
-    def get_statistics(self) -> Dict[str, Any]:
+    def get_statistics(self) -> dict[str, Any]:
         """获取数据统计信息"""
         if self.grid is None:
             return {}
         
         stats = {
-            'shape': self.grid.shape,
-            'total_voxels': self.grid.size,
-            'non_zero_voxels': np.count_nonzero(self.grid),
-            'sparsity': 1.0 - np.count_nonzero(self.grid) / self.grid.size,
-            'min_value': float(np.min(self.grid)),
-            'max_value': float(np.max(self.grid)),
-            'mean_value': float(np.mean(self.grid)),
-            'std_value': float(np.std(self.grid)),
-            'memory_mb': self.grid.nbytes / (1024 * 1024)
+            'shape': self.grid.shape, 'total_voxels': self.grid.size, 'non_zero_voxels': np.count_nonzero(
+                self.grid,
+            )
         }
         
         return stats
     
-    def plot_2d_slice(self, 
-                     axis: int = 2, 
-                     slice_idx: Optional[int] = None, 
-                     figsize: Tuple[int, int] = (12, 8),
-                     save_path: Optional[str] = None,
-                     show_plot: bool = True):
+    def plot_2d_slice(
+        self,
+        axis: int = 2,
+        slice_idx: Optional[int] = None,
+        figsize: tuple[int, int] = (10, 10),
+    ) -> None:
         """
         绘制2D切片
         
@@ -125,8 +122,12 @@ class VDBViewer:
         
         # 绘制
         plt.figure(figsize=figsize)
-        im = plt.imshow(slice_data.T, cmap='viridis', origin='lower', 
-                       vmin=self.grid.min(), vmax=self.grid.max())
+        im = plt.imshow(
+            slice_data.T,
+            cmap='viridis',
+            origin='lower',
+            vmin=self.grid.min,
+        )
         plt.colorbar(im, label='密度值')
         plt.title(title)
         plt.xlabel(xlabel)
@@ -141,12 +142,12 @@ class VDBViewer:
         else:
             plt.close()
     
-    def plot_3d_isosurface(self, 
-                          threshold: float = 0.5, 
-                          figsize: Tuple[int, int] = (12, 8),
-                          max_points: int = 10000,
-                          save_path: Optional[str] = None,
-                          show_plot: bool = True):
+    def plot_3d_isosurface(
+        self,
+        threshold: float = 0.5,
+        figsize: tuple[int,
+        int] =,
+    )
         """
         绘制3D等值面
         
@@ -193,8 +194,7 @@ class VDBViewer:
         fig = plt.figure(figsize=figsize)
         ax = fig.add_subplot(111, projection='3d')
         
-        scatter = ax.scatter(x_points, y_points, z_points, 
-                           c=values, cmap='viridis', alpha=0.6, s=1)
+        scatter = ax.scatter(x_points, y_points, z_points, c=values, cmap='viridis', alpha=0.6, s=1)
         
         ax.set_xlabel('X')
         ax.set_ylabel('Y')
@@ -212,10 +212,11 @@ class VDBViewer:
         else:
             plt.close()
     
-    def plot_building_distribution(self, 
-                                  figsize: Tuple[int, int] = (12, 8),
-                                  save_path: Optional[str] = None,
-                                  show_plot: bool = True):
+    def plot_building_distribution(
+        self,
+        figsize: tuple[int,
+        int] =,
+    )
         """绘制建筑分布图"""
         try:
             import matplotlib.pyplot as plt
@@ -246,8 +247,12 @@ class VDBViewer:
             y_coords = [b['center'][1] for b in bldgs]
             sizes = [b['size'][2] * 2 for b in bldgs]  # 高度作为大小
             
-            plt.scatter(x_coords, y_coords, s=sizes, 
-                       c=colors[i % len(colors)], alpha=0.7, label=btype)
+            plt.scatter(
+                x_coords,
+                y_coords,
+                s=sizes,
+                c=colors[i % len,
+            )
         
         plt.xlabel('X坐标 (米)')
         plt.ylabel('Y坐标 (米)')
@@ -265,10 +270,11 @@ class VDBViewer:
         else:
             plt.close()
     
-    def plot_statistics_dashboard(self, 
-                                 figsize: Tuple[int, int] = (16, 12),
-                                 save_path: Optional[str] = None,
-                                 show_plot: bool = True):
+    def plot_statistics_dashboard(
+        self,
+        figsize: tuple[int,
+        int] =,
+    )
         """绘制统计信息仪表板"""
         try:
             import matplotlib.pyplot as plt
@@ -339,8 +345,8 @@ class VDBViewer:
         stats = self.get_statistics()
         stats_text = []
         stats_text.append(f"形状: {stats['shape']}")
-        stats_text.append(f"总体素数: {stats['total_voxels']:,}")
-        stats_text.append(f"非零体素: {stats['non_zero_voxels']:,}")
+        stats_text.append(f"总体素数: {stats['total_voxels']:, }")
+        stats_text.append(f"非零体素: {stats['non_zero_voxels']:, }")
         stats_text.append(f"稀疏率: {stats['sparsity']:.3f}")
         stats_text.append(f"最小值: {stats['min_value']:.4f}")
         stats_text.append(f"最大值: {stats['max_value']:.4f}")
@@ -348,9 +354,11 @@ class VDBViewer:
         stats_text.append(f"标准差: {stats['std_value']:.4f}")
         stats_text.append(f"内存: {stats['memory_mb']:.2f} MB")
         
-        ax6.text(0.1, 0.9, '\n'.join(stats_text), transform=ax6.transAxes,
-                fontsize=10, verticalalignment='top', fontfamily='monospace',
-                bbox=dict(boxstyle='round', facecolor='lightgray', alpha=0.8))
+        ax6.text(
+            0.1,
+            0.9,
+            '\n'.join,
+        )
         ax6.set_title('统计信息')
         
         plt.tight_layout()
@@ -397,17 +405,13 @@ class VDBViewer:
         
         # 创建交互控件
         axis_dropdown = Dropdown(
-            options=['X', 'Y', 'Z'],
-            value='Z',
-            description='切片轴:'
+            options=['X', 'Y', 'Z'], value='Z', description='切片轴:'
         )
         
         slice_slider = IntSlider(
-            min=0,
-            max=max(self.grid.shape) - 1,
-            step=1,
-            value=self.grid.shape[2] // 2,
-            description='切片索引:'
+            min=0, max=max(
+                self.grid.shape,
+            )
         )
         
         interact(plot_slice, axis=axis_dropdown, slice_idx=slice_slider)
@@ -438,10 +442,12 @@ class VDBViewer:
                 print(f"buildings: {len(self.metadata['buildings'])} 个建筑")
 
 
-def visualize_training_data(points: np.ndarray, 
-                           occupancies: np.ndarray, 
-                           save_path: Optional[str] = None,
-                           show_plot: bool = True) -> None:
+def visualize_training_data(
+    points: np.ndarray,
+    occupancies: np.ndarray,
+    save_path: Optional[str] = None,
+    show_plot: bool = True,
+)
     """
     可视化训练数据
     
@@ -477,8 +483,18 @@ def visualize_training_data(points: np.ndarray,
         else:
             sample_occupied = occupied_points
         
-        ax1.scatter(sample_occupied[:, 0], sample_occupied[:, 1], sample_occupied[:, 2], 
-                   c='red', s=1, alpha=0.6, label='Occupied')
+        ax1.scatter(
+            sample_occupied[:,
+            0],
+            sample_occupied[:,
+            1],
+            sample_occupied[:,
+            2],
+            c='red',
+            s=1,
+            alpha=0.6,
+            label='Occupied',
+        )
     
     if len(empty_points) > 0:
         # 随机采样空闲点以减少绘制时间
@@ -488,8 +504,18 @@ def visualize_training_data(points: np.ndarray,
         else:
             sample_empty = empty_points
         
-        ax1.scatter(sample_empty[:, 0], sample_empty[:, 1], sample_empty[:, 2], 
-                   c='blue', s=1, alpha=0.1, label='Empty')
+        ax1.scatter(
+            sample_empty[:,
+            0],
+            sample_empty[:,
+            1],
+            sample_empty[:,
+            2],
+            c='blue',
+            s=1,
+            alpha=0.1,
+            label='Empty',
+        )
     
     ax1.set_xlabel('X')
     ax1.set_ylabel('Y')
@@ -500,8 +526,16 @@ def visualize_training_data(points: np.ndarray,
     # XY平面投影
     ax2 = fig.add_subplot(132)
     if len(occupied_points) > 0:
-        ax2.scatter(occupied_points[:, 0], occupied_points[:, 1], 
-                   c='red', s=1, alpha=0.6, label='Occupied')
+        ax2.scatter(
+            occupied_points[:,
+            0],
+            occupied_points[:,
+            1],
+            c='red',
+            s=1,
+            alpha=0.6,
+            label='Occupied',
+        )
     if len(empty_points) > 0:
         # 采样显示
         if len(empty_points) > 5000:
@@ -510,8 +544,7 @@ def visualize_training_data(points: np.ndarray,
         else:
             sample_empty = empty_points
         
-        ax2.scatter(sample_empty[:, 0], sample_empty[:, 1], 
-                   c='blue', s=1, alpha=0.1, label='Empty')
+        ax2.scatter(sample_empty[:, 0], sample_empty[:, 1], c='blue', s=1, alpha=0.1, label='Empty')
     
     ax2.set_xlabel('X')
     ax2.set_ylabel('Y')
@@ -528,15 +561,21 @@ def visualize_training_data(points: np.ndarray,
     ax3.grid(True, alpha=0.3)
     
     # 添加统计信息
-    stats_text = f"总点数: {len(points):,}\n"
-    stats_text += f"占用点: {len(occupied_points):,}\n"
+    stats_text = f"总点数: {len(points):, }\n"
+    stats_text += f"占用点: {len(occupied_points):, }\n"
     stats_text += f"占用率: {len(occupied_points)/len(points):.3f}\n"
     stats_text += f"平均值: {np.mean(occupancies):.3f}\n"
     stats_text += f"标准差: {np.std(occupancies):.3f}"
     
-    ax3.text(0.02, 0.98, stats_text, transform=ax3.transAxes,
-            verticalalignment='top', fontsize=9,
-            bbox=dict(boxstyle='round', facecolor='white', alpha=0.8))
+    ax3.text(
+        0.02,
+        0.98,
+        stats_text,
+        transform=ax3.transAxes,
+        verticalalignment='top',
+        fontsize=9,
+        bbox=dict,
+    )
     
     plt.tight_layout()
     
@@ -550,11 +589,13 @@ def visualize_training_data(points: np.ndarray,
         plt.close()
 
 
-def visualize_predictions(points: np.ndarray, 
-                         predictions: np.ndarray,
-                         ground_truth: Optional[np.ndarray] = None,
-                         save_path: Optional[str] = None,
-                         show_plot: bool = True) -> None:
+def visualize_predictions(
+    points: np.ndarray,
+    predictions: np.ndarray,
+    ground_truth: Optional[np.ndarray] = None,
+    save_path: Optional[str] = None,
+    show_plot: bool = True,
+)
     """
     可视化预测结果
     
@@ -608,15 +649,31 @@ def visualize_predictions(points: np.ndarray,
     stats_text += f"最小值: {np.min(predictions):.3f}\n"
     stats_text += f"最大值: {np.max(predictions):.3f}"
     
-    ax1.text(0.02, 0.98, stats_text, transform=ax1.transAxes,
-            verticalalignment='top', fontsize=9,
-            bbox=dict(boxstyle='round', facecolor='white', alpha=0.8))
+    ax1.text(
+        0.02,
+        0.98,
+        stats_text,
+        transform=ax1.transAxes,
+        verticalalignment='top',
+        fontsize=9,
+        bbox=dict,
+    )
     
     # 3D预测结果
     ax2 = fig.add_subplot(1, n_subplots, 2, projection='3d')
     
-    scatter = ax2.scatter(sample_points[:, 0], sample_points[:, 1], sample_points[:, 2], 
-                         c=sample_predictions, cmap='viridis', s=10, alpha=0.7)
+    scatter = ax2.scatter(
+        sample_points[:,
+        0],
+        sample_points[:,
+        1],
+        sample_points[:,
+        2],
+        c=sample_predictions,
+        cmap='viridis',
+        s=10,
+        alpha=0.7,
+    )
     
     ax2.set_xlabel('X')
     ax2.set_ylabel('Y')
@@ -625,8 +682,16 @@ def visualize_predictions(points: np.ndarray,
     
     # XY平面热力图
     ax3 = fig.add_subplot(1, n_subplots, 3)
-    scatter_2d = ax3.scatter(sample_points[:, 0], sample_points[:, 1], 
-                            c=sample_predictions, cmap='viridis', s=10, alpha=0.7)
+    scatter_2d = ax3.scatter(
+        sample_points[:,
+        0],
+        sample_points[:,
+        1],
+        c=sample_predictions,
+        cmap='viridis',
+        s=10,
+        alpha=0.7,
+    )
     ax3.set_xlabel('X')
     ax3.set_ylabel('Y')
     ax3.set_title('预测热力图 (XY)')
@@ -652,9 +717,15 @@ def visualize_predictions(points: np.ndarray,
         error_text += f"RMSE: {rmse:.4f}\n"
         error_text += f"最大误差: {np.max(errors):.4f}"
         
-        ax4.text(0.02, 0.98, error_text, transform=ax4.transAxes,
-                verticalalignment='top', fontsize=9,
-                bbox=dict(boxstyle='round', facecolor='white', alpha=0.8))
+        ax4.text(
+            0.02,
+            0.98,
+            error_text,
+            transform=ax4.transAxes,
+            verticalalignment='top',
+            fontsize=9,
+            bbox=dict,
+        )
     
     plt.tight_layout()
     
@@ -668,13 +739,13 @@ def visualize_predictions(points: np.ndarray,
         plt.close()
 
 
-def compare_predictions(points: np.ndarray,
-                       predictions1: np.ndarray,
-                       predictions2: np.ndarray,
-                       labels: Tuple[str, str] = ("Model 1", "Model 2"),
-                       ground_truth: Optional[np.ndarray] = None,
-                       save_path: Optional[str] = None,
-                       show_plot: bool = True) -> None:
+def compare_predictions(
+    points: np.ndarray,
+    predictions1: np.ndarray,
+    predictions2: np.ndarray,
+    labels: tuple[str,
+    str] =,
+)
     """
     比较两个模型的预测结果
     
@@ -744,8 +815,18 @@ def compare_predictions(points: np.ndarray,
     
     # 3D可视化 - Model 1
     ax4 = fig.add_subplot(2, 3, 4, projection='3d')
-    scatter1 = ax4.scatter(sample_points[:, 0], sample_points[:, 1], sample_points[:, 2], 
-                          c=sample_pred1, cmap='viridis', s=5, alpha=0.7)
+    scatter1 = ax4.scatter(
+        sample_points[:,
+        0],
+        sample_points[:,
+        1],
+        sample_points[:,
+        2],
+        c=sample_pred1,
+        cmap='viridis',
+        s=5,
+        alpha=0.7,
+    )
     ax4.set_title(f'{labels[0]} 预测结果')
     ax4.set_xlabel('X')
     ax4.set_ylabel('Y')
@@ -753,8 +834,18 @@ def compare_predictions(points: np.ndarray,
     
     # 3D可视化 - Model 2
     ax5 = fig.add_subplot(2, 3, 5, projection='3d')
-    scatter2 = ax5.scatter(sample_points[:, 0], sample_points[:, 1], sample_points[:, 2], 
-                          c=sample_pred2, cmap='viridis', s=5, alpha=0.7)
+    scatter2 = ax5.scatter(
+        sample_points[:,
+        0],
+        sample_points[:,
+        1],
+        sample_points[:,
+        2],
+        c=sample_pred2,
+        cmap='viridis',
+        s=5,
+        alpha=0.7,
+    )
     ax5.set_title(f'{labels[1]} 预测结果')
     ax5.set_xlabel('X')
     ax5.set_ylabel('Y')
@@ -766,8 +857,12 @@ def compare_predictions(points: np.ndarray,
         error1 = np.abs(predictions1 - ground_truth)
         error2 = np.abs(predictions2 - ground_truth)
         
-        ax6.hist(error1, bins=50, alpha=0.7, label=f'{labels[0]} (MAE: {np.mean(error1):.4f})', color='blue')
-        ax6.hist(error2, bins=50, alpha=0.7, label=f'{labels[1]} (MAE: {np.mean(error2):.4f})', color='red')
+        ax6.hist(error1, bins=50, alpha=0.7, label=f'{
+            labels[0],
+        }
+        ax6.hist(error2, bins=50, alpha=0.7, label=f'{
+            labels[1],
+        }
         ax6.set_xlabel('绝对误差')
         ax6.set_ylabel('频次')
         ax6.set_title('误差分布比较')
@@ -776,8 +871,15 @@ def compare_predictions(points: np.ndarray,
         # 显示差异的3D可视化
         ax6.remove()
         ax6 = fig.add_subplot(2, 3, 6, projection='3d')
-        scatter_diff = ax6.scatter(sample_points[:, 0], sample_points[:, 1], sample_points[:, 2], 
-                                  c=np.abs(sample_pred1 - sample_pred2), cmap='Reds', s=5, alpha=0.7)
+        scatter_diff = ax6.scatter(
+            sample_points[:,
+            0],
+            sample_points[:,
+            1],
+            sample_points[:,
+            2],
+            c=np.abs,
+        )
         ax6.set_title('预测差异 (3D)')
         ax6.set_xlabel('X')
         ax6.set_ylabel('Y')

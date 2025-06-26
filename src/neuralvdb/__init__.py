@@ -25,8 +25,7 @@ from .octree import (
     OctreeNode, AdaptiveOctreeNode, SparseVoxelGrid, AdvancedSparseVoxelGrid
 )
 from .networks import (
-    FeatureNetwork, OccupancyNetwork, MultiScaleFeatureNetwork, 
-    AdvancedOccupancyNetwork, PositionalEncoding, MLP
+    FeatureNetwork, OccupancyNetwork, MultiScaleFeatureNetwork, AdvancedOccupancyNetwork, PositionalEncoding, MLP
 )
 from .trainer import (
     NeuralVDBTrainer, AdvancedNeuralVDBTrainer, NeuralSDFTrainer
@@ -48,46 +47,12 @@ __version__ = "1.0.0"
 
 __all__ = [
     # Core classes
-    'NeuralVDB',
-    'NeuralVDBConfig', 
-    'AdvancedNeuralVDB',
-    'AdvancedNeuralVDBConfig',
-    
-    # Octree structures
-    'OctreeNode',
-    'AdaptiveOctreeNode',
-    'SparseVoxelGrid',
-    'AdvancedSparseVoxelGrid',
-    
-    # Neural networks
-    'FeatureNetwork',
-    'OccupancyNetwork',
-    'MultiScaleFeatureNetwork',
-    'AdvancedOccupancyNetwork',
-    'PositionalEncoding',
-    'MLP',
-    
-    # Training
-    'NeuralVDBTrainer',
-    'AdvancedNeuralVDBTrainer',
-    'NeuralSDFTrainer',
-    
-    # Data handling
-    'NeuralVDBDataset',
-    'VoxelDataset',
-    
-    # Utilities
-    'create_sample_data',
-    'load_training_data',
-    'save_vdb_data',
-    'load_vdb_data',
-    
-    # Visualization
-    'VDBViewer',
-    'visualize_training_data',
-    'visualize_predictions',
-    
-    # Generation
-    'TileCityGenerator',
-    'SimpleVDBGenerator'
+    'NeuralVDB', 'NeuralVDBConfig', 'AdvancedNeuralVDB', 'AdvancedNeuralVDBConfig', # Octree structures
+    'OctreeNode', 'AdaptiveOctreeNode', 'SparseVoxelGrid', 'AdvancedSparseVoxelGrid', # Neural networks
+    'FeatureNetwork', 'OccupancyNetwork', 'MultiScaleFeatureNetwork', 'AdvancedOccupancyNetwork', 'PositionalEncoding', 'MLP', # Training
+    'NeuralVDBTrainer', 'AdvancedNeuralVDBTrainer', 'NeuralSDFTrainer', # Data handling
+    'NeuralVDBDataset', 'VoxelDataset', # Utilities
+    'create_sample_data', 'load_training_data', 'save_vdb_data', 'load_vdb_data', # Visualization
+    'VDBViewer', 'visualize_training_data', 'visualize_predictions', # Generation
+    'TileCityGenerator', 'SimpleVDBGenerator'
 ] 

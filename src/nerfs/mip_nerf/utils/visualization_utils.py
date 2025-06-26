@@ -1,8 +1,7 @@
 """
 Visualization utilities for Mip-NeRF
 
-This module contains functions for visualizing training progress, rendering results,
-and debugging Mip-NeRF models.
+This module contains functions for visualizing training progress, rendering results, and debugging Mip-NeRF models.
 """
 
 import torch
@@ -14,8 +13,12 @@ import imageio
 from pathlib import Path
 
 
-def visualize_rays(origins: torch.Tensor, directions: torch.Tensor, 
-                  t_vals: torch.Tensor, num_rays: int = 10) -> None:
+def visualize_rays(
+    origins: torch.Tensor,
+    directions: torch.Tensor,
+    t_vals: torch.Tensor,
+    num_rays: int = 10,
+)
     """
     Visualize ray sampling for debugging
     
@@ -45,12 +48,10 @@ def visualize_rays(origins: torch.Tensor, directions: torch.Tensor,
         points = origin[None, :] + direction[None, :] * t_values[:, None]
         
         # Plot ray
-        ax.plot(points[:, 0], points[:, 1], points[:, 2], 
-               color=colors[i], alpha=0.7, linewidth=2)
+        ax.plot(points[:, 0], points[:, 1], points[:, 2], color=colors[i], alpha=0.7, linewidth=2)
         
         # Plot origin
-        ax.scatter(origin[0], origin[1], origin[2], 
-                  color=colors[i], s=50, marker='o')
+        ax.scatter(origin[0], origin[1], origin[2], color=colors[i], s=50, marker='o')
     
     ax.set_xlabel('X')
     ax.set_ylabel('Y')
@@ -59,9 +60,13 @@ def visualize_rays(origins: torch.Tensor, directions: torch.Tensor,
     plt.show()
 
 
-def plot_training_curves(losses: Dict[str, List[float]], 
-                        metrics: Dict[str, List[float]],
-                        save_path: Optional[str] = None) -> None:
+def plot_training_curves(
+    losses: dict[str,
+    list[float]],
+    metrics: dict[str,
+    list[float]],
+    save_path: Optional[str] = None,
+)
     """
     Plot training curves for losses and metrics
     
@@ -121,9 +126,15 @@ def plot_training_curves(losses: Dict[str, List[float]],
     plt.show()
 
 
-def render_video(model: torch.nn.Module, poses: torch.Tensor, 
-                focal_length: float, image_width: int, image_height: int,
-                output_path: str, fps: int = 30) -> None:
+def render_video(
+    model: torch.nn.Module,
+    poses: torch.Tensor,
+    focal_length: float,
+    image_width: int,
+    image_height: int,
+    output_path: str,
+    fps: int = 30,
+)
     """
     Render a video from camera poses
     
@@ -161,8 +172,12 @@ def render_video(model: torch.nn.Module, poses: torch.Tensor,
     print(f"Video saved to {output_path}")
 
 
-def save_rendered_images(images: Dict[str, torch.Tensor], 
-                        output_dir: str, prefix: str = "render") -> None:
+def save_rendered_images(
+    images: dict[str,
+    torch.Tensor],
+    output_dir: str,
+    prefix: str = "render",
+)
     """
     Save rendered images to disk
     
@@ -185,8 +200,9 @@ def save_rendered_images(images: Dict[str, torch.Tensor],
             # RGB image
             image_np = np.clip(image_np, 0, 1)
             image_np = (image_np * 255).astype(np.uint8)
-            cv2.imwrite(str(output_path / f"{prefix}_{name}.png"), 
-                       cv2.cvtColor(image_np, cv2.COLOR_RGB2BGR))
+            cv2.imwrite(
+                str,
+            )
         elif len(image_np.shape) == 2:
             # Grayscale image (depth, etc.)
             image_np = np.clip(image_np, 0, 1)
@@ -219,8 +235,7 @@ def visualize_depth_map(depth: torch.Tensor, title: str = "Depth Map") -> None:
     plt.show()
 
 
-def compare_images(pred: torch.Tensor, target: torch.Tensor, 
-                  title: str = "Comparison") -> None:
+def compare_images(pred: torch.Tensor, target: torch.Tensor, title: str = "Comparison") -> None:
     """
     Compare predicted and target images side by side
     
@@ -261,8 +276,12 @@ def compare_images(pred: torch.Tensor, target: torch.Tensor,
     plt.show()
 
 
-def visualize_weights(weights: torch.Tensor, t_vals: torch.Tensor,
-                     num_rays: int = 5, title: str = "Ray Weights") -> None:
+def visualize_weights(
+    weights: torch.Tensor,
+    t_vals: torch.Tensor,
+    num_rays: int = 5,
+    title: str = "Ray Weights",
+)
     """
     Visualize ray weights along depth
     
@@ -286,8 +305,7 @@ def visualize_weights(weights: torch.Tensor, t_vals: torch.Tensor,
     colors = plt.cm.viridis(np.linspace(0, 1, num_rays))
     
     for i, idx in enumerate(indices):
-        plt.plot(t_vals_np[idx], weights_np[idx], 
-                color=colors[i], alpha=0.7, linewidth=2)
+        plt.plot(t_vals_np[idx], weights_np[idx], color=colors[i], alpha=0.7, linewidth=2)
     
     plt.xlabel('Depth (t)')
     plt.ylabel('Weight')
@@ -296,9 +314,13 @@ def visualize_weights(weights: torch.Tensor, t_vals: torch.Tensor,
     plt.show()
 
 
-def plot_frustum_visualization(origins: torch.Tensor, directions: torch.Tensor,
-                              t_vals: torch.Tensor, radii: torch.Tensor,
-                              sample_idx: int = 0) -> None:
+def plot_frustum_visualization(
+    origins: torch.Tensor,
+    directions: torch.Tensor,
+    t_vals: torch.Tensor,
+    radii: torch.Tensor,
+    sample_idx: int = 0,
+)
     """
     Visualize conical frustums for a single ray
     
@@ -321,8 +343,7 @@ def plot_frustum_visualization(origins: torch.Tensor, directions: torch.Tensor,
     points = origin[None, :] + direction[None, :] * t_values[:, None]
     
     # Plot ray
-    ax.plot(points[:, 0], points[:, 1], points[:, 2], 
-           'b-', linewidth=2, label='Ray')
+    ax.plot(points[:, 0], points[:, 1], points[:, 2], 'b-', linewidth=2, label='Ray')
     
     # Plot frustum boundaries
     for i, (point, t) in enumerate(zip(points, t_values)):
@@ -347,8 +368,7 @@ def plot_frustum_visualization(origins: torch.Tensor, directions: torch.Tensor,
             v2[None, :] * np.sin(theta)[:, None]
         )
         
-        ax.plot(circle[:, 0], circle[:, 1], circle[:, 2], 
-               'r-', alpha=0.5, linewidth=1)
+        ax.plot(circle[:, 0], circle[:, 1], circle[:, 2], 'r-', alpha=0.5, linewidth=1)
     
     ax.set_xlabel('X')
     ax.set_ylabel('Y')
@@ -358,8 +378,12 @@ def plot_frustum_visualization(origins: torch.Tensor, directions: torch.Tensor,
     plt.show()
 
 
-def generate_rays_from_pose(pose: torch.Tensor, focal_length: float,
-                           image_width: int, image_height: int) -> Tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
+def generate_rays_from_pose(
+    pose: torch.Tensor,
+    focal_length: float,
+    image_width: int,
+    image_height: int,
+)
     """
     Generate rays from camera pose (helper function for rendering)
     
@@ -374,17 +398,16 @@ def generate_rays_from_pose(pose: torch.Tensor, focal_length: float,
     """
     # Create pixel coordinates
     i, j = torch.meshgrid(
-        torch.arange(image_width, dtype=torch.float32),
-        torch.arange(image_height, dtype=torch.float32),
-        indexing='xy'
+        torch.arange(
+            image_width,
+            dtype=torch.float32,
+        )
     )
     
     # Convert to camera coordinates (assuming centered principal point)
     cx, cy = image_width / 2, image_height / 2
     dirs = torch.stack([
-        (i - cx) / focal_length,
-        -(j - cy) / focal_length,
-        -torch.ones_like(i)
+        (i - cx) / focal_length, -(j - cy) / focal_length, -torch.ones_like(i)
     ], dim=-1)
     
     # Transform to world coordinates
@@ -398,9 +421,13 @@ def generate_rays_from_pose(pose: torch.Tensor, focal_length: float,
     return origins, dirs, radii
 
 
-def render_image(model: torch.nn.Module, origins: torch.Tensor, 
-                directions: torch.Tensor, radii: torch.Tensor,
-                chunk_size: int = 1024) -> Dict[str, torch.Tensor]:
+def render_image(
+    model: torch.nn.Module,
+    origins: torch.Tensor,
+    directions: torch.Tensor,
+    radii: torch.Tensor,
+    chunk_size: int = 1024,
+)
     """
     Render a full image using the model (helper function)
     
@@ -429,9 +456,14 @@ def render_image(model: torch.nn.Module, origins: torch.Tensor,
         
         # Render chunk
         with torch.no_grad():
-            chunk_results = model(chunk_origins, chunk_directions, 
-                                chunk_directions, near=2.0, far=6.0, 
-                                pixel_radius=chunk_radii)
+            chunk_results = model(
+                chunk_origins,
+                chunk_directions,
+                chunk_directions,
+                near=2.0,
+                far=6.0,
+                pixel_radius=chunk_radii,
+            )
         
         all_results.append(chunk_results)
     

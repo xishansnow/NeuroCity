@@ -1,16 +1,14 @@
 """
 Neural Networks for NeuralVDB
 
-This module contains various neural network architectures used in NeuralVDB,
-including feature networks, occupancy networks, and advanced variants.
+This module contains various neural network architectures used in NeuralVDB, including feature networks, occupancy networks, and advanced variants.
 """
 
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
 import numpy as np
-from typing import List, Tuple, Dict, Optional, Union
-import logging
+from typing import Dict, List, Optional, Tuple, import logging
 from sklearn.cluster import KMeans
 
 logger = logging.getLogger(__name__)
@@ -66,13 +64,19 @@ class PositionalEncoding(nn.Module):
 class MLP(nn.Module):
     """多层感知机网络"""
     
-    def __init__(self, 
-                 input_dim: int = 3,
-                 hidden_dims: List[int] = [256, 512, 512, 256, 128],
-                 output_dim: int = 1,
-                 activation: str = 'relu',
-                 dropout: float = 0.1,
-                 use_batch_norm: bool = True):
+    def __init__(
+        self,
+        input_dim: int = 3,
+        hidden_dims: list[int] = [256,
+        512,
+        512,
+        256,
+        128],
+        output_dim: int = 1,
+        activation: str = 'relu',
+        dropout: float = 0.1,
+        use_batch_norm: bool = True,
+    )
         """
         初始化MLP
         
@@ -113,12 +117,8 @@ class MLP(nn.Module):
     def _get_activation(self, activation: str) -> nn.Module:
         """获取激活函数"""
         activations = {
-            'relu': nn.ReLU(),
-            'leaky_relu': nn.LeakyReLU(),
-            'tanh': nn.Tanh(),
-            'sigmoid': nn.Sigmoid(),
-            'swish': nn.SiLU(),
-            'gelu': nn.GELU()
+            'relu': nn.ReLU(
+            )
         }
         
         if activation not in activations:
@@ -141,13 +141,19 @@ class MLP(nn.Module):
 class FeatureNetwork(nn.Module):
     """特征网络 - 将3D坐标映射到特征向量"""
     
-    def __init__(self, 
-                 input_dim: int = 3,
-                 feature_dim: int = 32,
-                 hidden_dims: List[int] = [256, 512, 512, 256, 128],
-                 activation: str = 'relu',
-                 dropout: float = 0.1,
-                 use_positional_encoding: bool = True):
+    def __init__(
+        self,
+        input_dim: int = 3,
+        feature_dim: int = 32,
+        hidden_dims: list[int] = [256,
+        512,
+        512,
+        256,
+        128],
+        activation: str = 'relu',
+        dropout: float = 0.1,
+        use_positional_encoding: bool = True,
+    )
         """
         初始化特征网络
         
@@ -173,11 +179,7 @@ class FeatureNetwork(nn.Module):
         
         # MLP网络
         self.mlp = MLP(
-            input_dim=network_input_dim,
-            hidden_dims=hidden_dims,
-            output_dim=feature_dim,
-            activation=activation,
-            dropout=dropout
+            input_dim=network_input_dim, hidden_dims=hidden_dims, output_dim=feature_dim, activation=activation, dropout=dropout
         )
     
     def forward(self, x):
@@ -199,11 +201,15 @@ class FeatureNetwork(nn.Module):
 class OccupancyNetwork(nn.Module):
     """占用网络 - 将特征向量映射到占用概率"""
     
-    def __init__(self, 
-                 feature_dim: int = 32,
-                 hidden_dims: List[int] = [128, 64, 32],
-                 activation: str = 'relu',
-                 dropout: float = 0.1):
+    def __init__(
+        self,
+        feature_dim: int = 32,
+        hidden_dims: list[int] = [128,
+        64,
+        32],
+        activation: str = 'relu',
+        dropout: float = 0.1,
+    )
         """
         初始化占用网络
         
@@ -216,11 +222,7 @@ class OccupancyNetwork(nn.Module):
         super(OccupancyNetwork, self).__init__()
         
         self.mlp = MLP(
-            input_dim=feature_dim,
-            hidden_dims=hidden_dims,
-            output_dim=1,
-            activation=activation,
-            dropout=dropout
+            input_dim=feature_dim, hidden_dims=hidden_dims, output_dim=1, activation=activation, dropout=dropout
         )
     
     def forward(self, features):
@@ -240,13 +242,19 @@ class OccupancyNetwork(nn.Module):
 class MultiScaleFeatureNetwork(nn.Module):
     """多尺度特征网络"""
     
-    def __init__(self, 
-                 input_dim: int = 3,
-                 feature_dim: int = 64,
-                 hidden_dims: List[int] = [256, 512, 512, 256, 128],
-                 num_scales: int = 3,
-                 activation: str = 'relu',
-                 dropout: float = 0.1):
+    def __init__(
+        self,
+        input_dim: int = 3,
+        feature_dim: int = 64,
+        hidden_dims: list[int] = [256,
+        512,
+        512,
+        256,
+        128],
+        num_scales: int = 3,
+        activation: str = 'relu',
+        dropout: float = 0.1,
+    )
         """
         初始化多尺度特征网络
         
@@ -268,40 +276,30 @@ class MultiScaleFeatureNetwork(nn.Module):
         for i in range(num_scales):
             # 不同尺度使用不同的位置编码
             pos_encoding = PositionalEncoding(
-                input_dim=input_dim,
-                max_freq_log2=6 + i * 2,  # 不同尺度使用不同频率
+                input_dim=input_dim, max_freq_log2=6 + i * 2, # 不同尺度使用不同频率
                 num_freqs=8
             )
             
             mlp = MLP(
-                input_dim=pos_encoding.output_dim,
-                hidden_dims=hidden_dims,
-                output_dim=feature_dim // num_scales,
-                activation=activation,
-                dropout=dropout
+                input_dim=pos_encoding.output_dim, hidden_dims=hidden_dims, output_dim=feature_dim // num_scales, activation=activation, dropout=dropout
             )
             
             self.scale_networks.append(nn.ModuleDict({
-                'pos_encoding': pos_encoding,
-                'mlp': mlp
+                'pos_encoding': pos_encoding, 'mlp': mlp
             }))
         
         # 特征融合网络
         self.fusion_network = nn.Sequential(
-            nn.Linear(feature_dim, feature_dim),
-            nn.BatchNorm1d(feature_dim),
-            self._get_activation(activation),
-            nn.Dropout(dropout),
-            nn.Linear(feature_dim, feature_dim)
+            nn.Linear(
+                feature_dim,
+                feature_dim,
+            )
         )
     
     def _get_activation(self, activation: str) -> nn.Module:
         """获取激活函数"""
         activations = {
-            'relu': nn.ReLU(),
-            'leaky_relu': nn.LeakyReLU(),
-            'swish': nn.SiLU(),
-            'gelu': nn.GELU()
+            'relu': nn.ReLU(), 'leaky_relu': nn.LeakyReLU(), 'swish': nn.SiLU(), 'gelu': nn.GELU()
         }
         return activations.get(activation, nn.ReLU())
     
@@ -337,11 +335,16 @@ class MultiScaleFeatureNetwork(nn.Module):
 class AdvancedOccupancyNetwork(nn.Module):
     """高级占用网络"""
     
-    def __init__(self, 
-                 feature_dim: int = 64,
-                 hidden_dims: List[int] = [256, 128, 64, 32],
-                 activation: str = 'relu',
-                 dropout: float = 0.1):
+    def __init__(
+        self,
+        feature_dim: int = 64,
+        hidden_dims: list[int] = [256,
+        128,
+        64,
+        32],
+        activation: str = 'relu',
+        dropout: float = 0.1,
+    )
         """
         初始化高级占用网络
         
@@ -355,29 +358,19 @@ class AdvancedOccupancyNetwork(nn.Module):
         
         # 主要占用预测分支
         self.occupancy_branch = MLP(
-            input_dim=feature_dim,
-            hidden_dims=hidden_dims,
-            output_dim=1,
-            activation=activation,
-            dropout=dropout
+            input_dim=feature_dim, hidden_dims=hidden_dims, output_dim=1, activation=activation, dropout=dropout
         )
         
         # 不确定性预测分支
         self.uncertainty_branch = MLP(
-            input_dim=feature_dim,
-            hidden_dims=hidden_dims[:2],  # 更简单的网络
-            output_dim=1,
-            activation=activation,
-            dropout=dropout
+            input_dim=feature_dim, hidden_dims=hidden_dims[:2], # 更简单的网络
+            output_dim=1, activation=activation, dropout=dropout
         )
         
         # 梯度预测分支（用于表面检测）
         self.gradient_branch = MLP(
-            input_dim=feature_dim,
-            hidden_dims=hidden_dims[:2],
-            output_dim=3,  # 3D梯度
-            activation=activation,
-            dropout=dropout
+            input_dim=feature_dim, hidden_dims=hidden_dims[:2], output_dim=3, # 3D梯度
+            activation=activation, dropout=dropout
         )
     
     def forward(self, features):
@@ -402,10 +395,7 @@ class AdvancedOccupancyNetwork(nn.Module):
         gradient = self.gradient_branch(features)
         
         return {
-            'occupancy': occupancy,
-            'uncertainty': uncertainty,
-            'gradient': gradient,
-            'occupancy_logits': occupancy_logits
+            'occupancy': occupancy, 'uncertainty': uncertainty, 'gradient': gradient, 'occupancy_logits': occupancy_logits
         }
 
 
@@ -422,10 +412,13 @@ class AdvancedLossFunction(nn.Module):
         super(AdvancedLossFunction, self).__init__()
         self.config = config
     
-    def forward(self, 
-                predictions: Dict[str, torch.Tensor], 
-                targets: torch.Tensor, 
-                points: torch.Tensor = None):
+    def forward(
+        self,
+        predictions: dict[str,
+        torch.Tensor],
+        targets: torch.Tensor,
+        points: torch.Tensor = None,
+    )
         """
         计算综合损失
         
@@ -497,9 +490,12 @@ class AdvancedLossFunction(nn.Module):
         sparsity_loss = torch.mean(predictions * (1 - predictions))
         return sparsity_loss
     
-    def _compute_consistency_loss(self, predictions: torch.Tensor, 
-                                targets: torch.Tensor, 
-                                uncertainty: torch.Tensor):
+    def _compute_consistency_loss(
+        self,
+        predictions: torch.Tensor,
+        targets: torch.Tensor,
+        uncertainty: torch.Tensor,
+    )
         """计算一致性损失"""
         # 不确定性应该与预测误差相关
         errors = torch.abs(predictions - targets)
@@ -561,15 +557,14 @@ class FeatureCompressor:
             features: 原始特征 (N, feature_dim)
             
         Returns:
-            压缩后的索引 (N,)
+            压缩后的索引 (N, )
         """
         if not self.is_trained:
             raise ValueError("压缩器未训练，请先调用train()方法")
         
         # 找到最近的码本条目
         distances = np.linalg.norm(
-            features[:, np.newaxis] - self.codebook[np.newaxis, :], 
-            axis=2
+            features[:, np.newaxis] - self.codebook[np.newaxis, :], axis=2
         )
         indices = np.argmin(distances, axis=1)
         
@@ -580,7 +575,7 @@ class FeatureCompressor:
         解压缩特征
         
         Args:
-            indices: 压缩索引 (N,)
+            indices: 压缩索引 (N, )
             
         Returns:
             解压缩的特征 (N, feature_dim)

@@ -9,13 +9,13 @@ import json
 import pickle
 import h5py
 import os
-from typing import Dict, List, Optional, Tuple, Any, Union
+from typing import Dict, List, Optional, Tuple, Any
 import logging
 
 logger = logging.getLogger(__name__)
 
 
-def load_sdf_data(file_path: str) -> Tuple[np.ndarray, np.ndarray]:
+def load_sdf_data(file_path: str) -> tuple[np.ndarray, np.ndarray]:
     """
     加载SDF数据
     
@@ -46,8 +46,8 @@ def load_sdf_data(file_path: str) -> Tuple[np.ndarray, np.ndarray]:
     
     elif ext == '.h5' or ext == '.hdf5':
         with h5py.File(file_path, 'r') as f:
-            coords = f['coords'][:]
-            sdf_values = f['sdf_values'][:]
+            coords = np.array(f['coords'])
+            sdf_values = np.array(f['sdf_values'])
     
     else:
         raise ValueError(f"不支持的文件格式: {ext}")
@@ -56,9 +56,12 @@ def load_sdf_data(file_path: str) -> Tuple[np.ndarray, np.ndarray]:
     return coords, sdf_values
 
 
-def save_feature_cache(features: Dict[str, np.ndarray], 
-                      cache_path: str,
-                      format: str = 'npz') -> None:
+def save_feature_cache(
+    features: dict[str,
+    np.ndarray],
+    cache_path: str,
+    format: str = 'npz',
+)
     """
     保存特征缓存
     
@@ -70,7 +73,9 @@ def save_feature_cache(features: Dict[str, np.ndarray],
     os.makedirs(os.path.dirname(cache_path), exist_ok=True)
     
     if format == 'npz':
-        np.savez_compressed(cache_path, **features)
+        # 使用字典解包操作符来传递特征数据
+        save_dict = {k: v for k, v in features.items()}
+        np.savez_compressed(cache_path, **save_dict)
     
     elif format == 'h5':
         with h5py.File(cache_path, 'w') as f:
@@ -87,7 +92,7 @@ def save_feature_cache(features: Dict[str, np.ndarray],
     logger.info(f"特征缓存已保存到: {cache_path}")
 
 
-def load_feature_cache(cache_path: str) -> Dict[str, np.ndarray]:
+def load_feature_cache(cache_path: str) -> dict[str, np.ndarray]:
     """
     加载特征缓存
     
@@ -110,7 +115,7 @@ def load_feature_cache(cache_path: str) -> Dict[str, np.ndarray]:
         features = {}
         with h5py.File(cache_path, 'r') as f:
             for key in f.keys():
-                features[key] = f[key][:]
+                features[key] = np.array(f[key])
     
     elif ext in ['.pkl', '.pickle']:
         with open(cache_path, 'rb') as f:
@@ -123,9 +128,13 @@ def load_feature_cache(cache_path: str) -> Dict[str, np.ndarray]:
     return features
 
 
-def export_features_to_json(features: Dict[str, np.ndarray],
-                           coords: List[Tuple[float, float]],
-                           output_path: str) -> None:
+def export_features_to_json(
+    features: dict[str,
+    np.ndarray],
+    coords: list[tuple[float,
+    float]],
+    output_path: str,
+)
     """
     将特征导出为JSON格式
     
@@ -137,12 +146,10 @@ def export_features_to_json(features: Dict[str, np.ndarray],
     # 准备导出数据
     export_data = {
         'metadata': {
-            'num_features': len(features),
-            'num_coords': len(coords),
-            'feature_keys': list(features.keys())
-        },
-        'coordinates': coords,
-        'features': {}
+            'num_features': len(
+                features,
+            )
+        }, 'coordinates': coords, 'features': {}
     }
     
     # 转换特征数据
@@ -160,7 +167,9 @@ def export_features_to_json(features: Dict[str, np.ndarray],
     logger.info(f"特征已导出为JSON: {output_path}")
 
 
-def load_geojson_features(geojson_path: str) -> Tuple[List[Tuple[float, float]], List[Dict[str, Any]]]:
+def load_geojson_features(
+    geojson_path: str,
+)
     """
     从GeoJSON文件加载特征
     
@@ -190,9 +199,14 @@ def load_geojson_features(geojson_path: str) -> Tuple[List[Tuple[float, float]],
     return coords, properties
 
 
-def preprocess_coordinates(coords: np.ndarray, 
-                         bounds: Optional[Tuple[float, float, float, float]] = None,
-                         normalize: bool = True) -> np.ndarray:
+def preprocess_coordinates(
+    coords: np.ndarray,
+    bounds: tuple[float,
+    float,
+    float,
+    float] | None = None,
+    normalize: bool = True,
+)
     """
     预处理坐标数据
     
@@ -202,63 +216,57 @@ def preprocess_coordinates(coords: np.ndarray,
         normalize: 是否归一化
         
     Returns:
-        processed_coords: 处理后的坐标
+        processed_coords: 处理后的坐标数组
     """
-    processed_coords = coords.copy()
-    
-    # 过滤边界外的点
     if bounds is not None:
         west, south, east, north = bounds
-        if coords.shape[1] >= 2:
-            mask = ((coords[:, 1] >= west) & (coords[:, 1] <= east) &  # lon
-                   (coords[:, 0] >= south) & (coords[:, 0] <= north))  # lat
-            processed_coords = processed_coords[mask]
-            logger.info(f"边界过滤后保留 {len(processed_coords)} / {len(coords)} 个点")
+        
+        # 裁剪到边界范围
+        mask = ((coords[:, 0] >= south) & (coords[:, 0] <= north) &
+                (coords[:, 1] >= west) & (coords[:, 1] <= east))
+        coords = coords[mask]
     
-    # 归一化
     if normalize:
-        if bounds is not None:
-            west, south, east, north = bounds
-            processed_coords[:, 1] = (processed_coords[:, 1] - west) / (east - west)  # lon
-            processed_coords[:, 0] = (processed_coords[:, 0] - south) / (north - south)  # lat
-        else:
-            # 使用数据自身的范围归一化
-            min_vals = processed_coords.min(axis=0)
-            max_vals = processed_coords.max(axis=0)
-            processed_coords = (processed_coords - min_vals) / (max_vals - min_vals)
+        # 归一化到[0, 1]范围
+        coords_min = coords.min(axis=0)
+        coords_max = coords.max(axis=0)
+        coords = (coords - coords_min) / (coords_max - coords_min)
     
-    return processed_coords
+    return coords
 
 
-def create_spatial_grid(bounds: Tuple[float, float, float, float],
-                       resolution: int) -> Tuple[np.ndarray, np.ndarray]:
+def create_spatial_grid(
+    bounds: tuple[float,
+    float,
+    float,
+    float],
+    resolution: int,
+)
     """
-    创建空间网格
+    创建空间采样网格
     
     Args:
         bounds: 边界 (west, south, east, north)
         resolution: 网格分辨率
         
     Returns:
-        grid_coords: 网格坐标 [resolution^2, 2]
-        grid_shape: 网格形状 (resolution, resolution)
+        lat_grid: 纬度网格
+        lon_grid: 经度网格
     """
     west, south, east, north = bounds
     
-    # 创建网格
-    lons = np.linspace(west, east, resolution)
     lats = np.linspace(south, north, resolution)
+    lons = np.linspace(west, east, resolution)
     
-    lon_grid, lat_grid = np.meshgrid(lons, lats)
-    grid_coords = np.stack([lat_grid.flatten(), lon_grid.flatten()], axis=1)
-    
-    return grid_coords, (resolution, resolution)
+    return np.meshgrid(lats, lons)
 
 
-def interpolate_features(coords: np.ndarray,
-                        features: np.ndarray,
-                        target_coords: np.ndarray,
-                        method: str = 'nearest') -> np.ndarray:
+def interpolate_features(
+    coords: np.ndarray,
+    features: np.ndarray,
+    target_coords: np.ndarray,
+    method: str = 'nearest',
+)
     """
     特征插值
     
@@ -273,34 +281,10 @@ def interpolate_features(coords: np.ndarray,
     """
     from scipy.interpolate import griddata
     
-    if method == 'nearest':
-        interpolated = griddata(coords, features, target_coords, method='nearest')
-    elif method == 'linear':
-        interpolated = griddata(coords, features, target_coords, method='linear')
-        # 填充NaN值
-        nan_mask = np.isnan(interpolated).any(axis=1)
-        if nan_mask.any():
-            nearest_interp = griddata(coords, features, target_coords[nan_mask], method='nearest')
-            interpolated[nan_mask] = nearest_interp
-    elif method == 'cubic':
-        interpolated = griddata(coords, features, target_coords, method='cubic')
-        # 填充NaN值
-        nan_mask = np.isnan(interpolated).any(axis=1)
-        if nan_mask.any():
-            linear_interp = griddata(coords, features, target_coords[nan_mask], method='linear')
-            interpolated[nan_mask] = linear_interp
-            # 如果还有NaN，用nearest填充
-            nan_mask = np.isnan(interpolated).any(axis=1)
-            if nan_mask.any():
-                nearest_interp = griddata(coords, features, target_coords[nan_mask], method='nearest')
-                interpolated[nan_mask] = nearest_interp
-    else:
-        raise ValueError(f"不支持的插值方法: {method}")
-    
-    return interpolated
+    return griddata(coords, features, target_coords, method=method, fill_value=0)
 
 
-def compute_feature_statistics(features: np.ndarray) -> Dict[str, Any]:
+def compute_feature_statistics(features: np.ndarray) -> dict[str, Any]:
     """
     计算特征统计信息
     
@@ -311,62 +295,53 @@ def compute_feature_statistics(features: np.ndarray) -> Dict[str, Any]:
         stats: 统计信息字典
     """
     stats = {
-        'shape': features.shape,
-        'mean': np.mean(features, axis=0),
-        'std': np.std(features, axis=0),
-        'min': np.min(features, axis=0),
-        'max': np.max(features, axis=0),
-        'median': np.median(features, axis=0),
-        'percentile_25': np.percentile(features, 25, axis=0),
-        'percentile_75': np.percentile(features, 75, axis=0)
+        'mean': np.mean(
+            features,
+            axis=0,
+        )
     }
-    
-    # 转换为可序列化的格式
-    for key, value in stats.items():
-        if isinstance(value, np.ndarray):
-            stats[key] = value.tolist()
-        elif isinstance(value, tuple):
-            stats[key] = list(value)
     
     return stats
 
 
-def batch_process_coordinates(coords_list: List[np.ndarray],
-                            batch_size: int = 1000) -> List[np.ndarray]:
+def batch_process_coordinates(
+    coords_list: list[np.ndarray],
+    batch_size: int = 1000,
+)
     """
     批量处理坐标
     
     Args:
         coords_list: 坐标数组列表
-        batch_size: 批处理大小
+        batch_size: 批次大小
         
     Returns:
-        processed_coords_list: 处理后的坐标列表
+        processed_coords: 处理后的坐标列表
     """
-    processed_list = []
+    processed_coords = []
     
-    for i, coords in enumerate(coords_list):
-        if len(coords) > batch_size:
-            # 分批处理
-            batches = []
-            for j in range(0, len(coords), batch_size):
-                batch = coords[j:j+batch_size]
-                # 这里可以添加具体的处理逻辑
-                batches.append(batch)
-            processed_coords = np.vstack(batches)
-        else:
-            processed_coords = coords
+    for coords in coords_list:
+        # 分批处理
+        num_batches = (len(coords) + batch_size - 1) // batch_size
+        batches = np.array_split(coords, num_batches)
         
-        processed_list.append(processed_coords)
+        # 处理每个批次
+        batch_results = []
+        for batch in batches:
+            processed_batch = preprocess_coordinates(batch)
+            batch_results.append(processed_batch)
         
-        if (i + 1) % 100 == 0:
-            logger.info(f"已处理 {i+1}/{len(coords_list)} 个坐标数组")
+        # 合并结果
+        processed_coords.append(np.concatenate(batch_results))
     
-    return processed_list
+    return processed_coords
 
 
-def validate_data_consistency(coords: List[Tuple[float, float]],
-                            features: List[np.ndarray]) -> bool:
+def validate_data_consistency(
+    coords: list[tuple[float,
+    float]],
+    features: list[np.ndarray],
+)
     """
     验证数据一致性
     
@@ -375,33 +350,27 @@ def validate_data_consistency(coords: List[Tuple[float, float]],
         features: 特征列表
         
     Returns:
-        is_valid: 数据是否一致
+        is_valid: 是否一致
     """
+    # 检查长度是否匹配
     if len(coords) != len(features):
         logger.error(f"坐标数量 ({len(coords)}) 与特征数量 ({len(features)}) 不匹配")
         return False
     
-    # 检查坐标有效性
+    # 检查特征维度是否一致
+    feature_dims = [f.shape[-1] for f in features if f is not None]
+    if not feature_dims:
+        logger.error("没有有效的特征数据")
+        return False
+    
+    if not all(d == feature_dims[0] for d in feature_dims):
+        logger.error("特征维度不一致")
+        return False
+    
+    # 检查坐标格式
     for i, (lat, lon) in enumerate(coords):
         if not (-90 <= lat <= 90) or not (-180 <= lon <= 180):
-            logger.error(f"坐标 {i} 超出有效范围: ({lat}, {lon})")
+            logger.error(f"无效的坐标: ({lat}, {lon}) at index {i}")
             return False
     
-    # 检查特征有效性
-    feature_dims = []
-    for i, feature in enumerate(features):
-        if not isinstance(feature, np.ndarray):
-            logger.error(f"特征 {i} 不是numpy数组")
-            return False
-        
-        if np.isnan(feature).any() or np.isinf(feature).any():
-            logger.warning(f"特征 {i} 包含NaN或Inf值")
-        
-        feature_dims.append(feature.shape)
-    
-    # 检查特征维度一致性
-    if len(set(feature_dims)) > 1:
-        logger.warning(f"特征维度不一致: {set(feature_dims)}")
-    
-    logger.info("数据一致性检查通过")
     return True 

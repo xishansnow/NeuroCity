@@ -16,8 +16,7 @@ from .progressive_encoder import ProgressivePositionalEncoder, MultiScaleEncoder
 from .multiscale_renderer import MultiScaleRenderer, LevelOfDetailRenderer
 from .trainer import ProgressiveTrainer, MultiScaleTrainer
 from .utils import (
-    compute_scale_factor, get_level_of_detail,
-    create_progressive_schedule, save_bungee_model
+    compute_scale_factor, get_level_of_detail, create_progressive_schedule, save_bungee_model
 )
 
 logging.basicConfig(level=logging.INFO)
@@ -30,19 +29,14 @@ def example_basic_usage():
     
     # Create configuration
     config = BungeeNeRFConfig(
-        num_stages=4,
-        base_resolution=16,
-        max_resolution=2048,
-        hidden_dim=256,
-        num_layers=8,
-        learning_rate=5e-4
+        num_stages=4, base_resolution=16, max_resolution=2048, hidden_dim=256, num_layers=8, learning_rate=5e-4
     )
     
     logger.info(f"Configuration: {config}")
     
     # Create model
     model = BungeeNeRF(config)
-    logger.info(f"Model created with {model.count_parameters():,} parameters")
+    logger.info(f"Model created with {model.count_parameters():, } parameters")
     
     # Show progressive info
     info = model.get_progressive_info()
@@ -73,9 +67,7 @@ def example_progressive_training():
     
     # Create progressive schedule
     schedule = create_progressive_schedule(
-        num_stages=4,
-        steps_per_stage=10000,
-        warmup_steps=1000
+        num_stages=4, steps_per_stage=10000, warmup_steps=1000
     )
     
     logger.info(f"Progressive schedule: {schedule}")
@@ -99,15 +91,11 @@ def example_multiscale_encoding():
     
     # Create encoders
     progressive_encoder = ProgressivePositionalEncoder(
-        num_freqs_base=4,
-        num_freqs_max=10,
-        include_input=True
+        num_freqs_base=4, num_freqs_max=10, include_input=True
     )
     
     multiscale_encoder = MultiScaleEncoder(
-        num_scales=4,
-        base_freqs=4,
-        max_freqs=10
+        num_scales=4, base_freqs=4, max_freqs=10
     )
     
     # Test data
@@ -143,9 +131,7 @@ def example_level_of_detail():
     # Create LOD renderer
     config = BungeeNeRFConfig()
     lod_renderer = LevelOfDetailRenderer(
-        config,
-        num_lod_levels=4,
-        lod_thresholds=[100.0, 50.0, 25.0, 10.0]
+        config, num_lod_levels=4, lod_thresholds=[100.0, 50.0, 25.0, 10.0]
     )
     
     # Test distances
@@ -168,14 +154,14 @@ def example_multiscale_loss():
     # Create fake outputs and targets
     batch_size = 100
     outputs = {
-        "rgb": torch.rand(batch_size, 3),
-        "depth": torch.rand(batch_size) * 10,
-        "weights": torch.rand(batch_size, 64)  # Fake attention weights
+        "rgb": torch.rand(
+            batch_size,
+            3,
+        )
     }
     
     targets = {
-        "rgb": torch.rand(batch_size, 3),
-        "depth": torch.rand(batch_size) * 10
+        "rgb": torch.rand(batch_size, 3), "depth": torch.rand(batch_size) * 10
     }
     
     distances = torch.rand(batch_size) * 100 + 1
@@ -231,11 +217,7 @@ def example_save_and_load():
     # Save model
     save_path = "/tmp/example_bungee_model.pth"
     save_bungee_model(
-        model,
-        config.__dict__,
-        save_path,
-        stage=2,
-        epoch=50
+        model, config.__dict__, save_path, stage=2, epoch=50
     )
     
     logger.info(f"Model saved to {save_path}")
@@ -254,8 +236,8 @@ def example_save_and_load():
     original_params = sum(p.numel() for p in model.parameters())
     loaded_params = sum(p.numel() for p in loaded_model.parameters())
     
-    logger.info(f"Original model parameters: {original_params:,}")
-    logger.info(f"Loaded model parameters: {loaded_params:,}")
+    logger.info(f"Original model parameters: {original_params:, }")
+    logger.info(f"Loaded model parameters: {loaded_params:, }")
     
     # Clean up
     os.remove(save_path)
@@ -269,9 +251,10 @@ def example_performance_analysis():
     
     # Create models with different sizes
     configs = [
-        ("Small", BungeeNeRFConfig(hidden_dim=128, num_layers=4, num_samples=32)),
-        ("Medium", BungeeNeRFConfig(hidden_dim=256, num_layers=8, num_samples=64)),
-        ("Large", BungeeNeRFConfig(hidden_dim=512, num_layers=12, num_samples=128))
+        (
+            "Small",
+            BungeeNeRFConfig,
+        )
     ]
     
     batch_size = 100
@@ -301,7 +284,7 @@ def example_performance_analysis():
         avg_time = (time.time() - start_time) / num_runs
         
         logger.info(f"{name} model:")
-        logger.info(f"  Parameters: {model.count_parameters():,}")
+        logger.info(f"  Parameters: {model.count_parameters():, }")
         logger.info(f"  Forward time: {avg_time*1000:.2f} ms")
         logger.info(f"  Samples per second: {batch_size/avg_time:.0f}")
 

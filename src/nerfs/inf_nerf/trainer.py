@@ -19,7 +19,7 @@ from torch.utils.data import DataLoader
 from torch.utils.tensorboard import SummaryWriter
 from torch.nn.parallel import DistributedDataParallel as DDP
 import torch.distributed as dist
-from typing import Dict, List, Optional, Tuple, Union, Any
+from typing import Dict, List, Optional, Tuple, Any
 from dataclasses import dataclass
 from tqdm import tqdm
 import numpy as np
@@ -101,12 +101,14 @@ class InfNeRFTrainer:
     Trainer for InfNeRF with distributed training and pyramid supervision.
     """
     
-    def __init__(self, 
-                 model: InfNeRF,
-                 train_dataset: InfNeRFDataset,
-                 config: InfNeRFTrainerConfig,
-                 val_dataset: Optional[InfNeRFDataset] = None,
-                 device: Optional[torch.device] = None):
+    def __init__(
+        self,
+        model: InfNeRF,
+        train_dataset: InfNeRFDataset,
+        config: InfNeRFTrainerConfig,
+        val_dataset: Optional[InfNeRFDataset] = None,
+        device: Optional[torch.device] = None,
+    ) -> None:
         """
         Initialize InfNeRF trainer.
         
@@ -153,7 +155,7 @@ class InfNeRFTrainer:
         self._create_directories()
         
         print(f"Initialized InfNeRF trainer on device: {self.device}")
-        print(f"Model parameters: {sum(p.numel() for p in self.model.parameters()):,}")
+        print(f"Model parameters: {sum(p.numel() for p in self.model.parameters()):, }")
         
     def _setup_distributed(self):
         """Setup distributed training."""
@@ -193,8 +195,11 @@ class InfNeRFTrainer:
                         mlp_params.append(param)
                 
                 octree_params.extend([
-                    {'params': hash_params, 'lr': self.config.lr_init * 10, 'name': f'hash_level_{node.level}'},
-                    {'params': mlp_params, 'lr': self.config.lr_init, 'name': f'mlp_level_{node.level}'}
+                    {
+                        'params': hash_params,
+                        'lr': self.config.lr_init * 10,
+                        'name': f'hash_level_{node.level}',
+                    }
                 ])
         
         # Create optimizer
@@ -218,9 +223,7 @@ class InfNeRFTrainer:
             return
             
         wandb.init(
-            project=self.config.project_name,
-            name=self.config.experiment_name,
-            config=self.config.__dict__
+            project=self.config.project_name, name=self.config.experiment_name, config=self.config.__dict__
         )
     
     def _create_directories(self):
@@ -232,7 +235,13 @@ class InfNeRFTrainer:
             # Setup tensorboard
             self.writer = SummaryWriter(self.config.log_dir)
     
-    def compute_loss(self, batch: Dict[str, torch.Tensor], outputs: Dict[str, torch.Tensor]) -> Dict[str, torch.Tensor]:
+    def compute_loss(
+        self,
+        batch: dict[str,
+        torch.Tensor],
+        outputs: dict[str,
+        torch.Tensor],
+    ) -> dict[str, torch.Tensor]:
         """
         Compute InfNeRF training losses.
         
@@ -276,7 +285,10 @@ class InfNeRFTrainer:
             loss_bi = 0
             for i in range(weights.shape[-1]):
                 for j in range(i+1, weights.shape[-1]):
-                    loss_bi += w_normalized[..., i] * w_normalized[..., j] * torch.abs(mid_points[..., i] - mid_points[..., j])
+                    loss_bi += w_normalized[..., i] * w_normalized[..., j] * torch.abs(
+                        mid_points[...,
+                        i] - mid_points[...,
+                        j],).sum(dim=-1).mean()
             
             losses['distortion_loss'] = loss_uni + loss_bi.mean()
         else:
@@ -330,7 +342,7 @@ class InfNeRFTrainer:
         
         return losses
     
-    def train_step(self, batch: Dict[str, torch.Tensor]) -> Dict[str, float]:
+    def train_step(self, batch: dict[str, torch.Tensor]) -> dict[str, float]:
         """
         Execute single training step.
         
@@ -351,24 +363,20 @@ class InfNeRFTrainer:
         if self.config.mixed_precision:
             with torch.cuda.amp.autocast():
                 outputs = self.model(
-                    rays_o=batch['rays_o'],
-                    rays_d=batch['rays_d'],
-                    near=batch.get('near', 0.1),
-                    far=batch.get('far', 100.0),
-                    focal_length=batch.get('focal_length', 1000.0),
-                    pixel_width=batch.get('pixel_width', 1.0)
+                    rays_o=batch['rays_o'], rays_d=batch['rays_d'], near=batch.get(
+                        'near',
+                        0.1,
+                    )
                 )
                 
                 losses = self.compute_loss(batch, outputs)
                 loss = losses['total_loss'] / self.config.accumulate_grad_batches
         else:
             outputs = self.model(
-                rays_o=batch['rays_o'],
-                rays_d=batch['rays_d'],
-                near=batch.get('near', 0.1),
-                far=batch.get('far', 100.0),
-                focal_length=batch.get('focal_length', 1000.0),
-                pixel_width=batch.get('pixel_width', 1.0)
+                rays_o=batch['rays_o'], rays_d=batch['rays_d'], near=batch.get(
+                    'near',
+                    0.1,
+                )
             )
             
             losses = self.compute_loss(batch, outputs)
@@ -384,11 +392,15 @@ class InfNeRFTrainer:
         if (self.global_step + 1) % self.config.accumulate_grad_batches == 0:
             if self.config.mixed_precision:
                 self.scaler.unscale_(self.optimizer)
-                torch.nn.utils.clip_grad_norm_(self.model.parameters(), self.config.gradient_clip_val)
+                torch.nn.utils.clip_grad_norm_(
+                    self.model.parameters,
+                )
                 self.scaler.step(self.optimizer)
                 self.scaler.update()
             else:
-                torch.nn.utils.clip_grad_norm_(self.model.parameters(), self.config.gradient_clip_val)
+                torch.nn.utils.clip_grad_norm_(
+                    self.model.parameters,
+                )
                 self.optimizer.step()
             
             self.optimizer.zero_grad()
@@ -397,7 +409,7 @@ class InfNeRFTrainer:
         # Convert tensors to float for logging
         return {k: v.item() if torch.is_tensor(v) else v for k, v in losses.items()}
     
-    def validate(self) -> Dict[str, float]:
+    def validate(self) -> dict[str, float]:
         """Run validation."""
         if self.val_dataset is None:
             return {}
@@ -406,10 +418,7 @@ class InfNeRFTrainer:
         val_losses = []
         
         val_loader = DataLoader(
-            self.val_dataset, 
-            batch_size=self.config.rays_batch_size,
-            shuffle=False,
-            num_workers=2
+            self.val_dataset, batch_size=self.config.rays_batch_size, shuffle=False, num_workers=2
         )
         
         with torch.no_grad():
@@ -421,12 +430,10 @@ class InfNeRFTrainer:
                 
                 # Forward pass
                 outputs = self.model(
-                    rays_o=batch['rays_o'],
-                    rays_d=batch['rays_d'],
-                    near=batch.get('near', 0.1),
-                    far=batch.get('far', 100.0),
-                    focal_length=batch.get('focal_length', 1000.0),
-                    pixel_width=batch.get('pixel_width', 1.0)
+                    rays_o=batch['rays_o'], rays_d=batch['rays_d'], near=batch.get(
+                        'near',
+                        0.1,
+                    )
                 )
                 
                 losses = self.compute_loss(batch, outputs)
@@ -473,16 +480,12 @@ class InfNeRFTrainer:
             return
         
         # Get model state dict (handle DDP wrapper)
-        model_state = self.model.module.state_dict() if hasattr(self.model, 'module') else self.model.state_dict()
+        model_state = self.model.module.state_dict(
+        )
         
         checkpoint = {
-            'epoch': self.epoch,
-            'global_step': self.global_step,
-            'model_state_dict': model_state,
-            'optimizer_state_dict': self.optimizer.state_dict(),
-            'scheduler_state_dict': self.scheduler.state_dict(),
-            'best_psnr': self.best_psnr,
-            'config': self.config
+            'epoch': self.epoch, 'global_step': self.global_step, 'model_state_dict': model_state, 'optimizer_state_dict': self.optimizer.state_dict(
+            )
         }
         
         # Save regular checkpoint
@@ -529,11 +532,8 @@ class InfNeRFTrainer:
         
         # Create data loader
         train_loader = DataLoader(
-            self.train_dataset,
-            batch_size=1,  # Dataset returns ray batches
-            shuffle=True,
-            num_workers=4,
-            pin_memory=True
+            self.train_dataset, batch_size=1, # Dataset returns ray batches
+            shuffle=True, num_workers=4, pin_memory=True
         )
         
         start_time = time.time()
@@ -552,8 +552,6 @@ class InfNeRFTrainer:
                 # Update progress bar
                 pbar.set_postfix({
                     'loss': f"{losses['total_loss']:.4f}",
-                    'psnr': f"{losses['psnr']:.2f}",
-                    'lr': f"{self.optimizer.param_groups[0]['lr']:.2e}"
                 })
                 
                 # Logging
@@ -592,7 +590,7 @@ class InfNeRFTrainer:
         self.save_checkpoint()
         print("Training completed!")
     
-    def _log_metrics(self, metrics: Dict[str, float], prefix: str = ''):
+    def _log_metrics(self, metrics: dict[str, float], prefix: str = ''):
         """Log metrics to tensorboard and wandb."""
         if not self.config.distributed or self.config.local_rank == 0:
             # Tensorboard
@@ -609,10 +607,7 @@ class InfNeRFTrainer:
 
 
 def create_inf_nerf_trainer(
-    model_config: InfNeRFConfig,
-    dataset_config: InfNeRFDatasetConfig, 
-    trainer_config: InfNeRFTrainerConfig,
-    device: Optional[torch.device] = None
+    model_config: InfNeRFConfig, dataset_config: InfNeRFDatasetConfig, trainer_config: InfNeRFTrainerConfig, device: Optional[torch.device] = None
 ) -> InfNeRFTrainer:
     """
     Factory function to create InfNeRF trainer with all components.
@@ -635,11 +630,7 @@ def create_inf_nerf_trainer(
     
     # Create trainer
     trainer = InfNeRFTrainer(
-        model=model,
-        train_dataset=train_dataset,
-        config=trainer_config,
-        val_dataset=val_dataset,
-        device=device
+        model=model, train_dataset=train_dataset, config=trainer_config, val_dataset=val_dataset, device=device
     )
     
     return trainer 

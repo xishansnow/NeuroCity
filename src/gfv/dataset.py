@@ -8,7 +8,7 @@ This module contains dataset classes for GFV library including:
 
 import torch
 import numpy as np
-from typing import List, Tuple, Optional, Dict, Any
+from typing import Any
 from torch.utils.data import Dataset
 import logging
 
@@ -29,7 +29,7 @@ class SDFDataset(Dataset):
         self.coords = data[:, :3].astype(np.float32)
         self.sdf = data[:, 3].astype(np.float32)
         
-        # 归一化坐标到[0,1]
+        # 归一化坐标到[0, 1]
         self.coords = (self.coords - self.coords.min(0)) / (self.coords.max(0) - self.coords.min(0))
         
         logger.info(f"已加载SDF数据集: {len(self)} 个样本")
@@ -37,17 +37,20 @@ class SDFDataset(Dataset):
     def __len__(self) -> int:
         return len(self.coords)
     
-    def __getitem__(self, idx: int) -> Tuple[torch.Tensor, torch.Tensor]:
+    def __getitem__(self, idx: int) -> tuple[torch.Tensor, torch.Tensor]:
         return torch.from_numpy(self.coords[idx]), torch.from_numpy(np.array([self.sdf[idx]]))
 
 
 class GlobalFeatureDataset(Dataset):
     """全球特征数据集"""
     
-    def __init__(self, 
-                 coords: List[Tuple[float, float]], 
-                 features: List[np.ndarray],
-                 zoom_levels: Optional[List[int]] = None):
+    def __init__(
+        self,
+        coords: list[tuple[float,
+        float]],
+        features: list[np.ndarray],
+        zoom_levels: list[int] | None = None,
+    )
         """
         初始化全球特征数据集
         
@@ -67,19 +70,21 @@ class GlobalFeatureDataset(Dataset):
     def __len__(self) -> int:
         return len(self.coords)
     
-    def __getitem__(self, idx: int) -> Dict[str, Any]:
+    def __getitem__(self, idx: int) -> dict[str, Any]:
         lat, lon = self.coords[idx]
         features = self.features[idx]
         zoom = self.zoom_levels[idx]
         
         return {
-            'coords': torch.tensor([lat, lon], dtype=torch.float32),
-            'features': torch.from_numpy(features).float(),
-            'zoom': zoom
+            'coords': torch.tensor(
+                [lat,
+                lon],
+                dtype=torch.float32,
+            )
         }
     
     @classmethod
-    def from_database(cls, database, coords: List[Tuple[float, float]], zoom: int = 10):
+    def from_database(cls, database, coords: list[tuple[float, float]], zoom: int = 10):
         """从数据库创建数据集"""
         features = []
         valid_coords = []
@@ -96,10 +101,15 @@ class GlobalFeatureDataset(Dataset):
 class GeospatialDataset(Dataset):
     """地理空间数据集"""
     
-    def __init__(self, 
-                 bounds: Tuple[float, float, float, float],
-                 resolution: int = 256,
-                 zoom: int = 10):
+    def __init__(
+        self,
+        bounds: tuple[float,
+        float,
+        float,
+        float],
+        resolution: int = 256,
+        zoom: int = 10,
+    )
         """
         初始化地理空间数据集
         
@@ -119,8 +129,7 @@ class GeospatialDataset(Dataset):
         
         self.lat_grid, self.lon_grid = np.meshgrid(lats, lons)
         self.coords = np.stack([
-            self.lat_grid.flatten(), 
-            self.lon_grid.flatten()
+            self.lat_grid.flatten(), self.lon_grid.flatten()
         ], axis=1)
         
         logger.info(f"已创建地理空间数据集: {len(self)} 个采样点")
@@ -128,19 +137,21 @@ class GeospatialDataset(Dataset):
     def __len__(self) -> int:
         return len(self.coords)
     
-    def __getitem__(self, idx: int) -> Dict[str, Any]:
+    def __getitem__(self, idx: int) -> dict[str, Any]:
         lat, lon = self.coords[idx]
         
         # 计算网格索引
         grid_idx = np.unravel_index(idx, (self.resolution, self.resolution))
         
         return {
-            'coords': torch.tensor([lat, lon], dtype=torch.float32),
-            'grid_idx': torch.tensor(grid_idx, dtype=torch.long),
-            'zoom': self.zoom
+            'coords': torch.tensor(
+                [lat,
+                lon],
+                dtype=torch.float32,
+            )
         }
     
-    def get_grid_shape(self) -> Tuple[int, int]:
+    def get_grid_shape(self) -> tuple[int, int]:
         """获取网格形状"""
         return (self.resolution, self.resolution)
 
@@ -148,9 +159,15 @@ class GeospatialDataset(Dataset):
 class MultiScaleDataset(Dataset):
     """多尺度数据集"""
     
-    def __init__(self, 
-                 base_coords: List[Tuple[float, float]],
-                 zoom_levels: List[int] = [8, 10, 12, 14]):
+    def __init__(
+        self,
+        base_coords: list[tuple[float,
+        float]],
+        zoom_levels: list[int] = [8,
+        10,
+        12,
+        14],
+    )
         """
         初始化多尺度数据集
         
@@ -172,11 +189,13 @@ class MultiScaleDataset(Dataset):
     def __len__(self) -> int:
         return len(self.samples)
     
-    def __getitem__(self, idx: int) -> Dict[str, Any]:
+    def __getitem__(self, idx: int) -> dict[str, Any]:
         lat, lon, zoom = self.samples[idx]
         
         return {
-            'coords': torch.tensor([lat, lon], dtype=torch.float32),
-            'zoom': zoom,
-            'scale_idx': self.zoom_levels.index(zoom)
+            'coords': torch.tensor(
+                [lat,
+                lon],
+                dtype=torch.float32,
+            )
         } 

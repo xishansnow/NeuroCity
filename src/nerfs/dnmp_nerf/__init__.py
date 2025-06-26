@@ -13,47 +13,27 @@ Key components:
 """
 
 from .core import (
-    DNMPConfig,
-    DeformableNeuralMeshPrimitive,
-    DNMPRenderer,
-    DNMPLoss,
-    DNMP
+    DNMPConfig, DeformableNeuralMeshPrimitive, DNMPRenderer, DNMPLoss, DNMP
 )
 
 from .mesh_autoencoder import (
-    MeshEncoder,
-    MeshDecoder,
-    MeshAutoEncoder,
-    LatentCode
+    MeshEncoder, MeshDecoder, MeshAutoEncoder, LatentCode
 )
 
 from .rasterizer import (
-    DNMPRasterizer,
-    MeshRasterizer,
-    VertexInterpolator,
-    RasterizationConfig
+    DNMPRasterizer, MeshRasterizer, VertexInterpolator, RasterizationConfig
 )
 
 from .dataset import (
-    DNMPDataset,
-    UrbanSceneDataset,
-    KITTI360Dataset,
-    WaymoDataset
+    DNMPDataset, UrbanSceneDataset, KITTI360Dataset, WaymoDataset
 )
 
 from .trainer import (
-    DNMPTrainer,
-    GeometryTrainer,
-    RadianceTrainer,
-    TwoStageTrainer
+    DNMPTrainer, GeometryTrainer, RadianceTrainer, TwoStageTrainer
 )
 
 from .utils import (
-    mesh_utils,
-    voxel_utils,
-    geometry_utils,
-    rendering_utils,
-    evaluation_utils
+    mesh_utils, voxel_utils, geometry_utils, rendering_utils, evaluation_utils
 )
 
 __version__ = "0.1.0"
@@ -61,40 +41,10 @@ __author__ = "DNMP-NeRF Team"
 
 __all__ = [
     # Core components
-    "DNMPConfig",
-    "DeformableNeuralMeshPrimitive", 
-    "DNMPRenderer",
-    "DNMPLoss",
-    "DNMP",
-    
-    # Mesh AutoEncoder
-    "MeshEncoder",
-    "MeshDecoder", 
-    "MeshAutoEncoder",
-    "LatentCode",
-    
-    # Rasterization
-    "DNMPRasterizer",
-    "MeshRasterizer",
-    "VertexInterpolator",
-    "RasterizationConfig",
-    
-    # Datasets
-    "DNMPDataset",
-    "UrbanSceneDataset", 
-    "KITTI360Dataset",
-    "WaymoDataset",
-    
-    # Training
-    "DNMPTrainer",
-    "GeometryTrainer",
-    "RadianceTrainer", 
-    "TwoStageTrainer",
-    
-    # Utilities
-    "mesh_utils",
-    "voxel_utils",
-    "geometry_utils",
-    "rendering_utils",
-    "evaluation_utils"
+    "DNMPConfig", "DeformableNeuralMeshPrimitive", "DNMPRenderer", "DNMPLoss", "DNMP", # Mesh AutoEncoder
+    "MeshEncoder", "MeshDecoder", "MeshAutoEncoder", "LatentCode", # Rasterization
+    "DNMPRasterizer", "MeshRasterizer", "VertexInterpolator", "RasterizationConfig", # Datasets
+    "DNMPDataset", "UrbanSceneDataset", "KITTI360Dataset", "WaymoDataset", # Training
+    "DNMPTrainer", "GeometryTrainer", "RadianceTrainer", "TwoStageTrainer", # Utilities
+    "mesh_utils", "voxel_utils", "geometry_utils", "rendering_utils", "evaluation_utils"
 ] 

@@ -1,21 +1,29 @@
 """
 Voxel Utilities for Plenoxels
 
-This module provides utilities for voxel grid operations, including creation,
-pruning, coordinate transformations, and boundary computations.
+This module provides utilities for voxel grid operations, including creation, pruning, coordinate transformations, and boundary computations.
 """
 
 import torch
 import numpy as np
-from typing import Tuple, Optional, List, Dict, Any
+from typing import Dict, List, Optional, Tuple, Any
 import logging
 
 logger = logging.getLogger(__name__)
 
 
-def create_voxel_grid(resolution: Tuple[int, int, int],
-                     scene_bounds: Tuple[float, float, float, float, float, float],
-                     device: torch.device = None) -> Dict[str, torch.Tensor]:
+def create_voxel_grid(
+    resolution: tuple[int,
+    int,
+    int],
+    scene_bounds: tuple[float,
+    float,
+    float,
+    float,
+    float,
+    float],
+    device: torch.device = None,
+)
     """
     Create a voxel grid with specified resolution and scene bounds.
     
@@ -46,22 +54,22 @@ def create_voxel_grid(resolution: Tuple[int, int, int],
     
     # Compute voxel size
     voxel_size = torch.tensor([
-        (x_max - x_min) / W,
-        (y_max - y_min) / H,
-        (z_max - z_min) / D
+        (x_max - x_min) / W, (y_max - y_min) / H, (z_max - z_min) / D
     ], device=device)
     
     return {
-        'coords': coords,
-        'resolution': torch.tensor(resolution, device=device),
-        'scene_bounds': torch.tensor(scene_bounds, device=device),
-        'voxel_size': voxel_size
+        'coords': coords, 'resolution': torch.tensor(
+            resolution,
+            device=device,
+        )
     }
 
 
-def prune_voxel_grid(density: torch.Tensor,
-                    sh_coeffs: torch.Tensor,
-                    threshold: float = 0.01) -> Tuple[torch.Tensor, torch.Tensor]:
+def prune_voxel_grid(
+    density: torch.Tensor,
+    sh_coeffs: torch.Tensor,
+    threshold: float = 0.01,
+)
     """
     Prune voxel grid by removing low-density voxels.
     
@@ -86,8 +94,15 @@ def prune_voxel_grid(density: torch.Tensor,
     return pruned_density, pruned_sh_coeffs
 
 
-def compute_voxel_bounds(coords: torch.Tensor,
-                        scene_bounds: Tuple[float, float, float, float, float, float]) -> torch.Tensor:
+def compute_voxel_bounds(
+    coords: torch.Tensor,
+    scene_bounds: tuple[float,
+    float,
+    float,
+    float,
+    float,
+    float],
+)
     """
     Compute which voxels contain the given coordinates.
     
@@ -102,17 +117,27 @@ def compute_voxel_bounds(coords: torch.Tensor,
     
     # Normalize coordinates to [0, 1]
     normalized_coords = torch.stack([
-        (coords[:, 0] - x_min) / (x_max - x_min),
-        (coords[:, 1] - y_min) / (y_max - y_min),
-        (coords[:, 2] - z_min) / (z_max - z_min)
+        (
+            coords[:,
+            0] - x_min,
+        )
     ], dim=-1)
     
     return normalized_coords
 
 
-def voxel_to_world_coords(voxel_indices: torch.Tensor,
-                         resolution: Tuple[int, int, int],
-                         scene_bounds: Tuple[float, float, float, float, float, float]) -> torch.Tensor:
+def voxel_to_world_coords(
+    voxel_indices: torch.Tensor,
+    resolution: tuple[int,
+    int,
+    int],
+    scene_bounds: tuple[float,
+    float,
+    float,
+    float,
+    float,
+    float],
+)
     """
     Convert voxel indices to world coordinates.
     
@@ -129,24 +154,31 @@ def voxel_to_world_coords(voxel_indices: torch.Tensor,
     
     # Normalize voxel indices
     normalized_coords = torch.stack([
-        voxel_indices[:, 0] / (W - 1),
-        voxel_indices[:, 1] / (H - 1),
-        voxel_indices[:, 2] / (D - 1)
+        voxel_indices[:, 0] / (W - 1), voxel_indices[:, 1] / (H - 1), voxel_indices[:, 2] / (D - 1)
     ], dim=-1)
     
     # Scale to world coordinates
     world_coords = torch.stack([
-        normalized_coords[:, 0] * (x_max - x_min) + x_min,
-        normalized_coords[:, 1] * (y_max - y_min) + y_min,
-        normalized_coords[:, 2] * (z_max - z_min) + z_min
+        normalized_coords[:, 0] * (
+            x_max - x_min,
+        )
     ], dim=-1)
     
     return world_coords
 
 
-def world_to_voxel_coords(world_coords: torch.Tensor,
-                         resolution: Tuple[int, int, int],
-                         scene_bounds: Tuple[float, float, float, float, float, float]) -> torch.Tensor:
+def world_to_voxel_coords(
+    world_coords: torch.Tensor,
+    resolution: tuple[int,
+    int,
+    int],
+    scene_bounds: tuple[float,
+    float,
+    float,
+    float,
+    float,
+    float],
+)
     """
     Convert world coordinates to voxel indices.
     
@@ -163,23 +195,26 @@ def world_to_voxel_coords(world_coords: torch.Tensor,
     
     # Normalize to [0, 1]
     normalized_coords = torch.stack([
-        (world_coords[:, 0] - x_min) / (x_max - x_min),
-        (world_coords[:, 1] - y_min) / (y_max - y_min),
-        (world_coords[:, 2] - z_min) / (z_max - z_min)
+        (
+            world_coords[:,
+            0] - x_min,
+        )
     ], dim=-1)
     
     # Scale to voxel indices
     voxel_indices = torch.stack([
-        normalized_coords[:, 0] * (W - 1),
-        normalized_coords[:, 1] * (H - 1),
-        normalized_coords[:, 2] * (D - 1)
+        normalized_coords[:, 0] * (
+            W - 1,
+        )
     ], dim=-1)
     
     return voxel_indices
 
 
-def compute_voxel_occupancy_stats(density: torch.Tensor,
-                                 threshold: float = 0.01) -> Dict[str, float]:
+def compute_voxel_occupancy_stats(
+    density: torch.Tensor,
+    threshold: float = 0.01,
+)
     """
     Compute statistics about voxel occupancy.
     
@@ -197,20 +232,17 @@ def compute_voxel_occupancy_stats(density: torch.Tensor,
     occupied_voxels = occupancy.sum().item()
     
     return {
-        'total_voxels': total_voxels,
-        'occupied_voxels': occupied_voxels,
-        'occupancy_ratio': occupied_voxels / total_voxels,
-        'sparsity_ratio': 1.0 - (occupied_voxels / total_voxels),
-        'density_mean': density.mean().item(),
-        'density_std': density.std().item(),
-        'density_min': density.min().item(),
-        'density_max': density.max().item()
+        'total_voxels': total_voxels, 'occupied_voxels': occupied_voxels, 'occupancy_ratio': occupied_voxels / total_voxels, 'sparsity_ratio': 1.0 - (
+            occupied_voxels / total_voxels,
+        )
     }
 
 
-def interpolate_voxel_grid(grid: torch.Tensor,
-                          coords: torch.Tensor,
-                          mode: str = 'trilinear') -> torch.Tensor:
+def interpolate_voxel_grid(
+    grid: torch.Tensor,
+    coords: torch.Tensor,
+    mode: str = 'trilinear',
+)
     """
     Interpolate values from a voxel grid at given coordinates.
     
@@ -239,17 +271,11 @@ def interpolate_voxel_grid(grid: torch.Tensor,
     # Perform interpolation
     if mode == 'trilinear':
         interpolated = torch.nn.functional.grid_sample(
-            grid, coords_grid, 
-            mode='bilinear', 
-            padding_mode='border', 
-            align_corners=True
+            grid, coords_grid, mode='bilinear', padding_mode='border', align_corners=True
         )
     else:  # nearest
         interpolated = torch.nn.functional.grid_sample(
-            grid, coords_grid, 
-            mode='nearest', 
-            padding_mode='border', 
-            align_corners=True
+            grid, coords_grid, mode='nearest', padding_mode='border', align_corners=True
         )
     
     # Reshape output
@@ -259,9 +285,11 @@ def interpolate_voxel_grid(grid: torch.Tensor,
     return interpolated
 
 
-def subdivide_voxel_grid(density: torch.Tensor,
-                        sh_coeffs: torch.Tensor,
-                        subdivision_factor: int = 2) -> Tuple[torch.Tensor, torch.Tensor]:
+def subdivide_voxel_grid(
+    density: torch.Tensor,
+    sh_coeffs: torch.Tensor,
+    subdivision_factor: int = 2,
+)
     """
     Subdivide voxel grid by increasing resolution.
     
@@ -283,11 +311,18 @@ def subdivide_voxel_grid(density: torch.Tensor,
     
     # Subdivide SH coefficients
     D, H, W, _, n_coeffs = sh_coeffs.shape
-    sh_coeffs_flat = sh_coeffs.reshape(D, H, W, -1).permute(3, 0, 1, 2).unsqueeze(0)  # [1, 3*n_coeffs, D, H, W]
+    sh_coeffs_flat = sh_coeffs.reshape(
+        D,
+        H,
+        W,
+        -1,
+    )
     sh_coeffs_subdivided = torch.nn.functional.interpolate(
         sh_coeffs_flat, size=new_size, mode='trilinear', align_corners=True
     )
-    sh_coeffs_subdivided = sh_coeffs_subdivided.squeeze(0).permute(1, 2, 3, 0)  # [D', H', W', 3*n_coeffs]
+    sh_coeffs_subdivided = sh_coeffs_subdivided.squeeze(
+        0,
+    )
     sh_coeffs_subdivided = sh_coeffs_subdivided.reshape(*new_size, 3, n_coeffs)
     
     return density_subdivided, sh_coeffs_subdivided
@@ -319,9 +354,11 @@ def compute_voxel_gradient(density: torch.Tensor) -> torch.Tensor:
     return gradient_magnitude
 
 
-def apply_voxel_mask(density: torch.Tensor,
-                    sh_coeffs: torch.Tensor,
-                    mask: torch.Tensor) -> Tuple[torch.Tensor, torch.Tensor]:
+def apply_voxel_mask(
+    density: torch.Tensor,
+    sh_coeffs: torch.Tensor,
+    mask: torch.Tensor,
+)
     """
     Apply a binary mask to voxel grid.
     

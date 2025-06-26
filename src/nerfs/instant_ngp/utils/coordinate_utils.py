@@ -10,8 +10,7 @@ import numpy as np
 from typing import Tuple
 
 
-def contract_to_unisphere(positions: torch.Tensor, 
-                         scene_radius: float = 1.0) -> torch.Tensor:
+def contract_to_unisphere(positions: torch.Tensor, scene_radius: float = 1.0) -> torch.Tensor:
     """
     Contract infinite coordinates to unit sphere.
     
@@ -35,9 +34,7 @@ def contract_to_unisphere(positions: torch.Tensor,
     # r' = 2 - scene_radius / r
     # This maps [scene_radius, inf) to [scene_radius, 2]
     distances_contracted = torch.where(
-        mask_inside,
-        distances,
-        2 - scene_radius / distances
+        mask_inside, distances, 2 - scene_radius / distances
     )
     
     # Normalize directions and scale by contracted distance
@@ -47,8 +44,10 @@ def contract_to_unisphere(positions: torch.Tensor,
     return contracted_positions
 
 
-def uncontract_from_unisphere(contracted_positions: torch.Tensor,
-                             scene_radius: float = 1.0) -> torch.Tensor:
+def uncontract_from_unisphere(
+    contracted_positions: torch.Tensor,
+    scene_radius: float = 1.0,
+) -> torch.Tensor:
     """
     Reverse unisphere contraction to get original coordinates.
     
@@ -67,9 +66,7 @@ def uncontract_from_unisphere(contracted_positions: torch.Tensor,
     
     # Reverse contraction: r = scene_radius / (2 - r')
     distances_original = torch.where(
-        mask_inside,
-        distances_contracted,
-        scene_radius / (2 - distances_contracted)
+        mask_inside, distances_contracted, scene_radius / (2 - distances_contracted)
     )
     
     # Get directions and scale by original distance
@@ -128,9 +125,11 @@ def cartesian_to_spherical(cartesian: torch.Tensor) -> torch.Tensor:
     return torch.stack([r, theta, phi], dim=-1)
 
 
-def normalize_coordinates(positions: torch.Tensor,
-                         bbox_min: torch.Tensor,
-                         bbox_max: torch.Tensor) -> torch.Tensor:
+def normalize_coordinates(
+    positions: torch.Tensor,
+    bbox_min: torch.Tensor,
+    bbox_max: torch.Tensor,
+) -> torch.Tensor:
     """
     Normalize coordinates to [0, 1] range.
     
@@ -148,9 +147,11 @@ def normalize_coordinates(positions: torch.Tensor,
     return torch.clamp(normalized, 0, 1)
 
 
-def denormalize_coordinates(normalized_positions: torch.Tensor,
-                           bbox_min: torch.Tensor,
-                           bbox_max: torch.Tensor) -> torch.Tensor:
+def denormalize_coordinates(
+    normalized_positions: torch.Tensor,
+    bbox_min: torch.Tensor,
+    bbox_max: torch.Tensor,
+) -> torch.Tensor:
     """
     Denormalize coordinates from [0, 1] to original range.
     
@@ -168,8 +169,7 @@ def denormalize_coordinates(normalized_positions: torch.Tensor,
     return positions
 
 
-def apply_pose_transform(positions: torch.Tensor,
-                        pose: torch.Tensor) -> torch.Tensor:
+def apply_pose_transform(positions: torch.Tensor, pose: torch.Tensor) -> torch.Tensor:
     """
     Apply pose transformation to positions.
     
@@ -193,8 +193,7 @@ def apply_pose_transform(positions: torch.Tensor,
     return transformed
 
 
-def rotate_points(points: torch.Tensor, 
-                 rotation_matrix: torch.Tensor) -> torch.Tensor:
+def rotate_points(points: torch.Tensor, rotation_matrix: torch.Tensor) -> torch.Tensor:
     """
     Rotate points using rotation matrix.
     
@@ -208,8 +207,10 @@ def rotate_points(points: torch.Tensor,
     return (rotation_matrix @ points.T).T
 
 
-def compute_scene_bounds(positions: torch.Tensor,
-                        percentile: float = 95.0) -> Tuple[torch.Tensor, torch.Tensor]:
+def compute_scene_bounds(
+    positions: torch.Tensor,
+    percentile: float = 95.0,
+) -> tuple[torch.Tensor, torch.Tensor]:
     """
     Compute scene bounds from positions.
     
@@ -227,8 +228,7 @@ def compute_scene_bounds(positions: torch.Tensor,
     return bbox_min, bbox_max
 
 
-def generate_random_directions(num_directions: int,
-                             device: torch.device = None) -> torch.Tensor:
+def generate_random_directions(num_directions: int, device: torch.device = None) -> torch.Tensor:
     """
     Generate uniformly distributed random directions on unit sphere.
     
@@ -251,8 +251,7 @@ def generate_random_directions(num_directions: int,
     return directions
 
 
-def fibonacci_sphere(num_points: int,
-                    device: torch.device = None) -> torch.Tensor:
+def fibonacci_sphere(num_points: int, device: torch.device = None) -> torch.Tensor:
     """
     Generate evenly distributed points on sphere using Fibonacci spiral.
     
@@ -283,8 +282,7 @@ def fibonacci_sphere(num_points: int,
     return torch.stack([x, y, z], dim=-1)
 
 
-def compute_viewing_direction(camera_pos: torch.Tensor,
-                             world_pos: torch.Tensor) -> torch.Tensor:
+def compute_viewing_direction(camera_pos: torch.Tensor, world_pos: torch.Tensor) -> torch.Tensor:
     """
     Compute viewing direction from camera to world position.
     
@@ -307,9 +305,11 @@ def compute_viewing_direction(camera_pos: torch.Tensor,
     return directions
 
 
-def sample_hemisphere(num_samples: int,
-                     normal: torch.Tensor,
-                     device: torch.device = None) -> torch.Tensor:
+def sample_hemisphere(
+    num_samples: int,
+    normal: torch.Tensor,
+    device: torch.device = None,
+) -> torch.Tensor:
     """
     Sample directions from hemisphere around given normal.
     
@@ -334,10 +334,12 @@ def sample_hemisphere(num_samples: int,
     return directions
 
 
-def coordinate_grid_3d(resolution: int,
-                      bbox_min: torch.Tensor = None,
-                      bbox_max: torch.Tensor = None,
-                      device: torch.device = None) -> torch.Tensor:
+def coordinate_grid_3d(
+    resolution: int,
+    bbox_min: torch.Tensor = None,
+    bbox_max: torch.Tensor = None,
+    device: torch.device = None,
+) -> torch.Tensor:
     """
     Generate 3D coordinate grid.
     
@@ -372,15 +374,15 @@ def coordinate_grid_3d(resolution: int,
     return coords
 
 
-def test_coordinate_transforms():
+def test_coordinate_transforms() -> None:
     """Test coordinate transformation functions."""
     print("Testing coordinate transformations...")
     
     # Test unisphere contraction
     positions = torch.tensor([
-        [0.5, 0.5, 0.5],    # Inside sphere
-        [2.0, 0.0, 0.0],    # Outside sphere
-        [0.0, 3.0, 4.0],    # Far outside
+        [0.5, 0.5, 0.5], # Inside sphere
+        [2.0, 0.0, 0.0], # Outside sphere
+        [0.0, 3.0, 4.0], # Far outside
     ])
     
     contracted = contract_to_unisphere(positions)
@@ -392,9 +394,9 @@ def test_coordinate_transforms():
     
     # Test spherical coordinates
     cartesian = torch.tensor([
-        [1.0, 0.0, 0.0],
-        [0.0, 1.0, 0.0],
-        [0.0, 0.0, 1.0],
+        [1.0, 0.0, 0.0], 
+        [0.0, 1.0, 0.0], 
+        [0.0, 0.0, 1.0]
     ])
     
     spherical = cartesian_to_spherical(cartesian)

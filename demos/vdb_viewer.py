@@ -35,7 +35,10 @@ class VDBViewer:
             raise ValueError("不支持的文件格式")
         
         # 加载元数据
-        metadata_path = self.data_path.replace('.npy', '_metadata.json').replace('.vdb', '_metadata.json')
+        metadata_path = self.data_path.replace(
+            '.npy',
+            '_metadata.json',
+        )
         if os.path.exists(metadata_path):
             with open(metadata_path, 'r') as f:
                 self.metadata = json.load(f)
@@ -61,20 +64,20 @@ class VDBViewer:
             return {}
         
         stats = {
-            'shape': self.grid.shape,
-            'total_voxels': self.grid.size,
-            'non_zero_voxels': np.count_nonzero(self.grid),
-            'sparsity': 1.0 - np.count_nonzero(self.grid) / self.grid.size,
-            'min_value': float(np.min(self.grid)),
-            'max_value': float(np.max(self.grid)),
-            'mean_value': float(np.mean(self.grid)),
-            'std_value': float(np.std(self.grid))
+            'shape': self.grid.shape, 'total_voxels': self.grid.size, 'non_zero_voxels': np.count_nonzero(
+                self.grid,
+            )
         }
         
         return stats
     
-    def plot_2d_slice(self, axis: int = 2, slice_idx: Optional[int] = None, 
-                     figsize: Tuple[int, int] = (12, 8)):
+    def plot_2d_slice(
+        self,
+        axis: int = 2,
+        slice_idx: Optional[int] = None,
+        figsize: tuple[int,
+        int] =,
+    )
         """
         绘制2D切片
         
@@ -110,7 +113,7 @@ class VDBViewer:
         plt.ylabel('Y' if axis != 1 else 'Z')
         plt.show()
     
-    def plot_3d_isosurface(self, threshold: float = 0.5, figsize: Tuple[int, int] = (12, 8)):
+    def plot_3d_isosurface(self, threshold: float = 0.5, figsize: tuple[int, int] = (12, 8)):
         """
         绘制3D等值面
         
@@ -124,10 +127,9 @@ class VDBViewer:
         
         # 创建坐标网格
         x, y, z = np.meshgrid(
-            np.arange(self.grid.shape[0]),
-            np.arange(self.grid.shape[1]),
-            np.arange(self.grid.shape[2]),
-            indexing='ij'
+            np.arange(
+                self.grid.shape[0],
+            )
         )
         
         # 找到满足条件的点
@@ -141,8 +143,7 @@ class VDBViewer:
         fig = plt.figure(figsize=figsize)
         ax = fig.add_subplot(111, projection='3d')
         
-        scatter = ax.scatter(x_points, y_points, z_points, 
-                           c=values, cmap='viridis', alpha=0.6)
+        scatter = ax.scatter(x_points, y_points, z_points, c=values, cmap='viridis', alpha=0.6)
         
         ax.set_xlabel('X')
         ax.set_ylabel('Y')
@@ -152,7 +153,7 @@ class VDBViewer:
         plt.colorbar(scatter, label='密度值')
         plt.show()
     
-    def plot_building_distribution(self, figsize: Tuple[int, int] = (12, 8)):
+    def plot_building_distribution(self, figsize: tuple[int, int] = (12, 8)):
         """绘制建筑分布图"""
         if self.metadata is None or 'buildings' not in self.metadata:
             print("没有建筑元数据")
@@ -177,8 +178,12 @@ class VDBViewer:
             y_coords = [b['center'][1] for b in bldgs]
             sizes = [b['size'][2] for b in bldgs]  # 高度作为大小
             
-            plt.scatter(x_coords, y_coords, s=sizes, 
-                       c=colors[i % len(colors)], alpha=0.7, label=btype)
+            plt.scatter(
+                x_coords,
+                y_coords,
+                s=sizes,
+                c=colors[i % len,
+            )
         
         plt.xlabel('X坐标 (米)')
         plt.ylabel('Y坐标 (米)')
@@ -244,20 +249,13 @@ class VDBViewer:
 def main():
     parser = argparse.ArgumentParser(description='VDB数据查看器')
     parser.add_argument('data_path', help='数据文件路径 (.npy 或 .vdb)')
-    parser.add_argument('--interactive', '-i', action='store_true', 
-                       help='启动交互式查看器')
-    parser.add_argument('--stats', '-s', action='store_true', 
-                       help='显示统计信息')
-    parser.add_argument('--slice', type=int, choices=[0, 1, 2], 
-                       help='显示2D切片 (0=X, 1=Y, 2=Z)')
-    parser.add_argument('--slice-idx', type=int, 
-                       help='切片索引')
-    parser.add_argument('--isosurface', action='store_true', 
-                       help='显示3D等值面')
-    parser.add_argument('--threshold', type=float, default=0.5, 
-                       help='等值面阈值')
-    parser.add_argument('--buildings', action='store_true', 
-                       help='显示建筑分布')
+    parser.add_argument('--interactive', '-i', action='store_true', help='启动交互式查看器')
+    parser.add_argument('--stats', '-s', action='store_true', help='显示统计信息')
+    parser.add_argument('--slice', type=int, choices=[0, 1, 2], help='显示2D切片 (0=X, 1=Y, 2=Z)')
+    parser.add_argument('--slice-idx', type=int, help='切片索引')
+    parser.add_argument('--isosurface', action='store_true', help='显示3D等值面')
+    parser.add_argument('--threshold', type=float, default=0.5, help='等值面阈值')
+    parser.add_argument('--buildings', action='store_true', help='显示建筑分布')
     
     args = parser.parse_args()
     

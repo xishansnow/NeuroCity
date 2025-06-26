@@ -18,21 +18,7 @@ __author__ = "NeuroCity Team"
 
 __all__ = [
     # 核心组件
-    'DataGenConfig',
-    'DataGenPipeline',
-    
-    # 采样器
-    'VoxelSampler',
-    'SurfaceSampler', 
-    'PointCloudSampler',
-    
-    # 生成器
-    'SDFGenerator',
-    'OccupancyGenerator',
-    'SyntheticSceneGenerator',
-    
-    # 数据集
-    'SyntheticVoxelDataset',
-    'SDFDataset',
-    'OccupancyDataset',
-] 
+    'DataGenConfig', 'DataGenPipeline', # 采样器
+    'VoxelSampler', 'SurfaceSampler', 'PointCloudSampler', # 生成器
+    'SDFGenerator', 'OccupancyGenerator', 'SyntheticSceneGenerator', # 数据集
+    'SyntheticVoxelDataset', 'SDFDataset', 'OccupancyDataset', ] 

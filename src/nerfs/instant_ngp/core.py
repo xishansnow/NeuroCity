@@ -17,7 +17,7 @@ import torch.nn as nn
 import torch.nn.functional as F
 import numpy as np
 import math
-from typing import Dict, List, Optional, Tuple, Union
+from typing import Dict, List, Optional, Tuple, Any, Union
 from dataclasses import dataclass
 
 
@@ -141,10 +141,10 @@ class HashEncoder(nn.Module):
         wz = wz.unsqueeze(-1)  # [N, 1]
         
         # Bilinear interpolation in xy plane for z=0 and z=1
-        c00 = features[:, 0] * (1 - wx) + features[:, 1] * wx  # (0,0,0) and (1,0,0)
-        c01 = features[:, 2] * (1 - wx) + features[:, 3] * wx  # (0,1,0) and (1,1,0)
-        c10 = features[:, 4] * (1 - wx) + features[:, 5] * wx  # (0,0,1) and (1,0,1)
-        c11 = features[:, 6] * (1 - wx) + features[:, 7] * wx  # (0,1,1) and (1,1,1)
+        c00 = features[:, 0] * (1 - wx) + features[:, 1] * wx  # (0, 0, 0) and (1, 0, 0)
+        c01 = features[:, 2] * (1 - wx) + features[:, 3] * wx  # (0, 1, 0) and (1, 1, 0)
+        c10 = features[:, 4] * (1 - wx) + features[:, 5] * wx  # (0, 0, 1) and (1, 0, 1)
+        c11 = features[:, 6] * (1 - wx) + features[:, 7] * wx  # (0, 1, 1) and (1, 1, 1)
         
         # Interpolate in y direction
         c0 = c00 * (1 - wy) + c01 * wy  # z=0 plane
@@ -275,16 +275,13 @@ class InstantNGP(nn.Module):
         geo_input_dim = self.position_encoder.output_dim
         
         self.geo_mlp = nn.Sequential(
-            nn.Linear(geo_input_dim, config.hidden_dim),
-            nn.ReLU(inplace=True)
+            nn.Linear(geo_input_dim, config.hidden_dim), nn.ReLU(inplace=True)
         )
         
         for i in range(config.num_layers - 1):
             self.geo_mlp.add_module(
-                f"layer_{i+1}",
-                nn.Sequential(
-                    nn.Linear(config.hidden_dim, config.hidden_dim),
-                    nn.ReLU(inplace=True)
+                f"layer_{i+1}", nn.Sequential(
+                    nn.Linear(config.hidden_dim, config.hidden_dim), nn.ReLU(inplace=True)
                 )
             )
         
@@ -295,16 +292,16 @@ class InstantNGP(nn.Module):
         color_input_dim = config.geo_feat_dim + self.direction_encoder.output_dim
         
         self.color_mlp = nn.Sequential(
-            nn.Linear(color_input_dim, config.hidden_dim_color),
-            nn.ReLU(inplace=True)
+            nn.Linear(color_input_dim, config.hidden_dim_color), nn.ReLU(inplace=True)
         )
         
         for i in range(config.num_layers_color - 1):
             self.color_mlp.add_module(
-                f"color_layer_{i+1}",
-                nn.Sequential(
-                    nn.Linear(config.hidden_dim_color, config.hidden_dim_color),
-                    nn.ReLU(inplace=True)
+                f"color_layer_{i+1}", nn.Sequential(
+                    nn.Linear(
+                        config.hidden_dim_color,
+                        config.hidden_dim_color,
+                    )
                 )
             )
         
@@ -477,7 +474,10 @@ class InstantNGPRenderer:
         
         # Compute distances between adjacent samples
         dists = z_vals[..., 1:] - z_vals[..., :-1]
-        dists = torch.cat([dists, torch.tensor([1e10], device=device).expand(dists[..., :1].shape)], -1)
+        dists = torch.cat(
+            [dists,
+            torch.tensor([1e10])
+        ])
         
         # Multiply by ray direction norm
         dists = dists * torch.norm(rays_d[..., None, :], dim=-1)
@@ -486,8 +486,9 @@ class InstantNGPRenderer:
         alpha = 1. - torch.exp(-density.squeeze(-1) * dists)  # [N_rays, N_samples]
         
         # Compute transmittance
-        transmittance = torch.cumprod(torch.cat([torch.ones((alpha.shape[0], 1), device=device), 
-                                               1. - alpha + 1e-10], -1), -1)[:, :-1]
+        transmittance = torch.cumprod(
+            torch.cat([torch.ones_like(alpha[..., :1]), 1. - alpha + 1e-10], -1)
+        )
         
         # Compute weights
         weights = alpha * transmittance  # [N_rays, N_samples]
@@ -524,9 +525,5 @@ class InstantNGPRenderer:
         rgb_map, depth_map, acc_map, weights = self.volume_render(rgb, density, z_vals, rays_d)
         
         return {
-            'rgb': rgb_map,
-            'depth': depth_map,
-            'acc': acc_map,
-            'weights': weights,
-            'z_vals': z_vals
+            'rgb': rgb_map, 'depth': depth_map, 'acc': acc_map, 'weights': weights, 'z_vals': z_vals
         }

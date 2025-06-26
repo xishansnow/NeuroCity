@@ -37,11 +37,9 @@ class MockSVRaster(torch.nn.Module):
         
         # 稀疏体素网络
         self.voxel_network = torch.nn.Sequential(
-            torch.nn.Linear(3, 128),  # 位置输入
-            torch.nn.ReLU(),
-            torch.nn.Linear(128, 128),
-            torch.nn.ReLU(),
-            torch.nn.Linear(128, 4)  # density + color
+            torch.nn.Linear(3, 128), # 位置输入
+            torch.nn.ReLU(
+            )
         )
         
         # 八叉树结构（简化）
@@ -58,7 +56,7 @@ class MockSVRaster(torch.nn.Module):
         morton = torch.stack([x, y, z], dim=-1)
         return morton.view(morton.shape[0], -1)
     
-    def forward(self, positions: torch.Tensor) -> Dict[str, torch.Tensor]:
+    def forward(self, positions: torch.Tensor) -> dict[str, torch.Tensor]:
         """前向传播"""
         # 体素网络
         output = self.voxel_network(positions)
@@ -67,9 +65,7 @@ class MockSVRaster(torch.nn.Module):
         color = torch.sigmoid(output[..., 1:])
         
         return {
-            'density': density,
-            'color': color,
-            'voxel_count': len(self.octree_features)
+            'density': density, 'color': color, 'voxel_count': len(self.octree_features)
         }
 
 def demonstrate_svraster():
@@ -88,7 +84,7 @@ def demonstrate_svraster():
     print(f"   - 光栅化方法: {config.rasterization_method}")
     
     total_params = sum(p.numel() for p in model.parameters())
-    print(f"🧠 模型参数数量: {total_params:,}")
+    print(f"🧠 模型参数数量: {total_params:, }")
     
     print("\n🎉 SVRaster演示完成!")
     print("\n📋 SVRaster特点:")

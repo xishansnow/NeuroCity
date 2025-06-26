@@ -8,14 +8,16 @@ including adaptive sampling, importance sampling, and hierarchical sampling.
 import torch
 import torch.nn.functional as F
 import numpy as np
-from typing import Tuple, Optional
+from typing import Optional, Tuple
 
 
-def adaptive_sampling(z_vals: torch.Tensor,
-                     weights: torch.Tensor,
-                     num_samples: int,
-                     det: bool = False,
-                     eps: float = 1e-5) -> torch.Tensor:
+def adaptive_sampling(
+    z_vals: torch.Tensor,
+    weights: torch.Tensor,
+    num_samples: int,
+    det: bool = False,
+    eps: float = 1e-5,
+) -> torch.Tensor:
     """
     Perform adaptive sampling based on importance weights.
     
@@ -71,10 +73,12 @@ def adaptive_sampling(z_vals: torch.Tensor,
     return samples
 
 
-def importance_sampling(pdf: torch.Tensor,
-                       z_vals: torch.Tensor,
-                       num_samples: int,
-                       det: bool = False) -> torch.Tensor:
+def importance_sampling(
+    pdf: torch.Tensor,
+    z_vals: torch.Tensor,
+    num_samples: int,
+    det: bool = False,
+) -> torch.Tensor:
     """
     Perform importance sampling based on probability density function.
     
@@ -94,10 +98,12 @@ def importance_sampling(pdf: torch.Tensor,
     return adaptive_sampling(z_vals, pdf, num_samples, det)
 
 
-def stratified_sampling(near: torch.Tensor,
-                       far: torch.Tensor,
-                       num_samples: int,
-                       perturb: bool = True) -> torch.Tensor:
+def stratified_sampling(
+    near: torch.Tensor,
+    far: torch.Tensor,
+    num_samples: int,
+    perturb: bool = True,
+) -> torch.Tensor:
     """
     Perform stratified sampling along rays.
     
@@ -129,9 +135,7 @@ def stratified_sampling(near: torch.Tensor,
     return z_vals
 
 
-def uniform_sampling(near: torch.Tensor,
-                    far: torch.Tensor,
-                    num_samples: int) -> torch.Tensor:
+def uniform_sampling(near: torch.Tensor, far: torch.Tensor, num_samples: int) -> torch.Tensor:
     """
     Perform uniform sampling along rays.
     
@@ -146,10 +150,12 @@ def uniform_sampling(near: torch.Tensor,
     return stratified_sampling(near, far, num_samples, perturb=False)
 
 
-def hierarchical_sampling(coarse_z_vals: torch.Tensor,
-                         coarse_weights: torch.Tensor,
-                         num_fine: int,
-                         det: bool = False) -> torch.Tensor:
+def hierarchical_sampling(
+    coarse_z_vals: torch.Tensor,
+    coarse_weights: torch.Tensor,
+    num_fine: int,
+    det: bool = False,
+) -> torch.Tensor:
     """
     Perform hierarchical sampling for fine network.
     
@@ -165,10 +171,12 @@ def hierarchical_sampling(coarse_z_vals: torch.Tensor,
     return adaptive_sampling(coarse_z_vals, coarse_weights, num_fine, det)
 
 
-def sample_pdf_2d(pdf: torch.Tensor,
-                 coords: torch.Tensor,
-                 num_samples: int,
-                 det: bool = False) -> torch.Tensor:
+def sample_pdf_2d(
+    pdf: torch.Tensor,
+    coords: torch.Tensor,
+    num_samples: int,
+    det: bool = False,
+) -> torch.Tensor:
     """
     Sample from 2D probability density function.
     
@@ -206,10 +214,12 @@ def sample_pdf_2d(pdf: torch.Tensor,
     return sampled_coords
 
 
-def poisson_disk_sampling(num_samples: int,
-                         radius: float,
-                         bounds: torch.Tensor,
-                         k: int = 30) -> torch.Tensor:
+def poisson_disk_sampling(
+    num_samples: int,
+    radius: float,
+    bounds: torch.Tensor,
+    k: int = 30,
+) -> torch.Tensor:
     """
     Generate Poisson disk samples for uniform distribution.
     
@@ -249,7 +259,7 @@ def poisson_disk_sampling(num_samples: int,
     # Generate remaining samples
     while active_list and len(samples) < num_samples:
         # Pick random active sample
-        active_idx = torch.randint(len(active_list), (1,)).item()
+        active_idx = torch.randint(len(active_list), (1, )).item()
         sample_idx = active_list[active_idx]
         center = samples[sample_idx]
         
@@ -307,8 +317,7 @@ def poisson_disk_sampling(num_samples: int,
     return torch.stack(samples)
 
 
-def blue_noise_sampling(num_samples: int,
-                       bounds: torch.Tensor) -> torch.Tensor:
+def blue_noise_sampling(num_samples: int, bounds: torch.Tensor) -> torch.Tensor:
     """
     Generate blue noise sampling pattern.
     
@@ -326,9 +335,7 @@ def blue_noise_sampling(num_samples: int,
     return poisson_disk_sampling(num_samples, radius.item(), bounds)
 
 
-def halton_sequence(num_samples: int,
-                   base: int = 2,
-                   scramble: bool = True) -> torch.Tensor:
+def halton_sequence(num_samples: int, base: int = 2, scramble: bool = True) -> torch.Tensor:
     """
     Generate Halton sequence for low-discrepancy sampling.
     
@@ -360,9 +367,7 @@ def halton_sequence(num_samples: int,
     return sequence
 
 
-def sobol_sampling(num_samples: int,
-                  dimension: int = 3,
-                  scramble: bool = True) -> torch.Tensor:
+def sobol_sampling(num_samples: int, dimension: int = 3, scramble: bool = True) -> torch.Tensor:
     """
     Generate Sobol sequence for quasi-random sampling.
     
@@ -385,7 +390,7 @@ def sobol_sampling(num_samples: int,
         return torch.rand(num_samples, dimension)
 
 
-def test_sampling_functions():
+def test_sampling_functions() -> None:
     """Test sampling function implementations."""
     print("Testing sampling functions...")
     

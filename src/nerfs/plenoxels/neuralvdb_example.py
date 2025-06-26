@@ -18,10 +18,7 @@ from pathlib import Path
 
 from .core import VoxelGrid, PlenoxelConfig, PlenoxelModel
 from .neuralvdb_interface import (
-    NeuralVDBManager,
-    NeuralVDBConfig,
-    save_plenoxel_as_neuralvdb,
-    load_plenoxel_from_neuralvdb
+    NeuralVDBManager, NeuralVDBConfig, save_plenoxel_as_neuralvdb, load_plenoxel_from_neuralvdb
 )
 from .trainer import PlenoxelTrainer, PlenoxelTrainerConfig
 from .dataset import PlenoxelDataset, PlenoxelDatasetConfig
@@ -38,19 +35,17 @@ def create_demo_voxel_grid(device: torch.device = None) -> VoxelGrid:
     sh_degree = 2
     
     voxel_grid = VoxelGrid(
-        resolution=resolution,
-        scene_bounds=scene_bounds,
-        sh_degree=sh_degree
+        resolution=resolution, scene_bounds=scene_bounds, sh_degree=sh_degree
     ).to(device)
     
     # Initialize with some demo data
     # Create a sphere-like density distribution
     center = torch.tensor([32, 32, 32], dtype=torch.float32, device=device)
     coords = torch.stack(torch.meshgrid(
-        torch.arange(64, device=device),
-        torch.arange(64, device=device),
-        torch.arange(64, device=device),
-        indexing='ij'
+        torch.arange(
+            64,
+            device=device,
+        )
     ), dim=-1).float()
     
     # Distance from center
@@ -90,27 +85,23 @@ def save_example(output_path: str):
     
     # Create model config
     model_config = PlenoxelConfig(
-        grid_resolution=(64, 64, 64),
-        scene_bounds=(-1.0, -1.0, -1.0, 1.0, 1.0, 1.0),
-        sh_degree=2,
-        density_activation="exp",
-        color_activation="sigmoid"
+        grid_resolution=(
+            64,
+            64,
+            64,
+        )
     )
     
     # Create VDB config for optimized storage
     vdb_config = NeuralVDBConfig(
-        compression_level=8,  # Higher compression
-        half_precision=True,
-        tolerance=1e-5,      # More aggressive sparsity
+        compression_level=8, # Higher compression
+        half_precision=True, tolerance=1e-5, # More aggressive sparsity
         include_metadata=True
     )
     
     print(f"💾 Saving to {output_path}...")
     success = save_plenoxel_as_neuralvdb(
-        voxel_grid=voxel_grid,
-        output_path=output_path,
-        model_config=model_config,
-        vdb_config=vdb_config
+        voxel_grid=voxel_grid, output_path=output_path, model_config=model_config, vdb_config=vdb_config
     )
     
     if success:
@@ -153,10 +144,8 @@ def load_example(vdb_path: str):
         
         # Print some statistics
         density_stats = {
-            'min': voxel_grid.density.min().item(),
-            'max': voxel_grid.density.max().item(),
-            'mean': voxel_grid.density.mean().item(),
-            'std': voxel_grid.density.std().item()
+            'min': voxel_grid.density.min(
+            )
         }
         print(f"📊 Density stats: {density_stats}")
         
@@ -193,7 +182,7 @@ def stats_example(vdb_path: str):
     for grid_name, grid_stats in stats['grids'].items():
         print(f"🔹 Grid: {grid_name}")
         print(f"   Class: {grid_stats['grid_class']}")
-        print(f"   Active voxels: {grid_stats['active_voxel_count']:,}")
+        print(f"   Active voxels: {grid_stats['active_voxel_count']:, }")
         print(f"   Memory usage: {grid_stats['memory_usage_mb']:.2f} MB")
         
         if 'bounding_box' in grid_stats:
@@ -214,26 +203,26 @@ def hierarchical_lod_example(output_dir: str):
     sh_degree = 2
     
     voxel_grid = VoxelGrid(
-        resolution=resolution,
-        scene_bounds=scene_bounds,
-        sh_degree=sh_degree
+        resolution=resolution, scene_bounds=scene_bounds, sh_degree=sh_degree
     ).to(device)
     
     # Create more complex geometry
     center = torch.tensor([64, 64, 64], dtype=torch.float32, device=device)
     coords = torch.stack(torch.meshgrid(
-        torch.arange(128, device=device),
-        torch.arange(128, device=device),
-        torch.arange(128, device=device),
-        indexing='ij'
+        torch.arange(
+            128,
+            device=device,
+        )
     ), dim=-1).float()
     
     # Multiple spheres
     centers = [
-        torch.tensor([40, 40, 40], device=device),
-        torch.tensor([88, 88, 88], device=device),
-        torch.tensor([40, 88, 64], device=device),
-    ]
+        torch.tensor(
+            [40,
+            40,
+            40],
+            device=device,
+        )
     
     density = torch.full(resolution, -10.0, device=device)
     
@@ -252,9 +241,7 @@ def hierarchical_lod_example(output_dir: str):
     # Create hierarchical LOD
     manager = NeuralVDBManager(NeuralVDBConfig(compression_level=9))
     created_files = manager.create_hierarchical_lod(
-        voxel_grid=voxel_grid,
-        output_dir=output_dir,
-        levels=4
+        voxel_grid=voxel_grid, output_dir=output_dir, levels=4
     )
     
     print(f"✅ Created {len(created_files)} LOD levels:")
@@ -296,13 +283,19 @@ def optimize_example(input_path: str, output_path: str):
 
 def main():
     parser = argparse.ArgumentParser(description="NeuralVDB Integration Example")
-    parser.add_argument('--mode', choices=['save', 'load', 'stats', 'lod', 'optimize'],
-                       default='save', help='Mode to run')
-    parser.add_argument('--vdb_path', default='demo_plenoxel.vdb',
-                       help='Path to VDB file')
+    parser.add_argument(
+        '--mode',
+        choices=['save',
+        'load',
+        'stats',
+        'lod',
+        'optimize'],
+        default='save',
+        help='Mode to run',
+    )
+    parser.add_argument('--vdb_path', default='demo_plenoxel.vdb', help='Path to VDB file')
     parser.add_argument('--output_path', help='Output path for optimization')
-    parser.add_argument('--lod_dir', default='lod_output',
-                       help='Directory for LOD output')
+    parser.add_argument('--lod_dir', default='lod_output', help='Directory for LOD output')
     
     args = parser.parse_args()
     

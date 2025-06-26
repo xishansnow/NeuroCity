@@ -28,9 +28,7 @@ import wandb
 from .core import PlenoxelModel, PlenoxelConfig, PlenoxelLoss
 from .dataset import PlenoxelDataset, PlenoxelDatasetConfig, create_plenoxel_dataloader
 from .neuralvdb_interface import (
-    NeuralVDBManager,
-    NeuralVDBConfig,
-    save_plenoxel_as_neuralvdb
+    NeuralVDBManager, NeuralVDBConfig, save_plenoxel_as_neuralvdb
 )
 
 logger = logging.getLogger(__name__)
@@ -47,8 +45,8 @@ class PlenoxelTrainerConfig:
     
     # Coarse-to-fine settings
     coarse_to_fine: bool = True
-    resolution_schedule: List[Tuple[int, int, int]] = None
-    resolution_epochs: List[int] = None
+    resolution_schedule: list[tuple[int, int, int]] = None
+    resolution_epochs: list[int] = None
     
     # Loss weights
     color_loss_weight: float = 1.0
@@ -73,7 +71,7 @@ class PlenoxelTrainerConfig:
     adam_beta1: float = 0.9
     adam_beta2: float = 0.999
     lr_decay: float = 0.1
-    lr_decay_steps: List[int] = None
+    lr_decay_steps: list[int] = None
     
     # Output
     experiment_name: str = "plenoxel_experiment"
@@ -89,10 +87,12 @@ class PlenoxelTrainerConfig:
 class PlenoxelTrainer:
     """Main trainer class for Plenoxels."""
     
-    def __init__(self,
-                 model_config: PlenoxelConfig,
-                 trainer_config: PlenoxelTrainerConfig,
-                 dataset_config: PlenoxelDatasetConfig):
+    def __init__(
+        self,
+        model_config: PlenoxelConfig,
+        trainer_config: PlenoxelTrainerConfig,
+        dataset_config: PlenoxelDatasetConfig,
+    ) -> None:
         """
         Initialize Plenoxel trainer.
         
@@ -136,25 +136,20 @@ class PlenoxelTrainer:
         """Setup optimizer and learning rate scheduler."""
         if self.trainer_config.use_adam:
             self.optimizer = optim.Adam(
-                self.model.parameters(),
-                lr=self.trainer_config.learning_rate,
-                betas=(self.trainer_config.adam_beta1, self.trainer_config.adam_beta2),
-                weight_decay=self.trainer_config.weight_decay
+                self.model.parameters(
+                )
             )
         else:
             # Use SGD for Plenoxels (as recommended in paper)
             self.optimizer = optim.SGD(
-                self.model.parameters(),
-                lr=self.trainer_config.learning_rate,
-                weight_decay=self.trainer_config.weight_decay
+                self.model.parameters(
+                )
             )
         
         # Learning rate scheduler
         if self.trainer_config.lr_decay_steps:
             self.lr_scheduler = optim.lr_scheduler.MultiStepLR(
-                self.optimizer,
-                milestones=self.trainer_config.lr_decay_steps,
-                gamma=self.trainer_config.lr_decay
+                self.optimizer, milestones=self.trainer_config.lr_decay_steps, gamma=self.trainer_config.lr_decay
             )
         else:
             self.lr_scheduler = None
@@ -180,8 +175,7 @@ class PlenoxelTrainer:
         """Setup logging with TensorBoard and optionally W&B."""
         # Create output directory
         self.exp_dir = os.path.join(
-            self.trainer_config.output_dir,
-            self.trainer_config.experiment_name
+            self.trainer_config.output_dir, self.trainer_config.experiment_name
         )
         os.makedirs(self.exp_dir, exist_ok=True)
         
@@ -196,12 +190,8 @@ class PlenoxelTrainer:
         # Weights & Biases
         if self.trainer_config.use_wandb:
             wandb.init(
-                project="plenoxels",
-                name=self.trainer_config.experiment_name,
-                config={
-                    **self.model_config.__dict__,
-                    **self.trainer_config.__dict__,
-                    **self.dataset_config.__dict__
+                project="plenoxels", name=self.trainer_config.experiment_name, config={
+                    **self.model_config.__dict__, **self.trainer_config.__dict__, **self.dataset_config.__dict__
                 }
             )
         
@@ -259,7 +249,7 @@ class PlenoxelTrainer:
         if self.trainer_config.use_wandb:
             wandb.finish()
     
-    def _train_epoch(self) -> Dict[str, float]:
+    def _train_epoch(self) -> dict[str, float]:
         """Train for one epoch."""
         self.model.train()
         
@@ -307,22 +297,17 @@ class PlenoxelTrainer:
             
             # Update progress bar
             pbar.set_postfix({
-                'loss': total_loss_batch.item(),
-                'color': losses['color_loss'].item(),
-                'tv': self.model.voxel_grid.total_variation_loss().item(),
-                'l1': self.model.voxel_grid.l1_loss().item()
+                'loss': total_loss_batch.item(
+                )
             })
             
             self.step += 1
         
         return {
-            'total_loss': total_loss / num_batches,
-            'color_loss': total_color_loss / num_batches,
-            'tv_loss': total_tv_loss / num_batches,
-            'l1_loss': total_l1_loss / num_batches
+            'total_loss': total_loss / num_batches, 'color_loss': total_color_loss / num_batches, 'tv_loss': total_tv_loss / num_batches, 'l1_loss': total_l1_loss / num_batches
         }
     
-    def _validate(self) -> Dict[str, float]:
+    def _validate(self) -> dict[str, float]:
         """Validate on validation set."""
         self.model.eval()
         
@@ -366,13 +351,16 @@ class PlenoxelTrainer:
                 num_samples += 1
         
         return {
-            'loss': total_loss / num_samples,
-            'psnr': total_psnr / num_samples
+            'loss': total_loss / num_samples, 'psnr': total_psnr / num_samples
         }
     
-    def _compute_losses(self, 
-                       outputs: Dict[str, torch.Tensor],
-                       targets: Dict[str, torch.Tensor]) -> Dict[str, torch.Tensor]:
+    def _compute_losses(
+        self,
+        outputs: dict[str,
+        torch.Tensor],
+        targets: dict[str,
+        torch.Tensor],
+    ) -> dict[str, torch.Tensor]:
         """Compute training losses."""
         losses = {}
         
@@ -411,11 +399,15 @@ class PlenoxelTrainer:
         self.model.prune_voxels(self.trainer_config.pruning_threshold)
         after_stats = self.model.get_occupancy_stats()
         
-        logger.info(f"Pruning: {before_stats['occupied_voxels']} -> {after_stats['occupied_voxels']} voxels")
+        logger.info(f"Pruning: {before_stats['occupied_voxels']} -> {after_stats['occupied_voxels']}")
     
-    def _log_metrics(self, 
-                    train_metrics: Dict[str, float],
-                    val_metrics: Optional[Dict[str, float]] = None):
+    def _log_metrics(
+        self,
+        train_metrics: dict[str,
+        float],
+        val_metrics: Optional[dict[str,
+        float]] = None,
+    ) -> None:
         """Log training and validation metrics."""
         # TensorBoard logging
         if self.tb_writer:
@@ -453,15 +445,8 @@ class PlenoxelTrainer:
     def _save_checkpoint(self, filename: str):
         """Save training checkpoint."""
         checkpoint = {
-            'epoch': self.epoch,
-            'step': self.step,
-            'model_state_dict': self.model.state_dict(),
-            'optimizer_state_dict': self.optimizer.state_dict(),
-            'model_config': self.model_config,
-            'trainer_config': self.trainer_config,
-            'dataset_config': self.dataset_config,
-            'best_psnr': self.best_psnr,
-            'current_resolution_level': self.current_resolution_level
+            'epoch': self.epoch, 'step': self.step, 'model_state_dict': self.model.state_dict(
+            )
         }
         
         if self.lr_scheduler:
@@ -483,18 +468,12 @@ class PlenoxelTrainer:
             
             # Use configured VDB config or default
             vdb_config = self.trainer_config.neuralvdb_config or NeuralVDBConfig(
-                compression_level=8,
-                half_precision=True,
-                tolerance=1e-5,
-                include_metadata=True
+                compression_level=8, half_precision=True, tolerance=1e-5, include_metadata=True
             )
             
             filepath = os.path.join(self.exp_dir, filename)
             success = save_plenoxel_as_neuralvdb(
-                voxel_grid=voxel_grid,
-                output_path=filepath,
-                model_config=self.model_config,
-                vdb_config=vdb_config
+                voxel_grid=voxel_grid, output_path=filepath, model_config=self.model_config, vdb_config=vdb_config
             )
             
             if success:
@@ -507,13 +486,20 @@ class PlenoxelTrainer:
                 stats = manager.get_storage_stats(filepath)
                 
                 if self.tb_writer:
-                    self.tb_writer.add_scalar('storage/vdb_file_size_mb', stats.get('file_size_mb', 0), self.epoch)
+                    self.tb_writer.add_scalar(
+                        'storage/vdb_file_size_mb',
+                        stats.get,
+                    )
                     
                     total_active_voxels = sum(
                         grid_stats.get('active_voxel_count', 0) 
                         for grid_stats in stats.get('grids', {}).values()
                     )
-                    self.tb_writer.add_scalar('storage/total_active_voxels', total_active_voxels, self.epoch)
+                    self.tb_writer.add_scalar(
+                        'storage/total_active_voxels',
+                        total_active_voxels,
+                        self.epoch,
+                    )
             else:
                 logger.warning(f"Failed to save NeuralVDB checkpoint: {filepath}")
                 
@@ -536,9 +522,7 @@ class PlenoxelTrainer:
         
         logger.info(f"Loaded checkpoint from {filepath} (epoch {self.epoch})")
     
-    def render_novel_views(self, 
-                          poses: np.ndarray,
-                          output_dir: str = None) -> List[np.ndarray]:
+    def render_novel_views(self, poses: np.ndarray, output_dir: str = None) -> list[np.ndarray]:
         """Render novel views given camera poses."""
         self.model.eval()
         
@@ -559,19 +543,19 @@ class PlenoxelTrainer:
                 
                 # Generate rays
                 i_coords, j_coords = np.meshgrid(
-                    np.arange(W, dtype=np.float32),
-                    np.arange(H, dtype=np.float32),
-                    indexing='xy'
+                    np.arange(W, dtype=np.float32), np.arange(H, dtype=np.float32), indexing='xy'
                 )
                 
                 dirs = np.stack([
-                    (i_coords - W * 0.5) / focal,
-                    -(j_coords - H * 0.5) / focal,
-                    -np.ones_like(i_coords)
+                    (
+                        i_coords - W * 0.5,
+                    )
                 ], -1)
                 
                 rays_d = torch.from_numpy(dirs @ pose[:3, :3].T).float().to(self.device)
-                rays_o = torch.from_numpy(np.broadcast_to(pose[:3, -1], rays_d.shape)).float().to(self.device)
+                rays_o = torch.from_numpy(
+                    np.broadcast_to,
+                )
                 
                 # Render in chunks
                 chunk_size = 1024
@@ -602,8 +586,10 @@ class PlenoxelTrainer:
         return rendered_images
 
 
-def create_plenoxel_trainer(model_config: PlenoxelConfig,
-                           trainer_config: PlenoxelTrainerConfig,
-                           dataset_config: PlenoxelDatasetConfig) -> PlenoxelTrainer:
+def create_plenoxel_trainer(
+    model_config: PlenoxelConfig,
+    trainer_config: PlenoxelTrainerConfig,
+    dataset_config: PlenoxelDatasetConfig,
+) -> PlenoxelTrainer:
     """Create a Plenoxel trainer."""
     return PlenoxelTrainer(model_config, trainer_config, dataset_config) 

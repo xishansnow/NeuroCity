@@ -4,12 +4,14 @@ Rendering utilities for SVRaster.
 
 import torch
 import numpy as np
-from typing import List, Tuple, Optional, Dict
+from typing import Dict, List, Optional, Tuple
 
 
-def ray_direction_dependent_ordering(voxel_positions: torch.Tensor,
-                                   morton_codes: torch.Tensor,
-                                   ray_direction: torch.Tensor) -> torch.Tensor:
+def ray_direction_dependent_ordering(
+    voxel_positions: torch.Tensor,
+    morton_codes: torch.Tensor,
+    ray_direction: torch.Tensor,
+) -> torch.Tensor:
     """
     Sort voxels using ray direction-dependent Morton ordering.
     
@@ -32,11 +34,13 @@ def ray_direction_dependent_ordering(voxel_positions: torch.Tensor,
     return sort_indices
 
 
-def depth_peeling(voxel_positions: torch.Tensor,
-                 voxel_sizes: torch.Tensor,
-                 ray_origin: torch.Tensor,
-                 ray_direction: torch.Tensor,
-                 num_layers: int = 4) -> List[torch.Tensor]:
+def depth_peeling(
+    voxel_positions: torch.Tensor,
+    voxel_sizes: torch.Tensor,
+    ray_origin: torch.Tensor,
+    ray_direction: torch.Tensor,
+    num_layers: int = 4,
+) -> list[torch.Tensor]:
     """
     Perform depth peeling for correct transparency rendering.
     
@@ -71,10 +75,12 @@ def depth_peeling(voxel_positions: torch.Tensor,
     return layers
 
 
-def compute_ray_aabb_intersection(ray_origin: torch.Tensor,
-                                ray_direction: torch.Tensor,
-                                box_min: torch.Tensor,
-                                box_max: torch.Tensor) -> Tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
+def compute_ray_aabb_intersection(
+    ray_origin: torch.Tensor,
+    ray_direction: torch.Tensor,
+    box_min: torch.Tensor,
+    box_max: torch.Tensor,
+) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
     """
     Compute ray-AABB intersection.
     
@@ -112,9 +118,11 @@ def compute_ray_aabb_intersection(ray_origin: torch.Tensor,
     return t_near, t_far, valid_mask
 
 
-def volume_rendering_integration(densities: torch.Tensor,
-                               colors: torch.Tensor,
-                               distances: torch.Tensor) -> Tuple[torch.Tensor, torch.Tensor]:
+def volume_rendering_integration(
+    densities: torch.Tensor,
+    colors: torch.Tensor,
+    distances: torch.Tensor,
+) -> tuple[torch.Tensor, torch.Tensor]:
     """
     Perform volume rendering integration.
     
@@ -142,4 +150,42 @@ def volume_rendering_integration(densities: torch.Tensor,
     # Compute total alpha
     integrated_alpha = 1.0 - transmittance[-1]
     
-    return integrated_color, integrated_alpha 
+    return integrated_color, integrated_alpha
+
+
+def render_rays(
+    ray_origins: torch.Tensor, ray_directions: torch.Tensor, near: float, far: float, num_samples: int = 64, perturb: bool = True
+) -> dict[str, torch.Tensor]:
+    """Render rays using volume rendering."""
+    # Get sample points and intervals
+    samples = compute_ray_samples(ray_origins, ray_directions, near, far, num_samples, perturb)
+    
+    return {
+        "samples": samples["points"], "intervals": samples["intervals"], "ray_indices": samples["ray_indices"]
+    }
+
+
+def compute_ray_samples(
+    ray_origins: torch.Tensor, ray_directions: torch.Tensor, near: float, far: float, num_samples: int = 64, perturb: bool = True
+) -> dict[str, torch.Tensor]:
+    """Compute sample points along rays."""
+    # Generate sample points
+    t_vals = torch.linspace(0., 1., num_samples, device=ray_origins.device)
+    z_vals = near * (1. - t_vals) + far * t_vals
+    
+    if perturb:
+        # Random sampling
+        mids = .5 * (z_vals[..., 1:] + z_vals[..., :-1])
+        upper = torch.cat([mids, z_vals[..., -1:]], dim=-1)
+        lower = torch.cat([z_vals[..., :1], mids], dim=-1)
+        t_rand = torch.rand_like(z_vals)
+        z_vals = lower + (upper - lower) * t_rand
+    
+    # Compute intervals
+    intervals = z_vals[..., 1:] - z_vals[..., :-1]
+    intervals = torch.cat([intervals, torch.tensor([1e10])])
+    
+    # Compute sample points
+    points = ray_origins[..., None, :] + ray_directions[..., None, :] * z_vals[..., :, None]
+    
+    return {"points": points, "intervals": intervals, "z_vals": z_vals, "ray_indices": torch.arange(ray_origins.shape[0], device=ray_origins.device)} 

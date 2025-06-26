@@ -34,7 +34,7 @@ class SVRasterTrainerConfig:
     # Optimizer settings
     optimizer_type: str = "adam"
     scheduler_type: str = "cosine"
-    scheduler_params: Dict[str, Any] = None
+    scheduler_params: dict[str, Any] = None
     
     # Loss weights
     rgb_loss_weight: float = 1.0
@@ -76,11 +76,13 @@ class SVRasterTrainerConfig:
 class SVRasterTrainer:
     """Main trainer class for SVRaster model."""
     
-    def __init__(self, 
-                 model_config: SVRasterConfig,
-                 trainer_config: SVRasterTrainerConfig,
-                 train_dataset: SVRasterDataset,
-                 val_dataset: Optional[SVRasterDataset] = None):
+    def __init__(
+        self,
+        model_config: SVRasterConfig,
+        trainer_config: SVRasterTrainerConfig,
+        train_dataset: SVRasterDataset,
+        val_dataset: Optional[SVRasterDataset] = None,
+    ) -> None:
         self.model_config = model_config
         self.config = trainer_config
         self.train_dataset = train_dataset
@@ -104,7 +106,8 @@ class SVRasterTrainer:
         
         # Mixed precision training
         if self.config.use_mixed_precision:
-            self.scaler = torch.cuda.amp.GradScaler()
+            # self.scaler = torch.cuda.amp.GradScaler()
+            self.scaler = torch.amp.GradScaler('cuda')
         
         # Training state
         self.current_epoch = 0
@@ -126,19 +129,25 @@ class SVRasterTrainer:
                 other_params.append(param)
         
         param_groups = [
-            {'params': voxel_params, 'lr': self.config.learning_rate},
-            {'params': other_params, 'lr': self.config.learning_rate * 0.1}
+            {
+                'params': voxel_params,
+                'lr': self.config.learning_rate,
+            }
         ]
         
         # Create optimizer
         if self.config.optimizer_type == "adam":
-            self.optimizer = optim.Adam(param_groups, 
-                                      lr=self.config.learning_rate,
-                                      weight_decay=self.config.weight_decay)
+            self.optimizer = optim.Adam(
+                param_groups,
+                lr=self.config.learning_rate,
+                weight_decay=self.config.weight_decay,
+            )
         elif self.config.optimizer_type == "adamw":
-            self.optimizer = optim.AdamW(param_groups,
-                                       lr=self.config.learning_rate,
-                                       weight_decay=self.config.weight_decay)
+            self.optimizer = optim.AdamW(
+                param_groups,
+                lr=self.config.learning_rate,
+                weight_decay=self.config.weight_decay,
+            )
         else:
             raise ValueError(f"Unsupported optimizer: {self.config.optimizer_type}")
         
@@ -152,21 +161,12 @@ class SVRasterTrainer:
     def _setup_data_loaders(self):
         """Setup data loaders."""
         self.train_loader = DataLoader(
-            self.train_dataset,
-            batch_size=self.config.batch_size,
-            shuffle=True,
-            num_workers=4,
-            pin_memory=True,
-            drop_last=True
+            self.train_dataset, batch_size=self.config.batch_size, shuffle=True, num_workers=4, pin_memory=True, drop_last=True
         )
         
         if self.val_dataset is not None:
             self.val_loader = DataLoader(
-                self.val_dataset,
-                batch_size=1,
-                shuffle=False,
-                num_workers=2,
-                pin_memory=True
+                self.val_dataset, batch_size=1, shuffle=False, num_workers=2, pin_memory=True
             )
     
     def _setup_logging(self):
@@ -209,7 +209,7 @@ class SVRasterTrainer:
         logger.info("Training completed!")
         self._save_checkpoint('final_model.pth')
     
-    def _train_epoch(self) -> Dict[str, float]:
+    def _train_epoch(self) -> dict[str, float]:
         """Train for one epoch."""
         self.model.train()
         
@@ -243,14 +243,18 @@ class SVRasterTrainer:
             # Logging
             if self.global_step % self.config.log_interval == 0:
                 self.writer.add_scalar('train/loss', loss.item(), self.global_step)
-                self.writer.add_scalar('train/lr', self.optimizer.param_groups[0]['lr'], self.global_step)
+                self.writer.add_scalar(
+                    'train/lr',
+                    self.optimizer.param_groups[0]['lr'],
+                    self.global_step,
+                )
             
             # Update progress bar
             pbar.set_postfix({'loss': loss.item()})
         
         return {'loss': total_loss / num_batches}
     
-    def _validate_epoch(self) -> Dict[str, float]:
+    def _validate_epoch(self) -> dict[str, float]:
         """Validate for one epoch."""
         self.model.eval()
         
@@ -288,13 +292,8 @@ class SVRasterTrainer:
     def _save_checkpoint(self, filename: str):
         """Save model checkpoint."""
         checkpoint = {
-            'epoch': self.current_epoch,
-            'global_step': self.global_step,
-            'model_state_dict': self.model.state_dict(),
-            'optimizer_state_dict': self.optimizer.state_dict(),
-            'best_val_psnr': self.best_val_psnr,
-            'model_config': self.model_config,
-            'trainer_config': self.config
+            'epoch': self.current_epoch, 'global_step': self.global_step, 'model_state_dict': self.model.state_dict(
+            )
         }
         
         if self.scheduler is not None:
@@ -321,9 +320,11 @@ class SVRasterTrainer:
         logger.info(f"Loaded checkpoint from epoch {self.current_epoch}")
 
 
-def create_svraster_trainer(model_config: SVRasterConfig,
-                           trainer_config: SVRasterTrainerConfig,
-                           train_dataset: SVRasterDataset,
-                           val_dataset: Optional[SVRasterDataset] = None) -> SVRasterTrainer:
+def create_svraster_trainer(
+    model_config: SVRasterConfig,
+    trainer_config: SVRasterTrainerConfig,
+    train_dataset: SVRasterDataset,
+    val_dataset: Optional[SVRasterDataset] = None,
+) -> SVRasterTrainer:
     """Create a SVRaster trainer."""
     return SVRasterTrainer(model_config, trainer_config, train_dataset, val_dataset) 

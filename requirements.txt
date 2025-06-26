@@ -1,19 +1,19 @@
-numpy>=1.21.0
-openvdb>=8.0.0
-scipy>=1.7.0
-requests>=2.25.0
-shapely>=1.8.0
-trimesh>=3.9.0
-pyproj>=3.2.0
-torch>=1.9.0
-matplotlib>=3.3.0
-tqdm>=4.60.0
+numpy>=1.21.0,<2.0.0
+openvdb>=8.0.0,<9.0.0
+scipy>=1.7.0,<2.0.0
+requests>=2.25.0,<3.0.0
+shapely>=1.8.0,<2.0.0
+trimesh>=3.9.0,<4.0.0
+pyproj>=3.2.0,<4.0.0
+torch>=1.9.0,<2.0.0
+matplotlib>=3.3.0,<4.0.0
+tqdm>=4.60.0,<5.0.0
 # PyTorch Lightning dependencies
-pytorch-lightning>=2.0.0
-torchmetrics>=0.11.0
-tensorboard>=2.8.0
-wandb>=0.13.0 pytest>=7.0.0
-opencv-python>=4.5.0
-pillow>=8.0.0
-matplotlib>=3.3.0
-pyyaml>=6.0
+pytorch-lightning>=2.0.0,<3.0.0
+torchmetrics>=0.11.0,<1.0.0
+tensorboard>=2.8.0,<3.0.0
+wandb>=0.13.0,<1.0.0
+pytest>=7.0.0,<8.0.0
+opencv-python>=4.5.0,<5.0.0
+pillow>=8.0.0,<10.0.0
+pyyaml>=6.0,<7.0.0

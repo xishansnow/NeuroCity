@@ -1,13 +1,13 @@
 # PyNeRF: 金字塔神经辐射场
 
-本包实现了基于Turki等人论文《PyNeRF: Pyramidal Neural Radiance Fields》的PyNeRF（金字塔神经辐射场），该方法为神经辐射场引入了多分辨率金字塔结构，实现了多尺度的高效训练和渲染。
+本包实现了基于 Turki 等人论文《PyNeRF: Pyramidal Neural Radiance Fields》的 PyNeRF（金字塔神经辐射场），该方法为神经辐射场引入了多分辨率金字塔结构，实现了多尺度的高效训练和渲染。
 
 ## 特性
 
 - **多分辨率金字塔结构**：具有多个分辨率级别的分层表示
-- **基于哈希的编码**：受Instant-NGP启发的高效多分辨率哈希编码
+- **基于哈希的编码**：受 Instant-NGP 启发的高效多分辨率哈希编码
 - **从粗到精训练**：从低分辨率到高分辨率的渐进式训练
-- **体积渲染**：带有alpha合成的标准体积渲染
+- **体积渲染**：带有 alpha 合成的标准体积渲染
 - **多尺度数据集**：支持多尺度图像训练
 - **灵活架构**：可配置的金字塔级别和网络架构
 
@@ -16,7 +16,7 @@
 ### 核心组件
 
 1. **PyramidEncoder**：带有分层特征提取的多分辨率哈希编码
-2. **PyNeRF模型**：结合金字塔编码器和MLP网络的主模型
+2. **PyNeRF 模型**：结合金字塔编码器和 MLP 网络的主模型
 3. **PyramidRenderer**：支持多尺度采样的体积渲染器
 4. **多尺度训练**：提高收敛性的渐进式训练策略
 
@@ -33,7 +33,7 @@
 # 安装所需依赖
 pip install torch torchvision numpy pillow opencv-python tqdm tensorboard
 
-# 包可从src/pyramid-nerf目录直接使用
+# 包可从 src/pyramid-nerf 目录直接使用
 ```
 
 ## 快速开始
@@ -41,14 +41,14 @@ pip install torch torchvision numpy pillow opencv-python tqdm tensorboard
 ### 训练
 
 ```bash
-# 在NeRF合成数据集上训练
+# 在 NeRF 合成数据集上训练
 python train_pyramid_nerf.py \
     --data_dir /path/to/nerf_synthetic/lego \
     --experiment_name lego_pyramid \
     --max_steps 20000 \
     --multiscale
 
-# 在LLFF数据集上训练
+# 在 LLFF 数据集上训练
 python train_pyramid_nerf.py \
     --data_dir /path/to/nerf_llff_data/fern \
     --dataset_type llff \
@@ -80,7 +80,7 @@ python render_pyramid_nerf.py \
 
 ## 配置
 
-`PyNeRFConfig`类提供全面的配置选项：
+`PyNeRFConfig` 类提供全面的配置选项：
 
 ```python
 from pyramid_nerf import PyNeRFConfig
@@ -96,7 +96,7 @@ config = PyNeRFConfig(
     hash_table_size=2**20,           # 哈希表大小
     features_per_level=4,            # 每级特征数
     
-    # MLP架构
+    # MLP 架构
     hidden_dim=128,                  # 隐藏层维度
     num_layers=3,                    # 层数
     
@@ -115,7 +115,7 @@ config = PyNeRFConfig(
 )
 ```
 
-## API参考
+## API 参考
 
 ### 核心类
 
@@ -178,7 +178,7 @@ trainer.train()
 ### 数据集类
 
 #### PyNeRFDataset
-支持NeRF合成和LLFF格式的标准数据集类。
+支持 NeRF 合成和 LLFF 格式的标准数据集类。
 
 ```python
 from pyramid_nerf import PyNeRFDataset
@@ -208,14 +208,14 @@ dataset = MultiScaleDataset(
 
 ### 训练速度对比
 
-| 模型 | Lego场景 | Chair场景 | Ficus场景 |
+| 模型 | Lego 场景 | Chair 场景 | Ficus 场景 |
 |------|----------|-----------|-----------|
-| 原始NeRF | 24小时 | 24小时 | 24小时 |
-| PyNeRF | 8小时 | 8小时 | 8小时 |
+| 原始 NeRF | 24 小时 | 24 小时 | 24 小时 |
+| PyNeRF | 8 小时 | 8 小时 | 8 小时 |
 
 ### 质量指标 (PSNR)
 
-| 场景 | 原始NeRF | PyNeRF | 改进 |
+| 场景 | 原始 NeRF | PyNeRF | 改进 |
 |------|----------|--------|------|
 | Lego | 32.54 | 33.18 | +0.64 |
 | Chair | 33.00 | 33.84 | +0.84 |
@@ -229,8 +229,8 @@ dataset = MultiScaleDataset(
 - **自适应采样**：根据距离和复杂度选择合适的金字塔级别
 
 ### 渐进式训练
-1. **阶段1**：仅使用最粗级别（低分辨率）
-2. **阶段2-N**：逐步添加更精细的级别
+1. **阶段 1**：仅使用最粗级别（低分辨率）
+2. **阶段 2-N**：逐步添加更精细的级别
 3. **特征激活**：渐进激活高频位置编码
 
 ## 故障排除
@@ -260,7 +260,7 @@ config.max_resolution = 4096
 
 ## 许可证
 
-MIT许可证
+MIT 许可证
 
 ## 引用
 

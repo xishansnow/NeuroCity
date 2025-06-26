@@ -8,7 +8,7 @@ import torch.utils.data as data
 import numpy as np
 import json
 import os
-from typing import Dict, List, Tuple, Optional, Union
+from typing import Any
 import trimesh
 
 
@@ -27,14 +27,7 @@ class OccupancyDataset(data.Dataset):
     """
     
     def __init__(
-        self,
-        data_root: str,
-        split: str = 'train',
-        num_points: int = 100000,
-        surface_sampling: float = 0.5,
-        uniform_sampling: float = 0.5,
-        bbox_size: float = 1.1,
-        transform: Optional = None
+        self, data_root: str, split: str = 'train', num_points: int = 100000, surface_sampling: float = 0.5, uniform_sampling: float = 0.5, bbox_size: float = 1.1, transform: Any | None = None
     ):
         self.data_root = data_root
         self.split = split
@@ -49,7 +42,7 @@ class OccupancyDataset(data.Dataset):
         
         print(f"Loaded {len(self.data_list)} {split} samples")
     
-    def _load_data_list(self) -> List[Dict]:
+    def _load_data_list(self) -> list[dict[str, str]]:
         """加载数据列表"""
         split_file = os.path.join(self.data_root, f'{self.split}.json')
         
@@ -64,8 +57,10 @@ class OccupancyDataset(data.Dataset):
                 for filename in os.listdir(mesh_dir):
                     if filename.endswith(('.obj', '.ply', '.off')):
                         data_list.append({
-                            'mesh_path': os.path.join(mesh_dir, filename),
-                            'shape_id': filename.split('.')[0]
+                            'mesh_path': os.path.join(
+                                mesh_dir,
+                                filename,
+                            )
                         })
         
         return data_list
@@ -73,7 +68,7 @@ class OccupancyDataset(data.Dataset):
     def __len__(self) -> int:
         return len(self.data_list)
     
-    def __getitem__(self, idx: int) -> Dict[str, torch.Tensor]:
+    def __getitem__(self, idx: int) -> dict[str, Any]:
         """获取数据样本
         
         Returns:
@@ -90,9 +85,9 @@ class OccupancyDataset(data.Dataset):
         
         # 构建样本
         sample = {
-            'points': torch.from_numpy(points).float(),
-            'occupancy': torch.from_numpy(occupancy).float(),
-            'shape_id': data_info.get('shape_id', idx)
+            'points': torch.from_numpy(
+                points,
+            )
         }
         
         if self.transform:
@@ -135,9 +130,8 @@ class OccupancyDataset(data.Dataset):
         return mesh
     
     def _sample_points(
-        self,
-        mesh: trimesh.Trimesh
-    ) -> Tuple[np.ndarray, np.ndarray]:
+        self, mesh: trimesh.Trimesh
+    ) -> tuple[np.ndarray, np.ndarray]:
         """采样点和占用标签
         
         Args:
@@ -173,9 +167,7 @@ class OccupancyDataset(data.Dataset):
         return points, occupancy
     
     def _sample_surface_points(
-        self,
-        mesh: trimesh.Trimesh,
-        num_points: int
+        self, mesh: trimesh.Trimesh, num_points: int
     ) -> np.ndarray:
         """在表面采样点"""
         try:
@@ -201,15 +193,12 @@ class OccupancyDataset(data.Dataset):
     def _sample_uniform_points(self, num_points: int) -> np.ndarray:
         """均匀采样空间点"""
         points = np.random.uniform(
-            -self.bbox_size, self.bbox_size,
-            (num_points, 3)
+            -self.bbox_size, self.bbox_size, (num_points, 3)
         )
         return points
     
     def _compute_occupancy(
-        self,
-        mesh: trimesh.Trimesh,
-        points: np.ndarray
+        self, mesh: trimesh.Trimesh, points: np.ndarray
     ) -> np.ndarray:
         """计算点的占用标签"""
         try:
@@ -230,11 +219,7 @@ class SyntheticOccupancyDataset(data.Dataset):
     """
     
     def __init__(
-        self,
-        num_samples: int = 1000,
-        num_points: int = 10000,
-        shape_types: List[str] = ['sphere', 'cube', 'cylinder'],
-        **kwargs
+        self, num_samples: int = 1000, num_points: int = 10000, shape_types: list[str] = ['sphere', 'cube', 'cylinder'], **kwargs
     ):
         self.num_samples = num_samples
         self.num_points = num_points
@@ -245,7 +230,7 @@ class SyntheticOccupancyDataset(data.Dataset):
     def __len__(self) -> int:
         return self.num_samples
     
-    def __getitem__(self, idx: int) -> Dict[str, torch.Tensor]:
+    def __getitem__(self, idx: int) -> dict[str, Any]:
         """生成合成数据样本"""
         # 随机选择形状类型
         shape_type = np.random.choice(self.shape_types)
@@ -265,16 +250,11 @@ class SyntheticOccupancyDataset(data.Dataset):
         return {
             'points': torch.from_numpy(points).float(),
             'occupancy': torch.from_numpy(occupancy).float(),
-            'shape_id': f"{shape_type}_{idx}",
-            'shape_type': shape_type
+            'shape_id': f"{shape_type}",
         }
     
     def _compute_synthetic_occupancy(
-        self,
-        points: np.ndarray,
-        shape_type: str,
-        scale: float,
-        center: np.ndarray
+        self, points: np.ndarray, shape_type: str, scale: float, center: np.ndarray
     ) -> np.ndarray:
         """计算合成形状的占用"""
         # 将点转换到形状坐标系
@@ -301,24 +281,18 @@ class SyntheticOccupancyDataset(data.Dataset):
 
 
 def create_occupancy_dataloader(
-    dataset: data.Dataset,
-    batch_size: int = 8,
-    shuffle: bool = True,
-    num_workers: int = 4,
-    **kwargs
+    dataset: data.Dataset, batch_size: int = 8, shuffle: bool = True, num_workers: int = 4, **kwargs
 ) -> data.DataLoader:
     """创建占用网络数据加载器"""
     
-    def collate_fn(batch):
+    def collate_fn(batch: list[dict[str, Any]]) -> dict[str, Any]:
         """自定义批处理函数"""
         points = torch.stack([item['points'] for item in batch])
         occupancy = torch.stack([item['occupancy'] for item in batch])
         shape_ids = [item['shape_id'] for item in batch]
         
         batch_dict = {
-            'points': points,
-            'occupancy': occupancy,
-            'shape_ids': shape_ids
+            'points': points, 'occupancy': occupancy, 'shape_ids': shape_ids
         }
         
         # 添加其他可能的键
@@ -328,12 +302,7 @@ def create_occupancy_dataloader(
         return batch_dict
     
     return data.DataLoader(
-        dataset,
-        batch_size=batch_size,
-        shuffle=shuffle,
-        num_workers=num_workers,
-        collate_fn=collate_fn,
-        **kwargs
+        dataset, batch_size=batch_size, shuffle=shuffle, num_workers=num_workers, collate_fn=collate_fn, **kwargs
     )
 
 
@@ -341,7 +310,7 @@ def create_occupancy_dataloader(
 class OccupancyTransform:
     """占用数据变换基类"""
     
-    def __call__(self, sample: Dict) -> Dict:
+    def __call__(self, sample: dict[str, Any]) -> dict[str, Any]:
         raise NotImplementedError
 
 
@@ -351,7 +320,7 @@ class RandomRotation(OccupancyTransform):
     def __init__(self, max_angle: float = np.pi):
         self.max_angle = max_angle
     
-    def __call__(self, sample: Dict) -> Dict:
+    def __call__(self, sample: dict[str, Any]) -> dict[str, Any]:
         # 生成随机旋转矩阵
         angle = np.random.uniform(-self.max_angle, self.max_angle)
         axis = np.random.randn(3)
@@ -363,9 +332,7 @@ class RandomRotation(OccupancyTransform):
         
         # 创建反对称矩阵
         K = np.array([
-            [0, -axis[2], axis[1]],
-            [axis[2], 0, -axis[0]],
-            [-axis[1], axis[0], 0]
+            [0, -axis[2], axis[1]], [axis[2], 0, -axis[0]], [-axis[1], axis[0], 0]
         ])
         
         # 旋转矩阵
@@ -385,7 +352,7 @@ class RandomNoise(OccupancyTransform):
     def __init__(self, noise_std: float = 0.01):
         self.noise_std = noise_std
     
-    def __call__(self, sample: Dict) -> Dict:
+    def __call__(self, sample: dict[str, Any]) -> dict[str, Any]:
         points = sample['points']
         noise = torch.randn_like(points) * self.noise_std
         sample['points'] = points + noise
@@ -395,10 +362,10 @@ class RandomNoise(OccupancyTransform):
 class Compose(OccupancyTransform):
     """组合多个变换"""
     
-    def __init__(self, transforms: List[OccupancyTransform]):
+    def __init__(self, transforms: list[OccupancyTransform]):
         self.transforms = transforms
     
-    def __call__(self, sample: Dict) -> Dict:
+    def __call__(self, sample: dict[str, Any]) -> dict[str, Any]:
         for transform in self.transforms:
             sample = transform(sample)
         return sample 

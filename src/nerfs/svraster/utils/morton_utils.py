@@ -7,8 +7,7 @@ using Morton codes (Z-order curves) for spatial ordering.
 
 import torch
 import numpy as np
-from typing import Tuple, Union
-
+from typing import Tuple
 
 def morton_encode_3d(x: int, y: int, z: int) -> int:
     """
@@ -32,7 +31,7 @@ def morton_encode_3d(x: int, y: int, z: int) -> int:
     return (part1by2(z) << 2) + (part1by2(y) << 1) + part1by2(x)
 
 
-def morton_decode_3d(morton_code: int) -> Tuple[int, int, int]:
+def morton_decode_3d(morton_code: int) -> tuple[int, int, int]:
     """
     Decode Morton code back to 3D coordinates.
     
@@ -99,9 +98,16 @@ def morton_decode_batch(morton_codes: torch.Tensor) -> torch.Tensor:
     return coords
 
 
-def compute_morton_order(positions: torch.Tensor, 
-                        scene_bounds: Tuple[float, float, float, float, float, float],
-                        grid_resolution: int) -> torch.Tensor:
+def compute_morton_order(
+    positions: torch.Tensor,
+    scene_bounds: tuple[float,
+    float,
+    float,
+    float,
+    float,
+    float],
+    grid_resolution: int,
+) -> torch.Tensor:
     """
     Compute Morton order for a set of 3D positions.
     
@@ -128,9 +134,16 @@ def compute_morton_order(positions: torch.Tensor,
     return morton_encode_batch(grid_coords)
 
 
-def sort_by_morton_order(positions: torch.Tensor,
-                        scene_bounds: Tuple[float, float, float, float, float, float],
-                        grid_resolution: int) -> Tuple[torch.Tensor, torch.Tensor]:
+def sort_by_morton_order(
+    positions: torch.Tensor,
+    scene_bounds: tuple[float,
+    float,
+    float,
+    float,
+    float,
+    float],
+    grid_resolution: int,
+) -> tuple[torch.Tensor, torch.Tensor]:
     """
     Sort positions by Morton order.
     

@@ -14,7 +14,5 @@ from .dataset import SDFDataset
 from .trainer import SDFTrainer
 
 __all__ = [
-    'SDFNetwork',
-    'SDFDataset',
-    'SDFTrainer'
+    'SDFNetwork', 'SDFDataset', 'SDFTrainer'
 ] 

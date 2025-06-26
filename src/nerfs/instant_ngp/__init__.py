@@ -24,10 +24,7 @@ Example usage:
     
     # Create configuration
     config = InstantNGPConfig(
-        num_levels=16,
-        level_dim=2, 
-        base_resolution=16,
-        desired_resolution=2048
+        num_levels=16, level_dim=2, base_resolution=16, desired_resolution=2048
     )
     
     # Create model
@@ -40,12 +37,7 @@ Example usage:
 """
 
 from .core import (
-    InstantNGPConfig,
-    InstantNGP,
-    HashEncoder,
-    SHEncoder,
-    InstantNGPLoss,
-    InstantNGPRenderer
+    InstantNGPConfig, InstantNGP, HashEncoder, SHEncoder, InstantNGPLoss, InstantNGPRenderer
 )
 
 from .trainer import (
@@ -53,18 +45,11 @@ from .trainer import (
 )
 
 from .dataset import (
-    InstantNGPDataset,
-    create_instant_ngp_dataloader
+    InstantNGPDataset, create_instant_ngp_dataloader
 )
 
 from .utils import (
-    contract_to_unisphere,
-    uncontract_from_unisphere,
-    morton_encode_3d,
-    compute_tv_loss,
-    adaptive_sampling,
-    estimate_normals,
-    compute_hash_grid_size
+    contract_to_unisphere, uncontract_from_unisphere, morton_encode_3d, compute_tv_loss, adaptive_sampling, estimate_normals, compute_hash_grid_size
 )
 
 __version__ = "1.0.0"
@@ -73,26 +58,8 @@ __email__ = "team@neurocity.ai"
 
 __all__ = [
     # Core components
-    'InstantNGPConfig',
-    'InstantNGP',
-    'HashEncoder', 
-    'SHEncoder',
-    'InstantNGPLoss',
-    'InstantNGPRenderer',
-    
-    # Training
-    'InstantNGPTrainer',
-    
-    # Dataset
-    'InstantNGPDataset',
-    'create_instant_ngp_dataloader',
-    
-    # Utils
-    'contract_to_unisphere',
-    'uncontract_from_unisphere',
-    'morton_encode_3d',
-    'compute_tv_loss',
-    'adaptive_sampling',
-    'estimate_normals',
-    'compute_hash_grid_size'
+    'InstantNGPConfig', 'InstantNGP', 'HashEncoder', 'SHEncoder', 'InstantNGPLoss', 'InstantNGPRenderer', # Training
+    'InstantNGPTrainer', # Dataset
+    'InstantNGPDataset', 'create_instant_ngp_dataloader', # Utils
+    'contract_to_unisphere', 'uncontract_from_unisphere', 'morton_encode_3d', 'compute_tv_loss', 'adaptive_sampling', 'estimate_normals', 'compute_hash_grid_size'
 ]

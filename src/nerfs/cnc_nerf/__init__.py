@@ -16,65 +16,25 @@ hash embeddings while maintaining high fidelity and rendering speed.
 """
 
 from .core import (
-    CNCNeRF,
-    CNCNeRFConfig,
-    HashEmbeddingEncoder,
-    ContextModel,
-    LevelWiseContextModel,
-    DimensionWiseContextModel,
-    EntropyEstimator,
-    ArithmeticCoder,
-    OccupancyGrid,
-    CNCRenderer
+    CNCNeRF, CNCNeRFConfig, HashEmbeddingEncoder, ContextModel, LevelWiseContextModel, DimensionWiseContextModel, EntropyEstimator, ArithmeticCoder, OccupancyGrid, CNCRenderer
 )
 
 from .dataset import (
-    CNCNeRFDataset,
-    CNCNeRFDatasetConfig,
-    create_synthetic_dataset
+    CNCNeRFDataset, CNCNeRFDatasetConfig, create_synthetic_dataset
 )
 
 from .trainer import (
-    CNCNeRFTrainer,
-    CNCNeRFTrainerConfig,
-    create_cnc_nerf_trainer
+    CNCNeRFTrainer, CNCNeRFTrainerConfig, create_cnc_nerf_trainer
 )
 
 from .example_usage import (
-    basic_usage_example,
-    training_example,
-    compression_analysis_example,
-    rendering_speed_benchmark,
-    main
+    basic_usage_example, training_example, compression_analysis_example, rendering_speed_benchmark
 )
 
 __all__ = [
     # Core components
-    "CNCNeRF",
-    "CNCNeRFConfig",
-    "HashEmbeddingEncoder",
-    "ContextModel",
-    "LevelWiseContextModel", 
-    "DimensionWiseContextModel",
-    "EntropyEstimator",
-    "ArithmeticCoder",
-    "OccupancyGrid",
-    "CNCRenderer",
-    
-    # Dataset
-    "CNCNeRFDataset",
-    "CNCNeRFDatasetConfig",
-    "create_synthetic_dataset",
-    
-    # Training
-    "CNCNeRFTrainer",
-    "CNCNeRFTrainerConfig",
-    "create_cnc_nerf_trainer",
-    
-    # Examples and demos
-    "basic_usage_example",
-    "training_example",
-    "compression_analysis_example",
-    "rendering_speed_benchmark",
-    "main"
+    "CNCNeRF", "CNCNeRFConfig", "HashEmbeddingEncoder", "ContextModel", "LevelWiseContextModel", "DimensionWiseContextModel", "EntropyEstimator", "ArithmeticCoder", "OccupancyGrid", "CNCRenderer", # Dataset
+    "CNCNeRFDataset", "CNCNeRFDatasetConfig", "create_synthetic_dataset", # Training
+    "CNCNeRFTrainer", "CNCNeRFTrainerConfig", "create_cnc_nerf_trainer", # Examples and demos
+    "basic_usage_example", "training_example", "compression_analysis_example", "rendering_speed_benchmark", "main"
 ] 

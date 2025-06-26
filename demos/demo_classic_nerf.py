@@ -61,7 +61,9 @@ class MockClassicNeRF(torch.nn.Module):
             if i == 0:
                 density_layers.append(torch.nn.Linear(pos_input_dim, config.hidden_dim))
             elif i in config.skip_layers:
-                density_layers.append(torch.nn.Linear(config.hidden_dim + pos_input_dim, config.hidden_dim))
+                density_layers.append(
+                    torch.nn.Linear,
+                )
             else:
                 density_layers.append(torch.nn.Linear(config.hidden_dim, config.hidden_dim))
             
@@ -74,21 +76,19 @@ class MockClassicNeRF(torch.nn.Module):
         if config.use_viewdirs:
             dir_input_dim = 3 + 3 * 2 * config.pe_freq_dir
             self.color_net = torch.nn.Sequential(
-                torch.nn.Linear(config.hidden_dim + dir_input_dim, config.hidden_dim // 2),
-                torch.nn.ReLU(),
-                torch.nn.Linear(config.hidden_dim // 2, 3),
-                torch.nn.Sigmoid()
+                torch.nn.Linear(
+                    config.hidden_dim + dir_input_dim,
+                    config.hidden_dim // 2,
+                )
             )
         else:
             self.color_net = torch.nn.Sequential(
-                torch.nn.Linear(config.hidden_dim, 3),
-                torch.nn.Sigmoid()
+                torch.nn.Linear(config.hidden_dim, 3), torch.nn.Sigmoid()
             )
         
         # 密度输出层
         self.density_head = torch.nn.Sequential(
-            torch.nn.Linear(config.hidden_dim, 1),
-            torch.nn.ReLU()
+            torch.nn.Linear(config.hidden_dim, 1), torch.nn.ReLU()
         )
     
     def positional_encoding(self, x: torch.Tensor, num_freqs: int) -> torch.Tensor:
@@ -99,7 +99,11 @@ class MockClassicNeRF(torch.nn.Module):
                 encoded.append(fn(2.**i * x))
         return torch.cat(encoded, dim=-1)
     
-    def forward(self, positions: torch.Tensor, directions: Optional[torch.Tensor] = None) -> Dict[str, torch.Tensor]:
+    def forward(
+        self,
+        positions: torch.Tensor,
+        directions: Optional[torch.Tensor] = None,
+    )
         """前向传播"""
         # 位置编码
         pos_encoded = self.positional_encoding(positions, self.config.pe_freq_pos)
@@ -124,12 +128,14 @@ class MockClassicNeRF(torch.nn.Module):
         color = self.color_net(color_input)
         
         return {
-            'density': density.squeeze(-1),
-            'color': color
+            'density': density.squeeze(-1), 'color': color
         }
 
 
-def create_synthetic_dataset(num_views: int = 100, image_size: int = 64) -> Tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
+def create_synthetic_dataset(
+    num_views: int = 100,
+    image_size: int = 64,
+)
     """创建合成数据集用于演示"""
     print(f"📊 创建合成数据集: {num_views}个视角, 图像大小{image_size}x{image_size}")
     
@@ -148,9 +154,9 @@ def create_synthetic_dataset(num_views: int = 100, image_size: int = 64) -> Tupl
         phi = elevations[i % len(elevations)]
         
         cam_pos = torch.tensor([
-            radius * torch.cos(phi) * torch.cos(theta),
-            radius * torch.cos(phi) * torch.sin(theta),
-            radius * torch.sin(phi)
+            radius * torch.cos(
+                phi,
+            )
         ])
         
         # 生成光线
@@ -172,17 +178,17 @@ def create_synthetic_dataset(num_views: int = 100, image_size: int = 64) -> Tupl
                 colors.append(color)
     
     return (
-        torch.stack(ray_origins),
-        torch.stack(ray_directions),
-        torch.stack(colors)
+        torch.stack(ray_origins), torch.stack(ray_directions), torch.stack(colors)
     )
 
 
-def train_classic_nerf(config: MockClassicNeRFConfig, 
-                      ray_origins: torch.Tensor,
-                      ray_directions: torch.Tensor,
-                      target_colors: torch.Tensor,
-                      num_epochs: int = 100) -> MockClassicNeRF:
+def train_classic_nerf(
+    config: MockClassicNeRFConfig,
+    ray_origins: torch.Tensor,
+    ray_directions: torch.Tensor,
+    target_colors: torch.Tensor,
+    num_epochs: int = 100,
+)
     """训练Classic NeRF模型"""
     print(f"🚀 开始训练Classic NeRF模型")
     print(f"📈 训练数据: {len(ray_origins)} 条光线")
@@ -234,10 +240,12 @@ def train_classic_nerf(config: MockClassicNeRFConfig,
     return model
 
 
-def render_novel_views(model: MockClassicNeRF, 
-                      config: MockClassicNeRFConfig,
-                      num_views: int = 8,
-                      image_size: int = 64) -> List[torch.Tensor]:
+def render_novel_views(
+    model: MockClassicNeRF,
+    config: MockClassicNeRFConfig,
+    num_views: int = 8,
+    image_size: int = 64,
+)
     """渲染新视角"""
     print(f"🎬 渲染新视角: {num_views}个视角")
     
@@ -251,9 +259,7 @@ def render_novel_views(model: MockClassicNeRF,
             # 新的相机位置
             theta = 2 * np.pi * i / num_views
             cam_pos = torch.tensor([
-                2.5 * np.cos(theta),
-                2.5 * np.sin(theta),
-                1.0
+                2.5 * np.cos(theta), 2.5 * np.sin(theta), 1.0
             ]).to(device)
             
             # 渲染图像
@@ -276,7 +282,7 @@ def render_novel_views(model: MockClassicNeRF,
     return rendered_images
 
 
-def visualize_results(rendered_images: List[torch.Tensor], save_path: str = "demo_outputs"):
+def visualize_results(rendered_images: list[torch.Tensor], save_path: str = "demo_outputs"):
     """可视化渲染结果"""
     print(f"📊 可视化渲染结果")
     
@@ -344,8 +350,7 @@ def demonstrate_classic_nerf():
     
     # 3. 训练模型
     model = train_classic_nerf(
-        config, ray_origins, ray_directions, target_colors, 
-        num_epochs=100
+        config, ray_origins, ray_directions, target_colors, num_epochs=100
     )
     
     # 4. 渲染新视角
@@ -360,8 +365,8 @@ def demonstrate_classic_nerf():
     
     print("\n" + "=" * 60)
     print("📊 模型统计:")
-    print(f"   - 总参数量: {total_params:,}")
-    print(f"   - 可训练参数: {trainable_params:,}")
+    print(f"   - 总参数量: {total_params:, }")
+    print(f"   - 可训练参数: {trainable_params:, }")
     print(f"   - 模型大小: {total_params * 4 / 1024 / 1024:.2f} MB")
     
     print("\n🎉 Classic NeRF演示完成!")

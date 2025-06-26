@@ -21,10 +21,7 @@ from .dataset import PlenoxelDatasetConfig
 
 try:
     from .neuralvdb_interface import (
-        NeuralVDBManager,
-        NeuralVDBConfig,
-        save_plenoxel_as_neuralvdb,
-        load_plenoxel_from_neuralvdb
+        NeuralVDBManager, NeuralVDBConfig, save_plenoxel_as_neuralvdb, load_plenoxel_from_neuralvdb
     )
     NEURALVDB_AVAILABLE = True
 except ImportError:
@@ -60,10 +57,12 @@ class NeuralVDBTrainerConfig(PlenoxelTrainerConfig):
 class NeuralVDBPlenoxelTrainer(PlenoxelTrainer):
     """Extended Plenoxel trainer with NeuralVDB functionality."""
     
-    def __init__(self,
-                 model_config: PlenoxelConfig,
-                 trainer_config: NeuralVDBTrainerConfig,
-                 dataset_config: PlenoxelDatasetConfig):
+    def __init__(
+        self,
+        model_config: PlenoxelConfig,
+        trainer_config: NeuralVDBTrainerConfig,
+        dataset_config: PlenoxelDatasetConfig,
+    ) -> None:
         """Initialize trainer with NeuralVDB support."""
         super().__init__(model_config, trainer_config, dataset_config)
         
@@ -75,10 +74,7 @@ class NeuralVDBPlenoxelTrainer(PlenoxelTrainer):
         # Initialize NeuralVDB manager
         if trainer_config.save_neuralvdb:
             self.vdb_config = trainer_config.neuralvdb_config or NeuralVDBConfig(
-                compression_level=trainer_config.neuralvdb_compression_level,
-                half_precision=trainer_config.neuralvdb_half_precision,
-                tolerance=trainer_config.neuralvdb_tolerance,
-                include_metadata=True
+                compression_level=trainer_config.neuralvdb_compression_level, half_precision=trainer_config.neuralvdb_half_precision, tolerance=trainer_config.neuralvdb_tolerance, include_metadata=True
             )
             self.vdb_manager = NeuralVDBManager(self.vdb_config)
         else:
@@ -162,10 +158,7 @@ class NeuralVDBPlenoxelTrainer(PlenoxelTrainer):
             
             filepath = os.path.join(self.exp_dir, filename)
             success = save_plenoxel_as_neuralvdb(
-                voxel_grid=voxel_grid,
-                output_path=filepath,
-                model_config=self.model_config,
-                vdb_config=self.vdb_config
+                voxel_grid=voxel_grid, output_path=filepath, model_config=self.model_config, vdb_config=self.vdb_config
             )
             
             if success:
@@ -209,10 +202,8 @@ class NeuralVDBPlenoxelTrainer(PlenoxelTrainer):
             
             # Log loaded stats
             density_stats = {
-                'min': voxel_grid.density.min().item(),
-                'max': voxel_grid.density.max().item(),
-                'mean': voxel_grid.density.mean().item(),
-                'std': voxel_grid.density.std().item()
+                'min': voxel_grid.density.min(
+                )
             }
             
             non_empty_voxels = (torch.exp(voxel_grid.density) > 0.01).sum().item()
@@ -238,9 +229,7 @@ class NeuralVDBPlenoxelTrainer(PlenoxelTrainer):
             
             logger.info(f"Creating hierarchical LOD at epoch {epoch}")
             created_files = self.vdb_manager.create_hierarchical_lod(
-                voxel_grid=self.model.voxel_grid,
-                output_dir=lod_dir,
-                levels=self.trainer_config.lod_levels
+                voxel_grid=self.model.voxel_grid, output_dir=lod_dir, levels=self.trainer_config.lod_levels
             )
             
             # Log LOD statistics
@@ -272,7 +261,10 @@ class NeuralVDBPlenoxelTrainer(PlenoxelTrainer):
                 return
             
             # Get stats for most recent checkpoint
-            latest_vdb = max(vdb_files, key=lambda f: os.path.getmtime(os.path.join(self.exp_dir, f)))
+            latest_vdb = max(
+                vdb_files,
+                key=lambda f: os.path.getmtime,
+            )
             filepath = os.path.join(self.exp_dir, latest_vdb)
             
             stats = self.vdb_manager.get_storage_stats(filepath)
@@ -281,17 +273,18 @@ class NeuralVDBPlenoxelTrainer(PlenoxelTrainer):
         except Exception as e:
             logger.error(f"Failed to log storage stats: {str(e)}")
     
-    def _log_vdb_stats(self, stats: Dict[str, Any]):
+    def _log_vdb_stats(self, stats: dict[str, Any]):
         """Log VDB storage statistics."""
         if not stats:
             return
         
         # TensorBoard logging
         if self.tb_writer:
-            self.tb_writer.add_scalar('storage/vdb_file_size_mb', 
-                                    stats.get('file_size_mb', 0), self.epoch)
-            self.tb_writer.add_scalar('storage/num_grids', 
-                                    stats.get('num_grids', 0), self.epoch)
+            self.tb_writer.add_scalar(
+                'storage/vdb_file_size_mb',
+                stats.get,
+            )
+            self.tb_writer.add_scalar('storage/num_grids', stats.get('num_grids', 0), self.epoch)
             
             # Log per-grid statistics
             total_active_voxels = 0
@@ -304,51 +297,46 @@ class NeuralVDBPlenoxelTrainer(PlenoxelTrainer):
                 total_active_voxels += active_voxels
                 total_memory_mb += memory_mb
                 
-                self.tb_writer.add_scalar(f'storage/grid_{grid_name}_active_voxels', 
-                                        active_voxels, self.epoch)
-                self.tb_writer.add_scalar(f'storage/grid_{grid_name}_memory_mb', 
-                                        memory_mb, self.epoch)
+                self.tb_writer.add_scalar(
+                    f'storage/grid_{grid_name}_active_voxels',
+                    active_voxels,
+                    self.epoch,
+                )
+                self.tb_writer.add_scalar(
+                    f'storage/grid_{grid_name}_memory_mb',
+                    memory_mb,
+                    self.epoch,
+                )
             
-            self.tb_writer.add_scalar('storage/total_active_voxels', 
-                                    total_active_voxels, self.epoch)
-            self.tb_writer.add_scalar('storage/total_memory_mb', 
-                                    total_memory_mb, self.epoch)
+            self.tb_writer.add_scalar(
+                'storage/total_active_voxels',
+                total_active_voxels,
+                self.epoch,
+            )
+            self.tb_writer.add_scalar('storage/total_memory_mb', total_memory_mb, self.epoch)
         
         # W&B logging
         if self.trainer_config.use_wandb:
             log_dict = {
                 'storage/vdb_file_size_mb': stats.get('file_size_mb', 0),
-                'storage/num_grids': stats.get('num_grids', 0),
-                'storage/total_active_voxels': sum(
-                    grid_stats.get('active_voxel_count', 0) 
-                    for grid_stats in stats.get('grids', {}).values()
-                ),
-                'storage/total_memory_mb': sum(
-                    grid_stats.get('memory_usage_mb', 0) 
-                    for grid_stats in stats.get('grids', {}).values()
-                )
+                'storage/total_memory_mb': sum(grid_stats.get('memory_usage_mb', 0) for grid_stats in stats.get('grids', {}).values()),
             }
             wandb.log(log_dict, step=self.epoch)
     
-    def export_final_vdb(self, output_path: str, create_lod: bool = True) -> Dict[str, Any]:
+    def export_final_vdb(self, output_path: str, create_lod: bool = True) -> dict[str, Any]:
         """Export final trained model as optimized VDB with optional LOD."""
         logger.info(f"Exporting final VDB to {output_path}")
         
         # Create high-quality VDB config for final export
         final_vdb_config = NeuralVDBConfig(
-            compression_level=9,  # Maximum compression
-            half_precision=True,
-            tolerance=1e-6,       # Higher precision
-            include_metadata=True,
-            include_training_info=True
+            compression_level=9, # Maximum compression
+            half_precision=True, tolerance=1e-6, # Higher precision
+            include_metadata=True, include_training_info=True
         )
         
         # Save main model
         success = save_plenoxel_as_neuralvdb(
-            voxel_grid=self.model.voxel_grid,
-            output_path=output_path,
-            model_config=self.model_config,
-            vdb_config=final_vdb_config
+            voxel_grid=self.model.voxel_grid, output_path=output_path, model_config=self.model_config, vdb_config=final_vdb_config
         )
         
         if not success:
@@ -368,33 +356,27 @@ class NeuralVDBPlenoxelTrainer(PlenoxelTrainer):
         if create_lod:
             lod_dir = output_path.replace('.vdb', '_lod')
             lod_files = manager.create_hierarchical_lod(
-                voxel_grid=self.model.voxel_grid,
-                output_dir=lod_dir,
-                levels=4
+                voxel_grid=self.model.voxel_grid, output_dir=lod_dir, levels=4
             )
         
         export_info = {
-            'main_file': output_path,
-            'file_size_mb': stats.get('file_size_mb', 0),
-            'num_grids': stats.get('num_grids', 0),
-            'lod_files': lod_files,
-            'total_active_voxels': sum(
-                grid_stats.get('active_voxel_count', 0) 
-                for grid_stats in stats.get('grids', {}).values()
-            )
+            'main_file': output_path, 'file_size_mb': stats.get('file_size_mb', 0),
+            'total_active_voxels': sum(grid_stats.get('active_voxel_count', 0) for grid_stats in stats.get('grids', {}).values()),
         }
         
         logger.info(f"Export complete:")
         logger.info(f"  Main file: {output_path} ({export_info['file_size_mb']:.2f} MB)")
-        logger.info(f"  Active voxels: {export_info['total_active_voxels']:,}")
+        logger.info(f"  Active voxels: {export_info['total_active_voxels']:,d}")
         if lod_files:
             logger.info(f"  LOD files: {len(lod_files)} levels")
         
         return export_info
 
 
-def create_neuralvdb_trainer(model_config: PlenoxelConfig,
-                           trainer_config: NeuralVDBTrainerConfig,
-                           dataset_config: PlenoxelDatasetConfig) -> NeuralVDBPlenoxelTrainer:
+def create_neuralvdb_trainer(
+    model_config: PlenoxelConfig,
+    trainer_config: NeuralVDBTrainerConfig,
+    dataset_config: PlenoxelDatasetConfig,
+) -> NeuralVDBPlenoxelTrainer:
     """Create a NeuralVDB-enabled Plenoxel trainer."""
     return NeuralVDBPlenoxelTrainer(model_config, trainer_config, dataset_config) 

@@ -16,9 +16,7 @@ def example_sampling():
     
     # 创建采样器
     sampler = VoxelSampler(
-        tiles_dir="tiles",
-        voxel_size=1.0,
-        sample_ratio=0.1
+        tiles_dir="tiles", voxel_size=1.0, sample_ratio=0.1
     )
     
     # 对单个tile进行采样
@@ -30,8 +28,7 @@ def example_sampling():
     # 对所有tile进行采样
     print("对所有tile进行采样...")
     all_samples = sampler.sample_all_tiles(
-        sampling_method='stratified',
-        n_samples_per_tile=5000
+        sampling_method='stratified', n_samples_per_tile=5000
     )
     
     # 保存采样数据
@@ -45,45 +42,31 @@ def example_training():
     # 加载训练数据
     print("加载训练数据...")
     train_dataloader, val_dataloader = load_training_data(
-        samples_dir="samples",
-        task_type='occupancy',
-        train_ratio=0.8
+        samples_dir="samples", task_type='occupancy', train_ratio=0.8
     )
     
     # 创建模型
     print("创建神经网络模型...")
     model = MLP(
-        input_dim=3,
-        hidden_dims=[256, 512, 512, 256, 128],
-        output_dim=1,
-        activation='relu',
-        dropout=0.1
+        input_dim=3, hidden_dims=[256, 512, 512, 256, 128], output_dim=1, activation='relu', dropout=0.1
     )
     
     # 创建训练器
     trainer = NeuralSDFTrainer(
-        model=model,
-        learning_rate=1e-3,
-        weight_decay=1e-5
+        model=model, learning_rate=1e-3, weight_decay=1e-5
     )
     
     # 训练模型
     print("开始训练...")
     trainer.train(
-        train_dataloader=train_dataloader,
-        val_dataloader=val_dataloader,
-        num_epochs=20,  # 减少轮数用于演示
-        save_path='model_occupancy.pth',
-        early_stopping_patience=5
+        train_dataloader=train_dataloader, val_dataloader=val_dataloader, num_epochs=20, # 减少轮数用于演示
+        save_path='model_occupancy.pth', early_stopping_patience=5
     )
     
     # 测试预测
     print("测试预测...")
     test_coords = np.array([
-        [100, 100, 10],
-        [200, 200, 20],
-        [300, 300, 30],
-        [400, 400, 40]
+        [100, 100, 10], [200, 200, 20], [300, 300, 30], [400, 400, 40]
     ])
     
     predictions = trainer.predict(test_coords)
@@ -112,17 +95,12 @@ def example_sdf_training():
     
     # 创建SDF模型
     model = MLP(
-        input_dim=3,
-        hidden_dims=[512, 1024, 1024, 512, 256],
-        output_dim=1,
-        activation='relu'
+        input_dim=3, hidden_dims=[512, 1024, 1024, 512, 256], output_dim=1, activation='relu'
     )
     
     # 创建SDF训练器
     trainer = NeuralSDFTrainer(
-        model=model,
-        learning_rate=1e-3,
-        weight_decay=1e-5
+        model=model, learning_rate=1e-3, weight_decay=1e-5
     )
     
     # 创建简单的SDF数据集
@@ -141,14 +119,10 @@ def example_sdf_training():
     from torch.utils.data import DataLoader
     
     train_dataset = VoxelDataset(
-        coords[train_indices], 
-        sdf_values=sdf_values[train_indices],
-        task_type='sdf'
+        coords[train_indices], sdf_values=sdf_values[train_indices], task_type='sdf'
     )
     val_dataset = VoxelDataset(
-        coords[val_indices], 
-        sdf_values=sdf_values[val_indices],
-        task_type='sdf'
+        coords[val_indices], sdf_values=sdf_values[val_indices], task_type='sdf'
     )
     
     train_dataloader = DataLoader(train_dataset, batch_size=1024, shuffle=True)
@@ -157,11 +131,7 @@ def example_sdf_training():
     # 训练SDF模型
     print("开始SDF训练...")
     trainer.train(
-        train_dataloader=train_dataloader,
-        val_dataloader=val_dataloader,
-        num_epochs=20,
-        save_path='model_sdf.pth',
-        early_stopping_patience=5
+        train_dataloader=train_dataloader, val_dataloader=val_dataloader, num_epochs=20, save_path='model_sdf.pth', early_stopping_patience=5
     )
     
     print("SDF训练完成！")

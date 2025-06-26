@@ -8,7 +8,7 @@ for efficient storage and processing of volumetric data.
 import numpy as np
 import torch
 import torch.nn as nn
-from typing import List, Tuple, Dict, Optional, Union, Any
+from typing import Dict, List, Optional, Tuple, Any
 import logging
 from scipy.spatial import cKDTree
 from sklearn.cluster import KMeans
@@ -24,7 +24,7 @@ class OctreeNode:
         初始化八叉树节点
         
         Args:
-            center: 节点中心坐标 (3,)
+            center: 节点中心坐标 (3, )
             size: 节点尺寸
             depth: 节点深度
         """
@@ -49,9 +49,9 @@ class OctreeNode:
         for i in range(8):
             # 计算子节点中心偏移
             offset = np.array([
-                (i & 1) * half_size - quarter_size,
-                ((i >> 1) & 1) * half_size - quarter_size,
-                ((i >> 2) & 1) * half_size - quarter_size
+                (
+                    i & 1,
+                )
             ])
             child_center = self.center + offset
             
@@ -67,8 +67,7 @@ class OctreeNode:
         # 检查点是否在节点边界内
         in_node = np.all(
             (points >= self.center - half_size) & 
-            (points < self.center + half_size), 
-            axis=1
+            (points < self.center + half_size), axis=1
         )
         
         return np.where(in_node)[0]
@@ -82,15 +81,14 @@ class OctreeNode:
         else:
             self.occupancy = 0.0
     
-    def should_subdivide(self, points: np.ndarray, occupancies: np.ndarray, 
-                        config) -> bool:
+    def should_subdivide(self, points: np.ndarray, occupancies: np.ndarray, config) -> bool:
         """判断是否应该细分节点"""
         indices = self.get_points_in_node(points)
         
         # 细分条件
         conditions = [
-            self.depth < config.max_depth,  # 未达到最大深度
-            len(indices) > 10,              # 包含足够多的点
+            self.depth < config.max_depth, # 未达到最大深度
+            len(indices) > 10, # 包含足够多的点
             self.occupancy > config.sparsity_threshold  # 占用率足够高
         ]
         
@@ -105,7 +103,7 @@ class AdaptiveOctreeNode(OctreeNode):
         初始化自适应八叉树节点
         
         Args:
-            center: 节点中心坐标 (3,)
+            center: 节点中心坐标 (3, )
             size: 节点尺寸
             depth: 节点深度
         """
@@ -179,17 +177,21 @@ class AdaptiveOctreeNode(OctreeNode):
             0.2 * min(self.variance, 1.0)          # 方差归一化
         )
     
-    def should_subdivide_adaptive(self, points: np.ndarray, occupancies: np.ndarray, 
-                                 config) -> bool:
+    def should_subdivide_adaptive(
+        self,
+        points: np.ndarray,
+        occupancies: np.ndarray,
+        config,
+    )
         """自适应细分判断"""
         # 首先计算重要性
         self.compute_importance(points, occupancies)
         
         # 基础条件
         basic_conditions = [
-            self.depth < config.max_depth,
-            self.depth >= config.min_depth,
-            len(self.get_points_in_node(points)) > 5
+            self.depth < config.max_depth, self.depth >= config.min_depth, len(
+                self.get_points_in_node,
+            )
         ]
         
         if not all(basic_conditions):
@@ -197,8 +199,8 @@ class AdaptiveOctreeNode(OctreeNode):
         
         # 自适应条件
         adaptive_conditions = [
-            self.importance > 0.3,  # 重要性阈值
-            self.variance > 0.1,    # 方差阈值
+            self.importance > 0.3, # 重要性阈值
+            self.variance > 0.1, # 方差阈值
             self.gradient > 0.05    # 梯度阈值
         ]
         
@@ -227,7 +229,7 @@ class SparseVoxelGrid:
         
         Args:
             points: 3D坐标点 (N, 3)
-            occupancies: 占用值 (N,)
+            occupancies: 占用值 (N, )
         """
         logger.info("构建稀疏体素网格...")
         
@@ -248,8 +250,12 @@ class SparseVoxelGrid:
         
         logger.info(f"稀疏体素网格构建完成，根节点大小: {size:.2f}")
     
-    def _build_octree_recursive(self, node: OctreeNode, 
-                               points: np.ndarray, occupancies: np.ndarray):
+    def _build_octree_recursive(
+        self,
+        node: OctreeNode,
+        points: np.ndarray,
+        occupancies: np.ndarray,
+    )
         """递归构建八叉树"""
         # 计算节点占用率
         node.compute_occupancy(points, occupancies)
@@ -268,19 +274,12 @@ class SparseVoxelGrid:
         
         # 特征网络
         self.feature_network = FeatureNetwork(
-            input_dim=3,
-            feature_dim=self.config.feature_dim,
-            hidden_dims=self.config.hidden_dims,
-            activation=self.config.activation,
-            dropout=self.config.dropout
+            input_dim=3, feature_dim=self.config.feature_dim, hidden_dims=self.config.hidden_dims, activation=self.config.activation, dropout=self.config.dropout
         )
         
         # 占用网络
         self.occupancy_network = OccupancyNetwork(
-            feature_dim=self.config.feature_dim,
-            hidden_dims=[128, 64, 32],
-            activation=self.config.activation,
-            dropout=self.config.dropout
+            feature_dim=self.config.feature_dim, hidden_dims=[128, 64, 32], activation=self.config.activation, dropout=self.config.dropout
         )
     
     def query_occupancy(self, points: np.ndarray) -> np.ndarray:
@@ -298,13 +297,13 @@ class SparseVoxelGrid:
         
         return occupancies.numpy().flatten()
     
-    def get_leaf_nodes(self) -> List[OctreeNode]:
+    def get_leaf_nodes(self) -> list[OctreeNode]:
         """获取所有叶子节点"""
         leaf_nodes = []
         self._collect_leaf_nodes(self.root, leaf_nodes)
         return leaf_nodes
     
-    def _collect_leaf_nodes(self, node: OctreeNode, leaf_nodes: List[OctreeNode]):
+    def _collect_leaf_nodes(self, node: OctreeNode, leaf_nodes: list[OctreeNode]):
         """递归收集叶子节点"""
         if node is None:
             return
@@ -316,7 +315,7 @@ class SparseVoxelGrid:
                 for child in node.children:
                     self._collect_leaf_nodes(child, leaf_nodes)
     
-    def get_statistics(self) -> Dict[str, Any]:
+    def get_statistics(self) -> dict[str, Any]:
         """获取网格统计信息"""
         if self.root is None:
             return {}
@@ -326,11 +325,9 @@ class SparseVoxelGrid:
         max_depth = self._get_max_depth(self.root)
         
         return {
-            'total_nodes': total_nodes,
-            'leaf_nodes': len(leaf_nodes),
-            'max_depth': max_depth,
-            'root_size': self.root.size,
-            'root_center': self.root.center.tolist()
+            'total_nodes': total_nodes, 'leaf_nodes': len(
+                leaf_nodes,
+            )
         }
     
     def _count_total_nodes(self, node: OctreeNode) -> int:
@@ -377,7 +374,7 @@ class AdvancedSparseVoxelGrid(SparseVoxelGrid):
         
         Args:
             points: 3D坐标点 (N, 3)
-            occupancies: 占用值 (N,)
+            occupancies: 占用值 (N, )
         """
         logger.info("构建高级稀疏体素网格...")
         
@@ -402,8 +399,12 @@ class AdvancedSparseVoxelGrid(SparseVoxelGrid):
         
         logger.info(f"高级稀疏体素网格构建完成，根节点大小: {size:.2f}")
     
-    def _build_adaptive_octree_recursive(self, node: AdaptiveOctreeNode, 
-                                       points: np.ndarray, occupancies: np.ndarray):
+    def _build_adaptive_octree_recursive(
+        self,
+        node: AdaptiveOctreeNode,
+        points: np.ndarray,
+        occupancies: np.ndarray,
+    )
         """递归构建自适应八叉树"""
         # 计算节点重要性和占用率
         node.compute_importance(points, occupancies)
@@ -423,30 +424,18 @@ class AdvancedSparseVoxelGrid(SparseVoxelGrid):
         if self.config.multi_scale_features:
             # 多尺度特征网络
             self.feature_network = MultiScaleFeatureNetwork(
-                input_dim=3,
-                feature_dim=self.config.feature_dim,
-                hidden_dims=self.config.hidden_dims,
-                num_scales=3,
-                activation=self.config.activation,
-                dropout=self.config.dropout
+                input_dim=3, feature_dim=self.config.feature_dim, hidden_dims=self.config.hidden_dims, num_scales=3, activation=self.config.activation, dropout=self.config.dropout
             )
         else:
             # 标准特征网络
             from .networks import FeatureNetwork
             self.feature_network = FeatureNetwork(
-                input_dim=3,
-                feature_dim=self.config.feature_dim,
-                hidden_dims=self.config.hidden_dims,
-                activation=self.config.activation,
-                dropout=self.config.dropout
+                input_dim=3, feature_dim=self.config.feature_dim, hidden_dims=self.config.hidden_dims, activation=self.config.activation, dropout=self.config.dropout
             )
         
         # 高级占用网络
         self.occupancy_network = AdvancedOccupancyNetwork(
-            feature_dim=self.config.feature_dim,
-            hidden_dims=[256, 128, 64, 32],
-            activation=self.config.activation,
-            dropout=self.config.dropout
+            feature_dim=self.config.feature_dim, hidden_dims=[256, 128, 64, 32], activation=self.config.activation, dropout=self.config.dropout
         )
     
     def _init_feature_compressor(self):
@@ -454,12 +443,15 @@ class AdvancedSparseVoxelGrid(SparseVoxelGrid):
         from .networks import FeatureCompressor
         
         self.feature_compressor = FeatureCompressor(
-            feature_dim=self.config.feature_dim,
-            quantization_bits=self.config.quantization_bits
+            feature_dim=self.config.feature_dim, quantization_bits=self.config.quantization_bits
         )
     
-    def adaptive_refinement(self, points: np.ndarray, occupancies: np.ndarray, 
-                           importance_threshold: float = 0.5):
+    def adaptive_refinement(
+        self,
+        points: np.ndarray,
+        occupancies: np.ndarray,
+        importance_threshold: float = 0.5,
+    )
         """
         自适应细化 - 根据重要性动态调整网格
         
@@ -473,8 +465,7 @@ class AdvancedSparseVoxelGrid(SparseVoxelGrid):
         # 收集需要细化的节点
         nodes_to_refine = []
         self._collect_refinement_candidates(
-            self.root, points, occupancies, 
-            importance_threshold, nodes_to_refine
+            self.root, points, occupancies, importance_threshold, nodes_to_refine
         )
         
         # 执行细化
@@ -487,9 +478,14 @@ class AdvancedSparseVoxelGrid(SparseVoxelGrid):
         
         logger.info(f"完成自适应细化，细化了 {len(nodes_to_refine)} 个节点")
     
-    def _collect_refinement_candidates(self, node: AdaptiveOctreeNode, 
-                                     points: np.ndarray, occupancies: np.ndarray,
-                                     threshold: float, candidates: List):
+    def _collect_refinement_candidates(
+        self,
+        node: AdaptiveOctreeNode,
+        points: np.ndarray,
+        occupancies: np.ndarray,
+        threshold: float,
+        candidates: List,
+    )
         """收集需要细化的候选节点"""
         if node is None:
             return
@@ -524,7 +520,7 @@ class AdvancedSparseVoxelGrid(SparseVoxelGrid):
         
         return self.feature_compressor.decompress(compressed_features)
     
-    def get_memory_statistics(self) -> Dict[str, float]:
+    def get_memory_statistics(self) -> dict[str, float]:
         """获取内存统计信息"""
         stats = super().get_statistics()
         
@@ -544,10 +540,9 @@ class AdvancedSparseVoxelGrid(SparseVoxelGrid):
         total_memory = node_memory + network_memory + compression_memory
         
         stats.update({
-            'node_memory_bytes': node_memory,
-            'network_memory_bytes': network_memory,
-            'compression_memory_bytes': compression_memory,
-            'total_memory_mb': total_memory / (1024 * 1024)
+            'node_memory_bytes': node_memory, 'network_memory_bytes': network_memory, 'compression_memory_bytes': compression_memory, 'total_memory_mb': total_memory / (
+                1024 * 1024,
+            )
         })
         
         return stats 

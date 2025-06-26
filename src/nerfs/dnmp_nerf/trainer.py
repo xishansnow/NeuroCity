@@ -29,12 +29,14 @@ from .utils import evaluation_utils, rendering_utils
 class DNMPTrainer:
     """Base trainer class for DNMP."""
     
-    def __init__(self,
-                 model: DNMP,
-                 config: DNMPConfig,
-                 device: torch.device = None,
-                 log_dir: str = './logs',
-                 checkpoint_dir: str = './checkpoints'):
+    def __init__(
+        self,
+        model: DNMP,
+        config: DNMPConfig,
+        device: torch.device = None,
+        log_dir: str = './logs',
+        checkpoint_dir: str = './checkpoints'
+    ):
         
         self.model = model
         self.config = config
@@ -68,15 +70,16 @@ class DNMPTrainer:
         lr = learning_rate or self.config.geometry_lr
         
         # Separate optimizers for different components
-        self.optimizer = optim.Adam(self.model.parameters(), lr=lr, 
-                                   weight_decay=self.config.weight_decay)
+        self.optimizer = optim.Adam(
+            self.model.parameters,
+        )
         
         # Learning rate scheduler
         self.scheduler = optim.lr_scheduler.StepLR(
             self.optimizer, step_size=1000, gamma=0.9
         )
     
-    def train_epoch(self, dataloader: DataLoader) -> Dict[str, float]:
+    def train_epoch(self, dataloader: DataLoader) -> dict[str, float]:
         """Train for one epoch."""
         self.model.train()
         epoch_losses = {}
@@ -98,8 +101,7 @@ class DNMPTrainer:
                 
                 # Update progress bar
                 pbar.set_postfix({
-                    'loss': f"{loss_dict.get('total_loss', 0.0):.6f}",
-                    'lr': f"{self.optimizer.param_groups[0]['lr']:.6f}"
+                    'loss': f"{loss_dict.get('total_loss', 0.0):.6f}"
                 })
                 
                 # Log to tensorboard
@@ -107,9 +109,11 @@ class DNMPTrainer:
                     for key, value in loss_dict.items():
                         self.writer.add_scalar(f'train/{key}', value, self.global_step)
                     
-                    self.writer.add_scalar('train/learning_rate', 
-                                         self.optimizer.param_groups[0]['lr'], 
-                                         self.global_step)
+                    self.writer.add_scalar(
+                        'train/learning_rate',
+                        self.optimizer.param_groups[0]['lr'],
+                        self.global_step,
+                    )
                 
                 self.global_step += 1
         
@@ -119,7 +123,7 @@ class DNMPTrainer:
         
         return epoch_losses
     
-    def train_step(self, batch: Dict[str, torch.Tensor]) -> Dict[str, float]:
+    def train_step(self, batch: dict[str, torch.Tensor]) -> dict[str, float]:
         """Single training step."""
         self.optimizer.zero_grad()
         
@@ -151,7 +155,7 @@ class DNMPTrainer:
         # Return scalar losses
         return {key: value.item() for key, value in loss_dict.items()}
     
-    def validate(self, dataloader: DataLoader) -> Dict[str, float]:
+    def validate(self, dataloader: DataLoader) -> dict[str, float]:
         """Validate model."""
         self.model.eval()
         val_losses = {}
@@ -186,7 +190,7 @@ class DNMPTrainer:
         
         return val_losses
     
-    def move_batch_to_device(self, batch: Dict[str, Any]) -> Dict[str, Any]:
+    def move_batch_to_device(self, batch: dict[str, Any]) -> dict[str, Any]:
         """Move batch data to device."""
         device_batch = {}
         
@@ -208,13 +212,8 @@ class DNMPTrainer:
     def save_checkpoint(self, epoch: int, is_best: bool = False):
         """Save training checkpoint."""
         checkpoint = {
-            'epoch': epoch,
-            'global_step': self.global_step,
-            'model_state_dict': self.model.state_dict(),
-            'optimizer_state_dict': self.optimizer.state_dict(),
-            'scheduler_state_dict': self.scheduler.state_dict(),
-            'config': self.config,
-            'best_val_loss': self.best_val_loss
+            'epoch': epoch, 'global_step': self.global_step, 'model_state_dict': self.model.state_dict(
+            )
         }
         
         checkpoint_path = self.checkpoint_dir / f'checkpoint_epoch_{epoch:04d}.pth'
@@ -252,12 +251,14 @@ class GeometryTrainer(DNMPTrainer):
         super().__init__(*args, **kwargs)
         self.setup_optimizers(self.config.geometry_lr)
     
-    def train(self, 
-              train_dataset: DNMPDataset,
-              val_dataset: Optional[DNMPDataset] = None,
-              num_epochs: int = 1000,
-              batch_size: int = 1,
-              save_freq: int = 100):
+    def train(
+        self,
+        train_dataset: DNMPDataset,
+        val_dataset: Optional[DNMPDataset] = None,
+        num_epochs: int = 1000,
+        batch_size: int = 1,
+        save_freq: int = 100
+    ):
         """Train geometry optimization stage."""
         
         # Initialize scene with point cloud
@@ -336,12 +337,14 @@ class RadianceTrainer(DNMPTrainer):
         
         print("Loaded pre-trained geometry and froze parameters")
     
-    def train(self,
-              train_dataset: DNMPDataset,
-              val_dataset: Optional[DNMPDataset] = None,
-              num_epochs: int = 2000,
-              batch_size: int = 1,
-              save_freq: int = 100):
+    def train(
+        self,
+        train_dataset: DNMPDataset,
+        val_dataset: Optional[DNMPDataset] = None,
+        num_epochs: int = 2000,
+        batch_size: int = 1,
+        save_freq: int = 100
+    ):
         """Train radiance field stage."""
         
         # Create data loaders
@@ -413,21 +416,24 @@ class RadianceTrainer(DNMPTrainer):
                 rendered_image = rendered_image.view(*batch['image'].shape)
                 
                 # Log images to tensorboard
-                self.writer.add_image(f'val/rendered_{i}', 
-                                    rendered_image.permute(2, 0, 1), epoch)
-                self.writer.add_image(f'val/target_{i}', 
-                                    batch['image'].squeeze().permute(2, 0, 1), epoch)
+                self.writer.add_image(f'val/rendered_{i}', rendered_image.permute(2, 0, 1), epoch)
+                self.writer.add_image(
+                    f'val/target_{i}',
+                    batch['image'].squeeze,
+                )
 
 
 class TwoStageTrainer:
     """Complete two-stage training pipeline."""
     
-    def __init__(self,
-                 model: DNMP,
-                 config: DNMPConfig,
-                 device: torch.device = None,
-                 log_dir: str = './logs',
-                 checkpoint_dir: str = './checkpoints'):
+    def __init__(
+        self,
+        model: DNMP,
+        config: DNMPConfig,
+        device: torch.device = None,
+        log_dir: str = './logs',
+        checkpoint_dir: str = './checkpoints'
+    ):
         
         self.model = model
         self.config = config
@@ -441,16 +447,17 @@ class TwoStageTrainer:
         self.geometry_checkpoint_dir = self.checkpoint_dir / 'geometry'
         self.radiance_checkpoint_dir = self.checkpoint_dir / 'radiance'
         
-        for dir_path in [self.geometry_log_dir, self.radiance_log_dir,
-                        self.geometry_checkpoint_dir, self.radiance_checkpoint_dir]:
+        for dir_path in [self.geometry_log_dir, self.radiance_log_dir, self.geometry_checkpoint_dir, self.radiance_checkpoint_dir]:
             dir_path.mkdir(parents=True, exist_ok=True)
     
-    def train(self,
-              train_dataset: DNMPDataset,
-              val_dataset: Optional[DNMPDataset] = None,
-              geometry_epochs: int = 1000,
-              radiance_epochs: int = 2000,
-              batch_size: int = 1):
+    def train(
+        self,
+        train_dataset: DNMPDataset,
+        val_dataset: Optional[DNMPDataset] = None,
+        geometry_epochs: int = 1000,
+        radiance_epochs: int = 2000,
+        batch_size: int = 1
+    ):
         """Run complete two-stage training."""
         
         print("=" * 60)
@@ -459,14 +466,13 @@ class TwoStageTrainer:
         
         # Stage 1: Geometry optimization
         geometry_trainer = GeometryTrainer(
-            self.model, self.config, self.device,
-            str(self.geometry_log_dir), str(self.geometry_checkpoint_dir)
+            self.model, self.config, self.device, str(
+                self.geometry_log_dir,
+            )
         )
         
         geometry_trainer.train(
-            train_dataset, val_dataset,
-            num_epochs=geometry_epochs,
-            batch_size=batch_size
+            train_dataset, val_dataset, num_epochs=geometry_epochs, batch_size=batch_size
         )
         
         # Save geometry checkpoint
@@ -479,8 +485,9 @@ class TwoStageTrainer:
         
         # Stage 2: Radiance field training
         radiance_trainer = RadianceTrainer(
-            self.model, self.config, self.device,
-            str(self.radiance_log_dir), str(self.radiance_checkpoint_dir)
+            self.model, self.config, self.device, str(
+                self.radiance_log_dir,
+            )
         )
         
         # Load pre-trained geometry
@@ -489,9 +496,7 @@ class TwoStageTrainer:
             radiance_trainer.load_geometry_checkpoint(str(best_geometry_path))
         
         radiance_trainer.train(
-            train_dataset, val_dataset,
-            num_epochs=radiance_epochs,
-            batch_size=batch_size
+            train_dataset, val_dataset, num_epochs=radiance_epochs, batch_size=batch_size
         )
         
         print("=" * 60)
@@ -499,8 +504,7 @@ class TwoStageTrainer:
         print("=" * 60)
         
         return {
-            'geometry_trainer': geometry_trainer,
-            'radiance_trainer': radiance_trainer
+            'geometry_trainer': geometry_trainer, 'radiance_trainer': radiance_trainer
         }
 
 

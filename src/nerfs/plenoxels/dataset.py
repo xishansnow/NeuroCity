@@ -16,7 +16,7 @@ import json
 import numpy as np
 import torch
 from torch.utils.data import Dataset, DataLoader
-from typing import Dict, List, Optional, Tuple, Union, Any
+from typing import Dict, List, Optional, Tuple, Any
 from dataclasses import dataclass
 import cv2
 from pathlib import Path
@@ -64,10 +64,12 @@ class PlenoxelDatasetConfig:
     scene_scale: float = 1.0
 
 
-def load_blender_data(basedir: str, 
-                      half_res: bool = False,
-                      testskip: int = 1,
-                      white_bkgd: bool = False) -> Dict[str, Any]:
+def load_blender_data(
+    basedir: str,
+    half_res: bool = False,
+    testskip: int = 1,
+    white_bkgd: bool = False,
+) -> dict[str, np.ndarray]:
     """Load Blender synthetic dataset."""
     splits = ['train', 'val', 'test']
     metas = {}
@@ -134,22 +136,17 @@ def load_blender_data(basedir: str,
         imgs = imgs_half_res
     
     return {
-        'images': imgs,
-        'poses': poses,
-        'i_split': i_split,
-        'H': H,
-        'W': W,
-        'focal': focal,
-        'near': 2.0,
-        'far': 6.0
+        'images': imgs, 'poses': poses, 'i_split': i_split, 'H': H, 'W': W, 'focal': focal, 'near': 2.0, 'far': 6.0
     }
 
 
-def load_colmap_data(basedir: str, 
-                     factor: int = 8,
-                     width: Optional[int] = None,
-                     height: Optional[int] = None,
-                     load_imgs: bool = True) -> Dict[str, Any]:
+def load_colmap_data(
+    basedir: str,
+    factor: int = 8,
+    width: Optional[int] = None,
+    height: Optional[int] = None,
+    load_imgs: bool = True,
+) -> dict[str, np.ndarray]:
     """Load COLMAP dataset."""
     try:
         from .colmap_utils import read_cameras_binary, read_images_binary, read_points3d_binary
@@ -168,17 +165,13 @@ def load_colmap_data(basedir: str,
         H, W, f = cam.height, cam.width, cam.params[0]
         hwf = np.array([H, W, f]).reshape([3, 1])
         K = np.array([
-            [f, 0, W/2],
-            [0, f, H/2],
-            [0, 0, 1]
+            [f, 0, W/2], [0, f, H/2], [0, 0, 1]
         ])
     elif cam.model == "PINHOLE":
         H, W, fx, fy, cx, cy = cam.height, cam.width, *cam.params
         hwf = np.array([H, W, (fx + fy) / 2]).reshape([3, 1])
         K = np.array([
-            [fx, 0, cx],
-            [0, fy, cy],
-            [0, 0, 1]
+            [fx, 0, cx], [0, fy, cy], [0, 0, 1]
         ])
     else:
         raise ValueError(f"Unsupported camera model: {cam.model}")
@@ -226,21 +219,14 @@ def load_colmap_data(basedir: str,
         imgs = None
     
     return {
-        'images': imgs,
-        'poses': poses,
-        'hwf': hwf,
-        'K': K,
-        'near': 0.1,
-        'far': 100.0
+        'images': imgs, 'poses': poses, 'hwf': hwf, 'K': K, 'near': 0.1, 'far': 100.0
     }
 
 
 class PlenoxelDataset(Dataset):
     """Main dataset class for Plenoxels."""
     
-    def __init__(self, 
-                 config: PlenoxelDatasetConfig,
-                 split: str = 'train'):
+    def __init__(self, config: PlenoxelDatasetConfig, split: str = 'train') -> None:
         """
         Initialize Plenoxel dataset.
         
@@ -254,15 +240,13 @@ class PlenoxelDataset(Dataset):
         # Load data based on dataset type
         if config.dataset_type == 'blender':
             self.data = load_blender_data(
-                config.data_dir,
-                half_res=(config.downsample_factor > 1),
-                testskip=config.test_skip,
-                white_bkgd=config.white_background
+                config.data_dir, half_res=(
+                    config.downsample_factor > 1,
+                )
             )
         elif config.dataset_type == 'colmap':
             self.data = load_colmap_data(
-                config.data_dir,
-                factor=config.downsample_factor
+                config.data_dir, factor=config.downsample_factor
             )
         else:
             raise ValueError(f"Unsupported dataset type: {config.dataset_type}")
@@ -273,7 +257,7 @@ class PlenoxelDataset(Dataset):
         # Setup ray sampling
         self._setup_ray_sampling()
     
-    def _setup_split_data(self):
+    def _setup_split_data(self) -> None:
         """Setup data for the current split."""
         if self.config.dataset_type == 'blender':
             i_split = self.data['i_split']
@@ -310,7 +294,7 @@ class PlenoxelDataset(Dataset):
         
         logger.info(f"Loaded {len(self.images)} {self.split} images ({self.H}x{self.W})")
     
-    def _setup_ray_sampling(self):
+    def _setup_ray_sampling(self) -> None:
         """Setup ray sampling for efficient training."""
         # Generate all rays for this split
         self.rays_o, self.rays_d = self._get_rays_np()
@@ -327,8 +311,11 @@ class PlenoxelDataset(Dataset):
                 dW = int(self.W // 2 * self.config.precrop_fraction)
                 coords = torch.stack(
                     torch.meshgrid(
-                        torch.linspace(self.H // 2 - dH, self.H // 2 + dH - 1, 2 * dH),
-                        torch.linspace(self.W // 2 - dW, self.W // 2 + dW - 1, 2 * dW)
+                        torch.linspace(
+                            self.H // 2 - dH,
+                            self.H // 2 + dH - 1,
+                            2 * dH,
+                        )
                     ), -1)
                 coords = torch.reshape(coords, [-1, 2]).long()
                 
@@ -336,25 +323,17 @@ class PlenoxelDataset(Dataset):
                 self.precrop_indices = coords[:, 0] * self.W + coords[:, 1]
                 self.precrop_indices = self.precrop_indices.numpy()
     
-    def _get_rays_np(self) -> Tuple[np.ndarray, np.ndarray]:
+    def _get_rays_np(self) -> tuple[np.ndarray, np.ndarray]:
         """Generate ray origins and directions for all images."""
         rays_o = []
         rays_d = []
         
         for pose in self.poses:
             # Generate rays for this image
-            i, j = np.meshgrid(
-                np.arange(self.W, dtype=np.float32),
-                np.arange(self.H, dtype=np.float32),
-                indexing='xy'
-            )
+            i, j = np.meshgrid(np.arange(self.W, dtype=np.float32), np.arange(self.H, dtype=np.float32), indexing='ij')
             
             # Convert to camera coordinates
-            dirs = np.stack([
-                (i - self.W * 0.5) / self.focal,
-                -(j - self.H * 0.5) / self.focal,
-                -np.ones_like(i)
-            ], -1)
+            dirs = np.stack([(i - self.W * 0.5) / self.focal, -(j - self.H * 0.5) / self.focal, -np.ones_like(i)], dim=-1)
             
             # Transform ray directions to world coordinates
             rays_d_cam = dirs @ pose[:3, :3].T
@@ -375,29 +354,25 @@ class PlenoxelDataset(Dataset):
         else:
             return len(self.images)
     
-    def __getitem__(self, idx: int) -> Dict[str, torch.Tensor]:
+    def __getitem__(self, idx: int) -> dict[str, torch.Tensor]:
         """Get a batch of data."""
         if self.split == 'train':
             return self._get_train_batch(idx)
         else:
             return self._get_eval_batch(idx)
     
-    def _get_train_batch(self, idx: int) -> Dict[str, torch.Tensor]:
+    def _get_train_batch(self, idx: int) -> dict[str, torch.Tensor]:
         """Get training batch with random ray sampling."""
         # Random ray sampling
         if hasattr(self, 'precrop_indices') and idx < self.config.precrop_iterations:
             # Use pre-cropped region for early training
             ray_indices = np.random.choice(
-                self.precrop_indices, 
-                size=self.config.num_rays_train, 
-                replace=False
+                self.precrop_indices, size=self.config.num_rays_train, replace=False
             )
         else:
             # Random sampling from all rays
             ray_indices = np.random.choice(
-                len(self.rays_o),
-                size=self.config.num_rays_train,
-                replace=False
+                len(self.rays_o), size=self.config.num_rays_train, replace=False
             )
         
         # Get sampled rays and colors
@@ -406,14 +381,12 @@ class PlenoxelDataset(Dataset):
         colors = torch.from_numpy(self.images_flat[ray_indices]).float()
         
         return {
-            'rays_o': rays_o,
-            'rays_d': rays_d,
-            'colors': colors,
-            'near': torch.tensor(self.near).float(),
-            'far': torch.tensor(self.far).float()
+            'rays_o': rays_o, 'rays_d': rays_d, 'colors': colors, 'near': torch.tensor(
+                self.near,
+            )
         }
     
-    def _get_eval_batch(self, idx: int) -> Dict[str, torch.Tensor]:
+    def _get_eval_batch(self, idx: int) -> dict[str, torch.Tensor]:
         """Get evaluation batch (full image)."""
         # Return full image data
         rays_o = torch.from_numpy(self.rays_o[idx]).float()  # [H, W, 3]
@@ -421,13 +394,9 @@ class PlenoxelDataset(Dataset):
         colors = torch.from_numpy(self.images[idx]).float()  # [H, W, 3]
         
         return {
-            'rays_o': rays_o,
-            'rays_d': rays_d,
-            'colors': colors,
-            'near': torch.tensor(self.near).float(),
-            'far': torch.tensor(self.far).float(),
-            'H': self.H,
-            'W': self.W
+            'rays_o': rays_o, 'rays_d': rays_d, 'colors': colors, 'near': torch.tensor(
+                self.near,
+            )
         }
     
     def get_test_poses(self, n_poses: int = 40) -> np.ndarray:
@@ -444,12 +413,7 @@ class PlenoxelDataset(Dataset):
         render_poses = []
         for theta in np.linspace(0., 2. * np.pi, n_poses, endpoint=False):
             # Rotate around up axis
-            rotate = np.array([
-                [np.cos(theta), 0, -np.sin(theta), 0],
-                [0, 1, 0, 0],
-                [np.sin(theta), 0, np.cos(theta), 0],
-                [0, 0, 0, 1]
-            ])
+            rotate = np.array([[np.cos(theta)], [np.sin(theta)], [0]])
             
             pose = c2w @ rotate
             render_poses.append(pose[:3, :4])
@@ -462,9 +426,11 @@ def normalize(x: np.ndarray) -> np.ndarray:
     return x / np.linalg.norm(x)
 
 
-def create_plenoxel_dataloader(config: PlenoxelDatasetConfig, 
-                              split: str = 'train',
-                              shuffle: bool = None) -> DataLoader:
+def create_plenoxel_dataloader(
+    config: PlenoxelDatasetConfig,
+    split: str = 'train',
+    shuffle: bool = None,
+) -> DataLoader:
     """Create a DataLoader for Plenoxel dataset."""
     dataset = PlenoxelDataset(config, split)
     
@@ -472,24 +438,21 @@ def create_plenoxel_dataloader(config: PlenoxelDatasetConfig,
         shuffle = (split == 'train')
     
     return DataLoader(
-        dataset,
-        batch_size=1,  # Handle batching internally
-        shuffle=shuffle,
-        num_workers=0,  # Single threaded for ray sampling
+        dataset, batch_size=1, # Handle batching internally
+        shuffle=shuffle, num_workers=0, # Single threaded for ray sampling
         pin_memory=True
     )
 
 
-def create_plenoxel_dataset(data_dir: str,
-                           dataset_type: str = 'blender',
-                           downsample_factor: int = 1,
-                           **kwargs) -> PlenoxelDatasetConfig:
+def create_plenoxel_dataset(
+    data_dir: str,
+    dataset_type: str = 'blender',
+    downsample_factor: int = 1,
+    **kwargs: Any,
+) -> PlenoxelDatasetConfig:
     """Create a Plenoxel dataset configuration."""
     config = PlenoxelDatasetConfig(
-        data_dir=data_dir,
-        dataset_type=dataset_type,
-        downsample_factor=downsample_factor,
-        **kwargs
+        data_dir=data_dir, dataset_type=dataset_type, downsample_factor=downsample_factor, **kwargs
     )
     
     return config 

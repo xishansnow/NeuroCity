@@ -4,13 +4,15 @@ Voxel utilities for SVRaster.
 
 import torch
 import numpy as np
-from typing import Tuple, Optional
+from typing import Optional, Tuple
 
 
-def voxel_pruning(voxel_densities: torch.Tensor,
-                 voxel_positions: torch.Tensor,
-                 voxel_sizes: torch.Tensor,
-                 threshold: float = 0.001) -> Tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
+def voxel_pruning(
+    voxel_densities: torch.Tensor,
+    voxel_positions: torch.Tensor,
+    voxel_sizes: torch.Tensor,
+    threshold: float = 0.001,
+) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
     """
     Prune voxels with low density.
     
@@ -37,8 +39,10 @@ def voxel_pruning(voxel_densities: torch.Tensor,
     return pruned_densities, pruned_positions, pruned_sizes
 
 
-def compute_voxel_bounds(voxel_positions: torch.Tensor,
-                        voxel_sizes: torch.Tensor) -> Tuple[torch.Tensor, torch.Tensor]:
+def compute_voxel_bounds(
+    voxel_positions: torch.Tensor,
+    voxel_sizes: torch.Tensor,
+) -> tuple[torch.Tensor, torch.Tensor]:
     """
     Compute bounding boxes for voxels.
     
@@ -56,9 +60,16 @@ def compute_voxel_bounds(voxel_positions: torch.Tensor,
     return box_min, box_max
 
 
-def voxel_to_world_coords(voxel_coords: torch.Tensor,
-                         scene_bounds: Tuple[float, float, float, float, float, float],
-                         grid_resolution: int) -> torch.Tensor:
+def voxel_to_world_coords(
+    voxel_coords: torch.Tensor,
+    scene_bounds: tuple[float,
+    float,
+    float,
+    float,
+    float,
+    float],
+    grid_resolution: int,
+) -> torch.Tensor:
     """
     Convert voxel coordinates to world coordinates.
     
@@ -83,9 +94,16 @@ def voxel_to_world_coords(voxel_coords: torch.Tensor,
     return world_coords
 
 
-def world_to_voxel_coords(world_coords: torch.Tensor,
-                         scene_bounds: Tuple[float, float, float, float, float, float],
-                         grid_resolution: int) -> torch.Tensor:
+def world_to_voxel_coords(
+    world_coords: torch.Tensor,
+    scene_bounds: tuple[float,
+    float,
+    float,
+    float,
+    float,
+    float],
+    grid_resolution: int,
+) -> torch.Tensor:
     """
     Convert world coordinates to voxel coordinates.
     

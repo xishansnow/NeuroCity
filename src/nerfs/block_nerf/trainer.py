@@ -29,7 +29,12 @@ class PoseRefinement(nn.Module):
     Learned pose refinement for Block-NeRF
     """
     
-    def __init__(self, num_images: int, translation_scale: float = 0.1, rotation_scale: float = 0.01):
+    def __init__(
+        self,
+        num_images: int,
+        translation_scale: float = 0.1,
+        rotation_scale: float = 0.01,
+    )
         super().__init__()
         
         self.num_images = num_images
@@ -38,7 +43,9 @@ class PoseRefinement(nn.Module):
         
         # Learnable pose offsets
         self.translation_offsets = nn.Parameter(torch.zeros(num_images, 3))
-        self.rotation_offsets = nn.Parameter(torch.zeros(num_images, 3))  # Axis-angle representation
+        self.rotation_offsets = nn.Parameter(
+            torch.zeros,
+        )
         
         # Initialize with small random values
         nn.init.normal_(self.translation_offsets, 0, 0.01)
@@ -49,7 +56,7 @@ class PoseRefinement(nn.Module):
         Apply pose refinement to input poses
         
         Args:
-            image_ids: Image indices (N,)
+            image_ids: Image indices (N, )
             poses: Original camera poses (N, 4, 4)
             
         Returns:
@@ -100,11 +107,13 @@ class BlockNeRFTrainer:
     Trainer for Block-NeRF with multiple blocks and components
     """
     
-    def __init__(self,
-                 block_manager: BlockManager,
-                 network_config: Dict,
-                 training_config: Dict,
-                 device: str = 'cuda'):
+    def __init__(
+        self,
+        block_manager: BlockManager,
+        network_config: Dict,
+        training_config: Dict,
+        device: str = 'cuda',
+    )
         """
         Initialize Block-NeRF trainer
         
@@ -121,8 +130,10 @@ class BlockNeRFTrainer:
         
         # Initialize compositor
         self.compositor = BlockCompositor(
-            interpolation_method=training_config.get('interpolation_method', 'inverse_distance'),
-            power=training_config.get('interpolation_power', 2.0)
+            interpolation_method=training_config.get(
+                'interpolation_method',
+                'inverse_distance',
+            )
         )
         
         # Pose refinement (will be initialized with dataset)
@@ -134,8 +145,8 @@ class BlockNeRFTrainer:
         self.best_psnr = 0.0
         
         # Optimizers (will be set up during training)
-        self.optimizers: Dict[str, optim.Optimizer] = {}
-        self.schedulers: Dict[str, Any] = {}
+        self.optimizers: dict[str, optim.Optimizer] = {}
+        self.schedulers: dict[str, Any] = {}
         
         # Loss tracking
         self.loss_history = []
@@ -143,12 +154,13 @@ class BlockNeRFTrainer:
     def setup_pose_refinement(self, num_images: int):
         """Setup pose refinement module"""
         self.pose_refinement = PoseRefinement(
-            num_images=num_images,
-            translation_scale=self.training_config.get('pose_translation_scale', 0.1),
-            rotation_scale=self.training_config.get('pose_rotation_scale', 0.01)
+            num_images=num_images, translation_scale=self.training_config.get(
+                'pose_translation_scale',
+                0.1,
+            )
         ).to(self.device)
     
-    def setup_optimizers(self, blocks: List[str]):
+    def setup_optimizers(self, blocks: list[str]):
         """Setup optimizers for all components"""
         lr = self.training_config.get('learning_rate', 5e-4)
         weight_decay = self.training_config.get('weight_decay', 0.0)
@@ -163,15 +175,14 @@ class BlockNeRFTrainer:
         
         # Visibility network optimizer
         self.optimizers['visibility'] = optim.Adam(
-            self.block_manager.visibility_network.parameters(), 
-            lr=lr * 0.1, weight_decay=weight_decay
+            self.block_manager.visibility_network.parameters(
+            )
         )
         
         # Pose refinement optimizer
         if self.pose_refinement is not None:
             self.optimizers['pose'] = optim.Adam(
-                self.pose_refinement.parameters(),
-                lr=lr * 0.01, weight_decay=weight_decay
+                self.pose_refinement.parameters(), lr=lr * 0.01, weight_decay=weight_decay
             )
         
         # Setup schedulers
@@ -181,11 +192,16 @@ class BlockNeRFTrainer:
             for name, optimizer in self.optimizers.items():
                 self.schedulers[name] = optim.lr_scheduler.ExponentialLR(optimizer, gamma=gamma)
     
-    def compute_losses(self,
-                      predicted: Dict[str, torch.Tensor],
-                      target: Dict[str, torch.Tensor],
-                      block_outputs: List[Dict[str, torch.Tensor]],
-                      visibility_outputs: Optional[torch.Tensor] = None) -> Dict[str, torch.Tensor]:
+    def compute_losses(
+        self,
+        predicted: dict[str,
+        torch.Tensor],
+        target: dict[str,
+        torch.Tensor],
+        block_outputs: list[dict[str,
+        torch.Tensor]],
+        visibility_outputs: Optional[torch.Tensor] = None,
+    )
         """
         Compute all training losses
         
@@ -236,15 +252,21 @@ class BlockNeRFTrainer:
             total_loss += self.training_config.get('pose_reg_weight', 0.01) * losses['pose_reg']
         
         if 'appearance_reg' in losses:
-            total_loss += self.training_config.get('appearance_reg_weight', 0.001) * losses['appearance_reg']
+            total_loss += self.training_config.get(
+                'appearance_reg_weight',
+                0.001,
+            )
         
         losses['total'] = total_loss
         
         return losses
     
-    def train_step(self,
-                  batch: Dict[str, torch.Tensor],
-                  active_blocks: List[str]) -> Dict[str, float]:
+    def train_step(
+        self,
+        batch: dict[str,
+        torch.Tensor],
+        active_blocks: list[str],
+    )
         """
         Single training step
         
@@ -287,13 +309,10 @@ class BlockNeRFTrainer:
         
         # Forward pass through blocks
         block_outputs = self.compositor.render_blocks(
-            blocks=batch_blocks,
-            block_names=batch_block_names,
-            ray_origins=ray_origins,
-            ray_directions=ray_directions,
-            appearance_ids=appearance_ids,
-            exposure_values=exposure_values,
-            **self.training_config.get('render_kwargs', {})
+            blocks=batch_blocks, block_names=batch_block_names, ray_origins=ray_origins, ray_directions=ray_directions, appearance_ids=appearance_ids, exposure_values=exposure_values, **self.training_config.get(
+                'render_kwargs',
+                {},
+            )
         )
         
         # Compute interpolation weights
@@ -310,8 +329,14 @@ class BlockNeRFTrainer:
         visibility_outputs = None
         if self.training_config.get('train_visibility', True):
             # Sample points for visibility training
-            sample_points = ray_origins + ray_directions * torch.rand_like(ray_origins[:, :1]) * 10.0
-            visibility_outputs = self.block_manager.visibility_network(sample_points, ray_directions)
+            sample_points = ray_origins + ray_directions * torch.rand_like(
+                ray_origins[:,
+                :1],
+            )
+            visibility_outputs = self.block_manager.visibility_network(
+                sample_points,
+                ray_directions,
+            )
         
         # Compute losses
         target = {'rgb': target_rgb}
@@ -331,8 +356,8 @@ class BlockNeRFTrainer:
             for block_name in batch_block_names:
                 if f'block_{block_name}' in self.optimizers:
                     nn.utils.clip_grad_norm_(
-                        self.block_manager.blocks[block_name].parameters(),
-                        self.training_config['grad_clip']
+                        self.block_manager.blocks[block_name].parameters(
+                        )
                     )
         
         # Optimizer step
@@ -344,7 +369,7 @@ class BlockNeRFTrainer:
         
         return loss_values
     
-    def validate(self, val_dataloader: DataLoader) -> Dict[str, float]:
+    def validate(self, val_dataloader: DataLoader) -> dict[str, float]:
         """
         Validation loop
         
@@ -380,8 +405,7 @@ class BlockNeRFTrainer:
                 
                 # Render
                 predicted = self.render_batch(
-                    ray_origins, ray_directions, camera_pos,
-                    appearance_ids, exposure_values, active_blocks
+                    ray_origins, ray_directions, camera_pos, appearance_ids, exposure_values, active_blocks
                 )
                 
                 # Compute metrics
@@ -395,31 +419,30 @@ class BlockNeRFTrainer:
         self.set_train_mode()
         
         return {
-            'val_loss': total_loss / max(num_batches, 1),
-            'val_psnr': total_psnr / max(num_batches, 1)
+            'val_loss': total_loss / max(
+                num_batches,
+                1,
+            )
         }
     
-    def render_batch(self,
-                    ray_origins: torch.Tensor,
-                    ray_directions: torch.Tensor,
-                    camera_position: torch.Tensor,
-                    appearance_ids: torch.Tensor,
-                    exposure_values: torch.Tensor,
-                    active_blocks: List[str]) -> Dict[str, torch.Tensor]:
+    def render_batch(
+        self,
+        ray_origins: torch.Tensor,
+        ray_directions: torch.Tensor,
+        camera_position: torch.Tensor,
+        appearance_ids: torch.Tensor,
+        exposure_values: torch.Tensor,
+        active_blocks: list[str],
+    )
         """Render a batch of rays"""
         batch_blocks = [self.block_manager.blocks[name] for name in active_blocks if name in self.block_manager.blocks]
         batch_block_centers = [self.block_manager.block_centers[name] for name in active_blocks if name in self.block_manager.blocks]
         
         return self.compositor.render_with_blocks(
-            blocks=batch_blocks,
-            block_names=active_blocks,
-            block_centers=batch_block_centers,
-            camera_position=camera_position,
-            ray_origins=ray_origins,
-            ray_directions=ray_directions,
-            appearance_ids=appearance_ids,
-            exposure_values=exposure_values,
-            **self.training_config.get('render_kwargs', {})
+            blocks=batch_blocks, block_names=active_blocks, block_centers=batch_block_centers, camera_position=camera_position, ray_origins=ray_origins, ray_directions=ray_directions, appearance_ids=appearance_ids, exposure_values=exposure_values, **self.training_config.get(
+                'render_kwargs',
+                {},
+            )
         )
     
     def set_train_mode(self):
@@ -443,14 +466,10 @@ class BlockNeRFTrainer:
     def save_checkpoint(self, save_path: str, epoch: int, is_best: bool = False):
         """Save training checkpoint"""
         checkpoint = {
-            'epoch': epoch,
-            'global_step': self.global_step,
-            'best_psnr': self.best_psnr,
-            'training_config': self.training_config,
-            'network_config': self.network_config,
-            'optimizer_states': {name: opt.state_dict() for name, opt in self.optimizers.items()},
-            'scheduler_states': {name: sch.state_dict() for name, sch in self.schedulers.items()},
-            'loss_history': self.loss_history
+            'epoch': epoch, 'global_step': self.global_step, 'best_psnr': self.best_psnr, 'training_config': self.training_config, 'network_config': self.network_config, 'optimizer_states': {
+                name: opt.state_dict() for name,
+                opt in self.optimizers.items(),
+            }
         }
         
         if self.pose_refinement is not None:
@@ -487,14 +506,16 @@ class BlockNeRFTrainer:
         if 'pose_refinement' in checkpoint and self.pose_refinement is not None:
             self.pose_refinement.load_state_dict(checkpoint['pose_refinement'])
     
-    def train(self,
-             train_dataloader: DataLoader,
-             val_dataloader: Optional[DataLoader] = None,
-             num_epochs: int = 100,
-             save_dir: str = './checkpoints',
-             log_interval: int = 100,
-             val_interval: int = 1000,
-             save_interval: int = 5000):
+    def train(
+        self,
+        train_dataloader: DataLoader,
+        val_dataloader: Optional[DataLoader] = None,
+        num_epochs: int = 100,
+        save_dir: str = './checkpoints',
+        log_interval: int = 100,
+        val_interval: int = 1000,
+        save_interval: int = 5000,
+    )
         """
         Main training loop
         
@@ -549,9 +570,9 @@ class BlockNeRFTrainer:
                 
                 # Update progress bar
                 pbar.set_postfix({
-                    'loss': f"{step_losses['total']:.4f}",
-                    'psnr': f"{step_losses['psnr']:.2f}",
-                    'blocks': len(active_blocks)
+                    'loss': f"{
+                        step_losses['total']:.4f,
+                    }
                 })
                 
                 # Logging
@@ -576,7 +597,10 @@ class BlockNeRFTrainer:
                     
                     # Save checkpoint
                     if self.global_step % save_interval == 0:
-                        checkpoint_path = os.path.join(save_dir, f'checkpoint_{self.global_step}.pth')
+                        checkpoint_path = os.path.join(
+                            save_dir,
+                            f'checkpoint_{self.global_step}.pth',
+                        )
                         self.save_checkpoint(checkpoint_path, epoch, is_best)
                 
                 # Update schedulers
@@ -594,7 +618,9 @@ class BlockNeRFTrainer:
                 for key in epoch_losses[0].keys():
                     avg_losses[f'epoch_{key}'] = np.mean([loss[key] for loss in epoch_losses])
                 
-                print(f"Epoch {epoch+1} - " + " - ".join([f"{k}: {v:.4f}" for k, v in avg_losses.items()]))
+                print(f"Epoch {
+                    epoch+1,
+                }
                 
                 if wandb.run is not None:
                     wandb.log(avg_losses, step=self.global_step)

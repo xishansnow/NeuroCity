@@ -1,14 +1,13 @@
 """
 Metrics and evaluation utilities for Grid-NeRF.
 
-This module provides utility functions for computing evaluation metrics,
-visualization functions, and other evaluation-related operations.
+This module provides utility functions for computing evaluation metrics, visualization functions, and other evaluation-related operations.
 """
 
 import torch
 import torch.nn.functional as F
 import numpy as np
-from typing import Tuple, List, Optional, Union, Dict
+from typing import List, Optional, Tuple, Union, Dict, Any
 import math
 import matplotlib.pyplot as plt
 from PIL import Image
@@ -36,8 +35,7 @@ def compute_psnr(pred: torch.Tensor, target: torch.Tensor, max_val: float = 1.0)
     return psnr
 
 
-def compute_ssim(pred: torch.Tensor, 
-                target: torch.Tensor) -> torch.Tensor:
+def compute_ssim(pred: torch.Tensor, target: torch.Tensor) -> torch.Tensor:
     """
     Compute Structural Similarity Index (SSIM) - simplified version.
     
@@ -73,9 +71,7 @@ def compute_ssim(pred: torch.Tensor,
     return ssim
 
 
-def compute_lpips(pred: torch.Tensor, 
-                 target: torch.Tensor,
-                 net: str = 'alex') -> torch.Tensor:
+def compute_lpips(pred: torch.Tensor, target: torch.Tensor, net: str = 'alex') -> torch.Tensor:
     """
     Compute Learned Perceptual Image Patch Similarity (LPIPS).
     Note: This is a simplified version. For full LPIPS, use the official implementation.
@@ -115,9 +111,11 @@ def compute_lpips(pred: torch.Tensor,
     return grad_loss
 
 
-def compute_depth_metrics(pred_depth: torch.Tensor, 
-                         target_depth: torch.Tensor,
-                         mask: Optional[torch.Tensor] = None) -> Dict[str, torch.Tensor]:
+def compute_depth_metrics(
+    pred_depth: torch.Tensor,
+    target_depth: torch.Tensor,
+    mask: Optional[torch.Tensor] = None
+) -> Dict[str, torch.Tensor]:
     """
     Compute depth estimation metrics.
     
@@ -150,8 +148,10 @@ def compute_depth_metrics(pred_depth: torch.Tensor,
     return {'abs_rel': abs_rel, 'rmse': rmse}
 
 
-def compute_novel_view_metrics(pred_images: torch.Tensor,
-                              target_images: torch.Tensor) -> Dict[str, torch.Tensor]:
+def compute_novel_view_metrics(
+    pred_images: torch.Tensor,
+    target_images: torch.Tensor
+) -> Dict[str, torch.Tensor]:
     """
     Compute novel view synthesis metrics.
     
@@ -163,9 +163,7 @@ def compute_novel_view_metrics(pred_images: torch.Tensor,
         Dictionary of metrics
     """
     metrics = {
-        'psnr': [],
-        'ssim': [],
-        'lpips': []
+        'psnr': [], 'ssim': [], 'lpips': []
     }
     
     for i in range(len(pred_images)):
@@ -190,10 +188,12 @@ def compute_novel_view_metrics(pred_images: torch.Tensor,
     return result
 
 
-def visualize_grid(grid: torch.Tensor,
-                  threshold: float = 0.01,
-                  slice_axis: int = 2,
-                  slice_idx: Optional[int] = None) -> np.ndarray:
+def visualize_grid(
+    grid: torch.Tensor,
+    threshold: float = 0.01,
+    slice_axis: int = 2,
+    slice_idx: Optional[int] = None
+) -> np.ndarray:
     """
     Visualize 3D grid as 2D slice.
     
@@ -229,9 +229,7 @@ def visualize_grid(grid: torch.Tensor,
     return slice_data.cpu().numpy()
 
 
-def create_error_map(pred: torch.Tensor, 
-                    target: torch.Tensor,
-                    colormap: str = 'hot') -> np.ndarray:
+def create_error_map(pred: torch.Tensor, target: torch.Tensor, colormap: str = 'hot') -> np.ndarray:
     """
     Create error visualization map.
     
@@ -251,51 +249,50 @@ def create_error_map(pred: torch.Tensor,
     
     # Apply colormap
     cmap = plt.get_cmap(colormap)
-    error_colored = cmap(error_norm.cpu().numpy())
+    error_map = cmap(error_norm.cpu().numpy())
     
-    return error_colored
+    return error_map
 
 
-def save_rendering_comparison(pred_images: List[torch.Tensor],
-                            target_images: List[torch.Tensor],
-                            save_path: str,
-                            num_samples: int = 8):
+def save_rendering_comparison(
+    pred_images: list[torch.Tensor],
+    target_images: list[torch.Tensor],
+    save_path: str,
+    num_samples: int = 8
+) -> None:
     """
-    Save comparison of rendered images.
+    Save rendering comparison visualization.
     
     Args:
-        pred_images: List of predicted images
-        target_images: List of target images
-        save_path: Path to save comparison
-        num_samples: Number of samples to show
+        pred_images: List of predicted images [H, W, C]
+        target_images: List of target images [H, W, C]
+        save_path: Path to save visualization
+        num_samples: Number of samples to visualize
     """
-    import matplotlib.pyplot as plt
-    
     num_samples = min(num_samples, len(pred_images))
     
-    fig, axes = plt.subplots(3, num_samples, figsize=(num_samples * 3, 9))
+    # Create figure
+    fig, axes = plt.subplots(num_samples, 3, figsize=(12, 4*num_samples))
     
     for i in range(num_samples):
         # Predicted image
-        pred_img = pred_images[i].cpu().numpy()
-        axes[0, i].imshow(pred_img)
-        axes[0, i].set_title(f'Predicted {i+1}')
-        axes[0, i].axis('off')
+        axes[i, 0].imshow(pred_images[i].cpu().numpy())
+        axes[i, 0].set_title('Predicted')
+        axes[i, 0].axis('off')
         
         # Target image
-        target_img = target_images[i].cpu().numpy()
-        axes[1, i].imshow(target_img)
-        axes[1, i].set_title(f'Target {i+1}')
-        axes[1, i].axis('off')
+        axes[i, 1].imshow(target_images[i].cpu().numpy())
+        axes[i, 1].set_title('Target')
+        axes[i, 1].axis('off')
         
         # Error map
         error_map = create_error_map(pred_images[i], target_images[i])
-        axes[2, i].imshow(error_map)
-        axes[2, i].set_title(f'Error {i+1}')
-        axes[2, i].axis('off')
+        axes[i, 2].imshow(error_map)
+        axes[i, 2].set_title('Error')
+        axes[i, 2].axis('off')
     
     plt.tight_layout()
-    plt.savefig(save_path, dpi=150, bbox_inches='tight')
+    plt.savefig(save_path)
     plt.close()
 
 
@@ -304,322 +301,214 @@ def compute_rendering_statistics(images: torch.Tensor) -> Dict[str, float]:
     Compute statistics for rendered images.
     
     Args:
-        images: Rendered images [N, H, W, C]
+        images: Image tensor [N, H, W, C]
         
     Returns:
         Dictionary of statistics
     """
-    stats = {}
-    
-    # Basic statistics
-    stats['mean'] = torch.mean(images).item()
-    stats['std'] = torch.std(images).item()
-    stats['min'] = torch.min(images).item()
-    stats['max'] = torch.max(images).item()
-    
-    # Per-channel statistics
-    for c in range(images.shape[-1]):
-        channel_data = images[..., c]
-        stats[f'mean_ch{c}'] = torch.mean(channel_data).item()
-        stats[f'std_ch{c}'] = torch.std(channel_data).item()
-    
-    # Dynamic range
-    stats['dynamic_range'] = stats['max'] - stats['min']
-    
-    # Histogram statistics
-    hist, _ = torch.histogram(images.flatten(), bins=100)
-    stats['entropy'] = -torch.sum(hist * torch.log(hist + 1e-8)).item()
+    stats = {
+        'mean': float(torch.mean(images).item()),
+        'std': float(torch.std(images).item()),
+        'min': float(torch.min(images).item()),
+        'max': float(torch.max(images).item()),
+        'num_black_pixels': int(torch.sum(torch.all(images < 0.02, dim=-1)).item()),
+        'num_white_pixels': int(torch.sum(torch.all(images > 0.98, dim=-1)).item())
+    }
     
     return stats
 
 
-def evaluate_model_performance(model,
-                             test_dataloader,
-                             device: str = 'cuda',
-                             save_dir: Optional[str] = None) -> Dict[str, float]:
+def evaluate_model_performance(
+    model: Any,
+    test_dataloader: Any,
+    device: str = 'cuda',
+    save_dir: Optional[str] = None
+) -> Dict[str, Any]:
     """
-    Evaluate model performance on test set.
+    Evaluate model performance on test dataset.
     
     Args:
-        model: Grid-NeRF model
+        model: Neural network model
         test_dataloader: Test data loader
         device: Device to use
-        save_dir: Directory to save results (optional)
+        save_dir: Directory to save visualizations (optional)
         
     Returns:
         Dictionary of evaluation metrics
     """
     model.eval()
-    
-    all_metrics = {
-        'psnr': [],
-        'ssim': [],
-        'lpips': []
+    metrics = {
+        'psnr': [], 'ssim': [], 'lpips': []
     }
     
-    pred_images = []
-    target_images = []
-    
     with torch.no_grad():
-        for batch_idx, batch in enumerate(test_dataloader):
-            # Move to device
-            ray_origins = batch['ray_origins'].to(device)
-            ray_directions = batch['ray_directions'].to(device)
-            target_colors = batch['colors'].to(device)
-            
+        for batch in test_dataloader:
             # Forward pass
-            outputs = model(ray_origins, ray_directions)
-            pred_colors = outputs['colors']
-            
-            # Reshape for metric computation
-            H, W = batch['image_height'], batch['image_width']
-            pred_img = pred_colors.view(H, W, 3)
-            target_img = target_colors.view(H, W, 3)
+            pred = model(batch)
             
             # Compute metrics
-            psnr = compute_psnr(pred_img, target_img)
-            ssim = compute_ssim(pred_img, target_img)
-            lpips = compute_lpips(pred_img, target_img)
+            batch_metrics = compute_novel_view_metrics(pred, batch['target_images'])
             
-            all_metrics['psnr'].append(psnr)
-            all_metrics['ssim'].append(ssim)
-            all_metrics['lpips'].append(lpips)
-            
-            pred_images.append(pred_img)
-            target_images.append(target_img)
+            # Accumulate metrics
+            for key, value in batch_metrics.items():
+                metrics[key].append(value)
     
-    # Compute final metrics
-    final_metrics = {}
-    for key, values in all_metrics.items():
-        final_metrics[f'{key}_mean'] = torch.mean(torch.stack(values)).item()
-        final_metrics[f'{key}_std'] = torch.std(torch.stack(values)).item()
+    # Compute mean metrics
+    result = {}
+    for key, values in metrics.items():
+        result[f'{key}_mean'] = float(torch.mean(torch.stack(values)).item())
+        result[f'{key}_std'] = float(torch.std(torch.stack(values)).item())
     
-    # Save comparison if requested
-    if save_dir is not None:
-        import os
-        os.makedirs(save_dir, exist_ok=True)
-        
-        comparison_path = os.path.join(save_dir, 'rendering_comparison.png')
-        save_rendering_comparison(pred_images, target_images, comparison_path)
-        
-        # Save metrics
-        metrics_path = os.path.join(save_dir, 'metrics.txt')
-        with open(metrics_path, 'w') as f:
-            for key, value in final_metrics.items():
-                f.write(f'{key}: {value:.6f}\n')
-    
-    return final_metrics
+    return result
 
 
-def plot_training_curves(train_losses: List[float],
-                        val_losses: List[float],
-                        save_path: str):
+def plot_training_curves(train_losses: list[float], val_losses: list[float], save_path: str) -> None:
     """
-    Plot training and validation curves.
+    Plot training and validation loss curves.
     
     Args:
-        train_losses: Training losses
-        val_losses: Validation losses
+        train_losses: List of training losses
+        val_losses: List of validation losses
         save_path: Path to save plot
     """
     plt.figure(figsize=(10, 6))
-    
-    plt.plot(train_losses, label='Training Loss', alpha=0.7)
-    plt.plot(val_losses, label='Validation Loss', alpha=0.7)
-    
+    plt.plot(train_losses, label='Training Loss')
+    plt.plot(val_losses, label='Validation Loss')
     plt.xlabel('Epoch')
     plt.ylabel('Loss')
     plt.title('Training Progress')
     plt.legend()
-    plt.grid(True, alpha=0.3)
-    
-    plt.savefig(save_path, dpi=150, bbox_inches='tight')
+    plt.grid(True)
+    plt.savefig(save_path)
     plt.close()
 
 
-def save_image(image: torch.Tensor, path: str, normalize: bool = True):
+def save_image(image: torch.Tensor, path: str, normalize: bool = True) -> None:
     """
-    Save a tensor image to file.
+    Save image tensor as file.
     
     Args:
-        image: Image tensor [H, W, C] or [C, H, W]
-        path: Path to save the image
-        normalize: Whether to normalize image to [0, 1] range
+        image: Image tensor [H, W, C]
+        path: Save path
+        normalize: Whether to normalize values to [0, 1]
     """
-    import os
-    os.makedirs(os.path.dirname(path), exist_ok=True)
-    
-    # Convert to numpy
-    if isinstance(image, torch.Tensor):
-        image = image.detach().cpu().numpy()
-    
-    # Handle different formats
-    if image.shape[0] == 3 and len(image.shape) == 3:  # [C, H, W]
-        image = image.transpose(1, 2, 0)  # [H, W, C]
-    
-    # Normalize if needed
     if normalize:
-        image = np.clip(image, 0, 1)
-        image = (image * 255).astype(np.uint8)
-    else:
-        image = np.clip(image * 255, 0, 255).astype(np.uint8)
+        image = (image - image.min()) / (image.max() - image.min())
     
-    # Save image
-    if len(image.shape) == 3 and image.shape[2] == 3:
-        Image.fromarray(image, 'RGB').save(path)
-    elif len(image.shape) == 2:
-        Image.fromarray(image, 'L').save(path)
-    else:
-        raise ValueError(f"Unsupported image shape: {image.shape}")
+    image = (image * 255).byte().cpu().numpy()
+    Image.fromarray(image).save(path)
 
 
 def load_image(path: str, to_tensor: bool = True) -> Union[torch.Tensor, np.ndarray]:
     """
-    Load an image from file.
+    Load image from file.
     
     Args:
-        path: Path to the image file
-        to_tensor: Whether to return as torch tensor
+        path: Image file path
+        to_tensor: Whether to convert to tensor
         
     Returns:
         Image as tensor or numpy array
     """
-    image = Image.open(path)
-    image = np.array(image).astype(np.float32) / 255.0
+    image = np.array(Image.open(path))
     
     if to_tensor:
-        image = torch.from_numpy(image)
-        if len(image.shape) == 3:  # [H, W, C]
-            image = image.permute(2, 0, 1)  # [C, H, W]
+        image = torch.from_numpy(image).float() / 255.0
     
     return image
 
 
-def create_video_from_images(image_dir: str, output_path: str, fps: int = 30, pattern: str = "*.png"):
+def create_video_from_images(
+    image_dir: str,
+    output_path: str,
+    fps: int = 30,
+    pattern: str = "*.png"
+) -> None:
     """
-    Create a video from a directory of images.
+    Create video from sequence of images.
     
     Args:
         image_dir: Directory containing images
-        output_path: Path for output video
+        output_path: Output video path
         fps: Frames per second
-        pattern: File pattern to match
+        pattern: Image filename pattern
     """
-    import glob
     import cv2
-    import os
+    import glob
     
-    images = sorted(glob.glob(os.path.join(image_dir, pattern)))
-    if not images:
-        print(f"No images found in {image_dir} with pattern {pattern}")
-        return
+    # Get image files
+    image_files = sorted(glob.glob(f"{image_dir}/{pattern}"))
+    
+    if not image_files:
+        raise ValueError(f"No images found in {image_dir} matching pattern {pattern}")
     
     # Read first image to get dimensions
-    frame = cv2.imread(images[0])
-    height, width, layers = frame.shape
+    frame = cv2.imread(image_files[0])
+    height, width, channels = frame.shape
     
     # Create video writer
     fourcc = cv2.VideoWriter_fourcc(*'mp4v')
-    video = cv2.VideoWriter(output_path, fourcc, fps, (width, height))
+    out = cv2.VideoWriter(output_path, fourcc, fps, (width, height))
     
-    # Add frames
-    for image_path in images:
-        frame = cv2.imread(image_path)
-        video.write(frame)
+    # Write frames
+    for image_file in image_files:
+        frame = cv2.imread(image_file)
+        out.write(frame)
     
-    video.release()
-    cv2.destroyAllWindows()
-    print(f"Video saved to {output_path}")
+    out.release()
 
 
-def create_comparison_grid(images: List[torch.Tensor], 
-                          titles: List[str] = None,
-                          save_path: str = None,
-                          grid_size: Tuple[int, int] = None) -> np.ndarray:
+def create_comparison_grid(
+    images: list[torch.Tensor],
+    titles: Optional[list[str]] = None,
+    save_path: Optional[str] = None,
+    grid_size: Optional[tuple[int, int]] = None
+) -> Optional[np.ndarray]:
     """
-    Create a comparison grid of images.
+    Create comparison grid of images.
     
     Args:
-        images: List of image tensors
-        titles: List of titles for each image
-        save_path: Path to save the grid image
-        grid_size: (rows, cols) for the grid. Auto-computed if None
+        images: List of images [H, W, C]
+        titles: Optional list of titles
+        save_path: Path to save visualization
+        grid_size: Grid dimensions (rows, cols)
         
     Returns:
-        Grid image as numpy array
+        Grid visualization as numpy array if save_path is None
     """
-    n_images = len(images)
-    
     if grid_size is None:
-        cols = int(np.ceil(np.sqrt(n_images)))
-        rows = int(np.ceil(n_images / cols))
+        n = len(images)
+        cols = int(math.sqrt(n))
+        rows = (n + cols - 1) // cols
+        grid_size = (rows, cols)
+    
+    # Create figure
+    fig, axes = plt.subplots(grid_size[0], grid_size[1], figsize=(4*grid_size[1], 4*grid_size[0]))
+    axes = axes.flatten()
+    
+    for i, image in enumerate(images):
+        if i >= len(axes):
+            break
+            
+        axes[i].imshow(image.cpu().numpy())
+        if titles and i < len(titles):
+            axes[i].set_title(titles[i])
+        axes[i].axis('off')
+    
+    # Hide empty subplots
+    for i in range(len(images), len(axes)):
+        axes[i].axis('off')
+    
+    plt.tight_layout()
+    
+    if save_path:
+        plt.savefig(save_path)
+        plt.close()
+        return None
     else:
-        rows, cols = grid_size
-    
-    # Convert tensors to numpy
-    np_images = []
-    for img in images:
-        if isinstance(img, torch.Tensor):
-            img = img.detach().cpu().numpy()
-        
-        # Handle different formats
-        if img.shape[0] == 3 and len(img.shape) == 3:  # [C, H, W]
-            img = img.transpose(1, 2, 0)  # [H, W, C]
-        
-        # Normalize
-        img = np.clip(img, 0, 1)
-        np_images.append(img)
-    
-    # Get image dimensions
-    h, w = np_images[0].shape[:2]
-    channels = np_images[0].shape[2] if len(np_images[0].shape) == 3 else 1
-    
-    # Create grid
-    if channels == 3:
-        grid = np.ones((rows * h, cols * w, 3))
-    else:
-        grid = np.ones((rows * h, cols * w))
-    
-    for i, img in enumerate(np_images):
-        row = i // cols
-        col = i % cols
-        
-        start_row = row * h
-        end_row = start_row + h
-        start_col = col * w
-        end_col = start_col + w
-        
-        if channels == 3:
-            grid[start_row:end_row, start_col:end_col, :] = img
-        else:
-            grid[start_row:end_row, start_col:end_col] = img
-    
-    # Add titles if provided
-    if titles is not None:
-        fig, ax = plt.subplots(figsize=(cols * 3, rows * 3))
-        ax.imshow(grid, cmap='gray' if channels == 1 else None)
-        ax.axis('off')
-        
-        # Add title annotations
-        for i, title in enumerate(titles[:n_images]):
-            row = i // cols
-            col = i % cols
-            x = (col + 0.5) * w
-            y = row * h + 20
-            ax.text(x, y, title, ha='center', va='top', 
-                   fontsize=10, color='white', weight='bold',
-                   bbox=dict(boxstyle='round,pad=0.3', facecolor='black', alpha=0.7))
-        
-        if save_path:
-            plt.savefig(save_path, dpi=300, bbox_inches='tight', pad_inches=0.1)
-            plt.close()
-        else:
-            plt.show()
-    else:
-        if save_path:
-            if channels == 3:
-                Image.fromarray((grid * 255).astype(np.uint8), 'RGB').save(save_path)
-            else:
-                Image.fromarray((grid * 255).astype(np.uint8), 'L').save(save_path)
-    
-    return grid 
+        # Convert to numpy array
+        fig.canvas.draw()
+        grid = np.frombuffer(fig.canvas.tostring_rgb(), dtype=np.uint8)
+        grid = grid.reshape(fig.canvas.get_width_height()[::-1] + (3,))
+        plt.close()
+        return grid 

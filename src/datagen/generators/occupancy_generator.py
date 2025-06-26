@@ -5,8 +5,7 @@
 """
 
 import numpy as np
-from typing import List, Tuple, Dict, Optional, Union
-import logging
+from typing import Dict, List, Optional, Tuple, import logging
 import os
 
 logger = logging.getLogger(__name__)
@@ -15,9 +14,16 @@ logger = logging.getLogger(__name__)
 class OccupancyGenerator:
     """占用网格生成器"""
     
-    def __init__(self,
-                 voxel_size: float = 1.0,
-                 grid_bounds: Tuple[float, float, float, float, float, float] = (-100, -100, 0, 100, 100, 50)):
+    def __init__(
+        self,
+        voxel_size: float = 1.0,
+        grid_bounds: tuple[float,
+        float,
+        float,
+        float,
+        float,
+        float] =,
+    )
         """
         初始化占用网格生成器
         
@@ -36,10 +42,14 @@ class OccupancyGenerator:
         
         logger.info(f"占用网格生成器初始化完成，网格尺寸: {self.grid_size}")
     
-    def generate_sphere_occupancy(self,
-                                 center: Tuple[float, float, float],
-                                 radius: float,
-                                 filled: bool = True) -> np.ndarray:
+    def generate_sphere_occupancy(
+        self,
+        center: tuple[float,
+        float,
+        float],
+        radius: float,
+        filled: bool = True,
+    )
         """
         生成球体占用网格
         
@@ -77,10 +87,16 @@ class OccupancyGenerator:
         logger.info(f"生成球体占用网格，中心: {center}, 半径: {radius}, 占用体素数: {np.sum(occupancy)}")
         return occupancy
     
-    def generate_box_occupancy(self,
-                              center: Tuple[float, float, float],
-                              size: Tuple[float, float, float],
-                              filled: bool = True) -> np.ndarray:
+    def generate_box_occupancy(
+        self,
+        center: tuple[float,
+        float,
+        float],
+        size: tuple[float,
+        float,
+        float],
+        filled: bool = True,
+    )
         """
         生成盒子占用网格
         
@@ -124,12 +140,16 @@ class OccupancyGenerator:
         logger.info(f"生成盒子占用网格，中心: {center}, 尺寸: {size}, 占用体素数: {np.sum(occupancy)}")
         return occupancy
     
-    def generate_cylinder_occupancy(self,
-                                   center: Tuple[float, float, float],
-                                   radius: float,
-                                   height: float,
-                                   axis: int = 2,
-                                   filled: bool = True) -> np.ndarray:
+    def generate_cylinder_occupancy(
+        self,
+        center: tuple[float,
+        float,
+        float],
+        radius: float,
+        height: float,
+        axis: int = 2,
+        filled: bool = True,
+    ) -> np.ndarray:
         """
         生成圆柱体占用网格
         
@@ -181,9 +201,11 @@ class OccupancyGenerator:
         logger.info(f"生成圆柱体占用网格，中心: {center}, 半径: {radius}, 高度: {height}, 占用体素数: {np.sum(occupancy)}")
         return occupancy
     
-    def generate_complex_scene(self,
-                              objects: List[Dict],
-                              combination_mode: str = 'union') -> np.ndarray:
+    def generate_complex_scene(
+        self,
+        objects: list[Dict],
+        combination_mode: str = 'union',
+    )
         """
         生成复杂场景占用网格
         
@@ -222,31 +244,34 @@ class OccupancyGenerator:
         
         if obj_type == 'sphere':
             return self.generate_sphere_occupancy(
-                center=params.get('center', (0, 0, 0)),
-                radius=params.get('radius', 10.0),
-                filled=params.get('filled', True)
+                center=params.get(
+                    'center',
+                )
             )
         elif obj_type == 'box':
             return self.generate_box_occupancy(
-                center=params.get('center', (0, 0, 0)),
-                size=params.get('size', (20, 20, 20)),
-                filled=params.get('filled', True)
+                center=params.get(
+                    'center',
+                )
             )
         elif obj_type == 'cylinder':
             return self.generate_cylinder_occupancy(
-                center=params.get('center', (0, 0, 0)),
-                radius=params.get('radius', 10.0),
-                height=params.get('height', 30.0),
-                axis=params.get('axis', 2),
-                filled=params.get('filled', True)
+                center=params.get(
+                    'center',
+                )
             )
         else:
             raise ValueError(f"未知对象类型: {obj_type}")
     
-    def generate_random_scene(self,
-                             num_objects: int = 5,
-                             object_types: List[str] = ['sphere', 'box', 'cylinder'],
-                             size_range: Tuple[float, float] = (5.0, 20.0)) -> Tuple[np.ndarray, List[Dict]]:
+    def generate_random_scene(
+        self,
+        num_objects: int = 5,
+        object_types: list[str] = ['sphere',
+        'box',
+        'cylinder'],
+        size_range: tuple[float,
+        float] =,
+    ) -> tuple[np.ndarray, list[Dict]]:
         """
         生成随机场景
         
@@ -266,9 +291,10 @@ class OccupancyGenerator:
             
             # 随机生成位置
             center = (
-                np.random.uniform(self.grid_bounds[0] + 20, self.grid_bounds[3] - 20),
-                np.random.uniform(self.grid_bounds[1] + 20, self.grid_bounds[4] - 20),
-                np.random.uniform(self.grid_bounds[2] + 10, self.grid_bounds[5] - 10)
+                np.random.uniform(
+                    self.grid_bounds[0] + 20,
+                    self.grid_bounds[3] - 20,
+                )
             )
             
             # 随机生成尺寸
@@ -276,32 +302,21 @@ class OccupancyGenerator:
             
             if obj_type == 'sphere':
                 obj_config = {
-                    'type': 'sphere',
-                    'params': {
-                        'center': center,
-                        'radius': size,
-                        'filled': True
+                    'type': 'sphere', 'params': {
+                        'center': center, 'radius': size, 'filled': True
                     }
                 }
             elif obj_type == 'box':
                 box_size = (size, size, size * 0.5)
                 obj_config = {
-                    'type': 'box',
-                    'params': {
-                        'center': center,
-                        'size': box_size,
-                        'filled': True
+                    'type': 'box', 'params': {
+                        'center': center, 'size': box_size, 'filled': True
                     }
                 }
             elif obj_type == 'cylinder':
                 obj_config = {
-                    'type': 'cylinder',
-                    'params': {
-                        'center': center,
-                        'radius': size * 0.7,
-                        'height': size * 1.5,
-                        'axis': 2,
-                        'filled': True
+                    'type': 'cylinder', 'params': {
+                        'center': center, 'radius': size * 0.7, 'height': size * 1.5, 'axis': 2, 'filled': True
                     }
                 }
             
@@ -313,10 +328,12 @@ class OccupancyGenerator:
         logger.info(f"生成随机场景，对象数: {num_objects}, 总占用体素数: {np.sum(occupancy)}")
         return occupancy, objects
     
-    def save_occupancy_grid(self, 
-                           occupancy: np.ndarray,
-                           filepath: str,
-                           metadata: Optional[Dict] = None):
+    def save_occupancy_grid(
+        self,
+        occupancy: np.ndarray,
+        filepath: str,
+        metadata: Optional[Dict] = None,
+    ) -> None:
         """
         保存占用网格
         
@@ -333,10 +350,9 @@ class OccupancyGenerator:
             metadata = {}
         
         metadata.update({
-            'voxel_size': self.voxel_size,
-            'grid_bounds': self.grid_bounds,
-            'grid_size': self.grid_size,
-            'occupied_voxels': int(np.sum(occupancy))
+            'voxel_size': self.voxel_size, 'grid_bounds': self.grid_bounds, 'grid_size': self.grid_size, 'occupied_voxels': int(
+                np.sum,
+            )
         })
         
         metadata_path = filepath.replace('.npy', '.json')
@@ -346,7 +362,7 @@ class OccupancyGenerator:
         
         logger.info(f"占用网格已保存: {filepath}")
     
-    def load_occupancy_grid(self, filepath: str) -> Tuple[np.ndarray, Dict]:
+    def load_occupancy_grid(self, filepath: str) -> tuple[np.ndarray, Dict]:
         """
         加载占用网格
         

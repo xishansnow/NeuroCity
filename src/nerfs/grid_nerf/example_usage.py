@@ -7,15 +7,23 @@ configurations.
 """
 
 import os
+import sys
+import warnings
+import logging
 import torch
 import argparse
 from pathlib import Path
 import multiprocessing as mp
 
-from . import (
-    GridNeRF, GridNeRFConfig, GridNeRFTrainer,
-    create_dataset, create_grid_nerf_model,
-    get_default_config, quick_setup
+# Add the project root to Python path to enable imports
+current_dir = Path(__file__).parent
+project_root = current_dir.parent.parent
+if str(project_root) not in sys.path:
+    sys.path.insert(0, str(project_root))
+
+# Import from the nerfs package using absolute imports
+from nerfs.grid_nerf import (
+    GridNeRF, GridNeRFConfig, GridNeRFTrainer, create_dataset, create_grid_nerf_model, get_default_config, quick_setup
 )
 
 
@@ -26,16 +34,13 @@ def basic_example():
     # Create default configuration
     config = get_default_config()
     
-    # Update with specific settings
+    # Update with specific settings (using correct parameter names)
     config.update({
-        "scene_bounds": {
-            "min_bound": [-50, -50, -5],
-            "max_bound": [50, 50, 20]
-        },
-        "grid_levels": 3,
-        "base_resolution": 32,
-        "batch_size": 512,
-        "num_epochs": 10,  # Small for demo
+        "scene_bounds": (-50, -50, -5, 50, 50, 20), # Tuple format
+        "num_grid_levels": 3, # Correct parameter name
+        "base_grid_resolution": 32, # Correct parameter name
+        "learning_rate": 1e-3, # Use existing parameter
+        "num_samples_coarse": 32, # Use existing parameter
     })
     
     # Create model
@@ -43,7 +48,7 @@ def basic_example():
     model = create_grid_nerf_model(config, device)
     
     print(f"Created Grid-NeRF model on {device}")
-    print(f"Model parameters: {sum(p.numel() for p in model.parameters()):,}")
+    print(f"Model parameters: {sum(p.numel() for p in model.parameters()):, }")
     
     return model, config
 
@@ -52,57 +57,27 @@ def kitti360_example(data_path: str, output_dir: str):
     """Example training on KITTI-360 dataset."""
     print("=== KITTI-360 Grid-NeRF Training ===")
     
-    # Configuration for KITTI-360
+    # Configuration for KITTI-360 (using correct parameter names)
     config = {
-        # Scene bounds for KITTI-360 (approximate)
-        "scene_bounds": {
-            "min_bound": [-200, -200, -10],
-            "max_bound": [200, 200, 50]
-        },
-        
-        # Grid configuration for large scenes
-        "grid_levels": 4,
-        "base_resolution": 64,
-        "resolution_multiplier": 2,
-        "grid_feature_dim": 32,
-        
-        # Network architecture
-        "density_layers": 4,
-        "density_hidden_dim": 256,
-        "color_layers": 3,
-        "color_hidden_dim": 128,
-        "position_encoding_levels": 10,
-        "direction_encoding_levels": 4,
-        
-        # Training settings
-        "batch_size": 2048,
-        "num_epochs": 200,
-        "grid_lr": 1e-2,
-        "mlp_lr": 5e-4,
-        "weight_decay": 1e-6,
-        "max_steps": 200000,
-        "scheduler_type": "cosine",
-        "warmup_steps": 2000,
-        
-        # Loss weights
-        "color_weight": 1.0,
-        "depth_weight": 0.1,
-        "grid_regularization_weight": 1e-4,
-        
-        # Evaluation
-        "eval_batch_size": 512,
-        "chunk_size": 2048,
-        "eval_every_n_epochs": 10,
-        "save_every_n_epochs": 25,
-        "render_every_n_epochs": 50
-    }
+        # Scene bounds for KITTI-360 (tuple format)
+        "scene_bounds": (-200, -200, -10, 200, 200, 50), # Grid configuration
+        "num_grid_levels": 4, # Correct parameter name
+        "base_grid_resolution": 64, # Correct parameter name
+        "max_grid_resolution": 512, # Correct parameter name
+        "grid_feature_dim": 32, # Network architecture
+        "mlp_num_layers": 4, # Correct parameter name
+        "mlp_hidden_dim": 256, # Correct parameter name
+        "view_dependent": True, # Training settings
+        "learning_rate": 1e-2, "weight_decay": 1e-6, # Rendering
+        "num_samples_coarse": 64, # Correct parameter name
+        "num_samples_fine": 128, # Correct parameter name
+        "near_plane": 0.1, "far_plane": 1000.0, # Loss weights
+        "color_loss_weight": 1.0, "depth_loss_weight": 0.1, "grid_regularization_weight": 1e-4, }
     
     # Quick setup
     model, trainer, dataset = quick_setup(
-        data_path=data_path,
-        output_dir=output_dir,
-        config=config,
-        device="cuda" if torch.cuda.is_available() else "cpu"
+        data_path=data_path, output_dir=output_dir, config=config, device="cuda" if torch.cuda.is_available(
+        )
     )
     
     print(f"Dataset: {len(dataset)} samples")
@@ -110,8 +85,7 @@ def kitti360_example(data_path: str, output_dir: str):
     
     # Start training
     trainer.train(
-        train_dataset=dataset,
-        val_dataset=None,  # Could create validation split
+        train_dataset=dataset, val_dataset=None, # Could create validation split
         test_dataset=None   # Could create test split
     )
     
@@ -122,75 +96,34 @@ def custom_dataset_example(data_path: str, output_dir: str):
     """Example with custom dataset configuration."""
     print("=== Custom Dataset Grid-NeRF Training ===")
     
-    # Configuration for custom urban dataset
+    # Configuration for custom urban dataset (using correct parameters)
     config = GridNeRFConfig(
         # Scene bounds - adjust based on your data
-        scene_bounds=(-100, -100, -10, 100, 100, 30),
-        
-        # Grid configuration
-        grid_levels=4,
-        base_resolution=64,
-        resolution_multiplier=2,
-        grid_feature_dim=32,
-        
-        # Network architecture
-        density_layers=3,
-        density_hidden_dim=256,
-        color_layers=2,
-        color_hidden_dim=128,
-        position_encoding_levels=10,
-        direction_encoding_levels=4,
-        
-        # Rendering
-        num_samples=64,
-        num_importance_samples=128,
-        perturb=True,
-        white_background=False,
-        
-        # Training
-        batch_size=1024,
-        num_epochs=150,
-        grid_lr=1e-2,
-        mlp_lr=5e-4,
-        weight_decay=1e-6,
-        grad_clip_norm=1.0,
-        
-        # Loss weights
-        color_weight=1.0,
-        depth_weight=0.1,
-        grid_regularization_weight=1e-4,
-        
-        # Scheduling
-        scheduler_type="cosine",
-        max_steps=150000,
-        warmup_steps=1000,
-        
-        # Evaluation
-        eval_batch_size=256,
-        chunk_size=1024,
-        
-        # Logging
-        log_every_n_steps=100,
-        eval_every_n_epochs=5,
-        save_every_n_epochs=15,
-        render_every_n_epochs=30
-    )
+        scene_bounds=(-100, -100, -10, 100, 100, 30), # Grid configuration
+        num_grid_levels=4, # Correct parameter name
+        base_grid_resolution=64, # Correct parameter name
+        max_grid_resolution=512, # Correct parameter name
+        grid_feature_dim=32, # Network architecture
+        mlp_num_layers=3, # Correct parameter name
+        mlp_hidden_dim=256, # Correct parameter name
+        view_dependent=True, # Rendering
+        num_samples_coarse=64, # Correct parameter name
+        num_samples_fine=128, # Correct parameter name
+        near_plane=0.1, far_plane=1000.0, # Training
+        learning_rate=5e-4, weight_decay=1e-6, # Loss weights
+        color_loss_weight=1.0, depth_loss_weight=0.1, grid_regularization_weight=1e-4, )
     
     # Create model and trainer
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     
     model = GridNeRF(config).to(device)
     trainer = GridNeRFTrainer(
-        config=config,
-        output_dir=output_dir,
-        device=device
+        config=config, output_dir=output_dir, device=device
     )
     
     # Create dataset
     train_dataset = create_dataset(
-        data_path=data_path,
-        split='train',
-        config=config
+        data_path=data_path, split='train', config=config
     )
     
     # Optional: Create validation and test datasets
@@ -199,16 +132,12 @@ def custom_dataset_example(data_path: str, output_dir: str):
     
     if os.path.exists(os.path.join(data_path, 'val')):
         val_dataset = create_dataset(
-            data_path=data_path,
-            split='val',
-            config=config
+            data_path=data_path, split='val', config=config
         )
     
     if os.path.exists(os.path.join(data_path, 'test')):
         test_dataset = create_dataset(
-            data_path=data_path,
-            split='test',
-            config=config
+            data_path=data_path, split='test', config=config
         )
     
     print(f"Training samples: {len(train_dataset)}")
@@ -219,9 +148,7 @@ def custom_dataset_example(data_path: str, output_dir: str):
     
     # Start training
     trainer.train(
-        train_dataset=train_dataset,
-        val_dataset=val_dataset,
-        test_dataset=test_dataset
+        train_dataset=train_dataset, val_dataset=val_dataset, test_dataset=test_dataset
     )
     
     return model, trainer
@@ -247,9 +174,7 @@ def evaluation_example(model_path: str, data_path: str, output_dir: str):
     
     # Create test dataset
     test_dataset = create_dataset(
-        data_path=data_path,
-        split='test',
-        config=config
+        data_path=data_path, split='test', config=config
     )
     
     # Render test images
@@ -269,7 +194,7 @@ def evaluation_example(model_path: str, data_path: str, output_dir: str):
             rays_d_flat = rays_d.reshape(-1, 3).to(device)
             
             # Render in chunks
-            chunk_size = config.chunk_size
+            chunk_size = 1024  # Use default chunk size
             rgb_chunks = []
             depth_chunks = []
             
@@ -285,8 +210,8 @@ def evaluation_example(model_path: str, data_path: str, output_dir: str):
             rgb_pred = torch.cat(rgb_chunks, dim=0).reshape(H, W, 3)
             depth_pred = torch.cat(depth_chunks, dim=0).reshape(H, W)
             
-            # Save images
-            from .utils import save_image
+            # Save images - use absolute import for utils
+            from nerfs.grid_nerf.utils import save_image
             save_image(rgb_pred, output_path / f"render_{i:03d}.png")
             
             # Save depth as colormap
@@ -310,28 +235,24 @@ def multi_gpu_training_example(data_path: str, output_dir: str, num_gpus: int = 
     # Configuration for distributed training
     config = get_default_config()
     config.update({
-        "batch_size": 1024 * num_gpus,  # Scale batch size
-        "num_epochs": 100,
-        "eval_every_n_epochs": 10,
-        "save_every_n_epochs": 20
-    })
+        "learning_rate": 1e-3, })
     
     grid_config = GridNeRFConfig(**config)
     
     # Data configuration
     data_config = {
-        'train_data_path': data_path,
-        'train_kwargs': {},
-    }
+        'train_data_path': data_path, 'train_kwargs': {}, }
     
-    # Launch distributed training
-    from .trainer import main_worker
+    # Launch distributed training - use absolute import
+    from nerfs.grid_nerf.trainer import main_worker
     
     mp.spawn(
-        main_worker,
-        args=(num_gpus, grid_config, output_dir, data_config),
-        nprocs=num_gpus,
-        join=True
+        main_worker, args=(
+            num_gpus,
+            grid_config,
+            output_dir,
+            data_config,
+        )
     )
     
     print("Multi-GPU training completed!")
@@ -385,7 +306,8 @@ def create_spiral_video_example(model_path: str, output_dir: str):
     H, W = 800, 800  # Output resolution
     focal = 800.0    # Focal length
     
-    from .utils import get_ray_directions
+    # Use absolute import for utils
+    from nerfs.grid_nerf.utils import get_ray_directions
     
     with torch.no_grad():
         for i, pose in enumerate(poses):
@@ -401,7 +323,7 @@ def create_spiral_video_example(model_path: str, output_dir: str):
             rays_d = rays_d.to(device)
             
             # Render in chunks
-            chunk_size = config.chunk_size
+            chunk_size = 1024
             rgb_chunks = []
             
             for j in range(0, rays_o.shape[0], chunk_size):
@@ -414,18 +336,16 @@ def create_spiral_video_example(model_path: str, output_dir: str):
             # Combine and reshape
             rgb_frame = torch.cat(rgb_chunks, dim=0).reshape(H, W, 3)
             
-            # Save frame
-            from .utils import save_image
+            # Save frame - use absolute import
+            from nerfs.grid_nerf.utils import save_image
             save_image(rgb_frame, frames_dir / f"frame_{i:04d}.png")
             
             print(f"Rendered frame {i+1}/{num_frames}")
     
-    # Create video from frames
-    from .utils import create_video_from_images
+    # Create video from frames - use absolute import
+    from nerfs.grid_nerf.utils import create_video_from_images
     create_video_from_images(
-        image_dir=frames_dir,
-        output_path=output_path / "spiral_video.mp4",
-        fps=30
+        image_dir=frames_dir, output_path=output_path / "spiral_video.mp4", fps=30
     )
     
     print(f"Spiral video saved to {output_path / 'spiral_video.mp4'}")
@@ -434,14 +354,27 @@ def create_spiral_video_example(model_path: str, output_dir: str):
 def main():
     """Main function with command-line interface."""
     parser = argparse.ArgumentParser(description="Grid-NeRF Example Usage")
-    parser.add_argument("--example", type=str, default="basic",
-                       choices=["basic", "kitti360", "custom", "eval", "multi_gpu", "spiral"],
-                       help="Example to run")
+    parser.add_argument(
+        "--example",
+        type=str,
+        default="basic",
+        choices=["basic",
+        "kitti360",
+        "custom",
+        "eval",
+        "multi_gpu",
+        "spiral"],
+        help="Example to run",
+    )
     parser.add_argument("--data_path", type=str, help="Path to dataset")
-    parser.add_argument("--output_dir", type=str, default="./outputs",
-                       help="Output directory")
+    parser.add_argument("--output_dir", type=str, default="./outputs", help="Output directory")
     parser.add_argument("--model_path", type=str, help="Path to trained model")
-    parser.add_argument("--num_gpus", type=int, default=2, help="Number of GPUs for multi-GPU training")
+    parser.add_argument(
+        "--num_gpus",
+        type=int,
+        default=2,
+        help="Number of GPUs for multi-GPU training",
+    )
     
     args = parser.parse_args()
     

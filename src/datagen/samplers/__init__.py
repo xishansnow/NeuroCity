@@ -9,7 +9,4 @@ from .surface_sampler import SurfaceSampler
 from .point_cloud_sampler import PointCloudSampler
 
 __all__ = [
-    'VoxelSampler',
-    'SurfaceSampler',
-    'PointCloudSampler',
-] 
+    'VoxelSampler', 'SurfaceSampler', 'PointCloudSampler', ] 

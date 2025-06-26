@@ -15,8 +15,8 @@ import torch.nn as nn
 import torch.nn.functional as F
 import numpy as np
 import math
-from typing import Dict, List, Optional, Tuple, Union
-from dataclasses import dataclass
+from typing import Dict, List, Optional, Tuple, Any, Union
+from dataclasses import dataclass, field
 
 
 @dataclass
@@ -24,16 +24,25 @@ class PlenoxelConfig:
     """Configuration for Plenoxel model."""
     
     # Voxel grid settings
-    grid_resolution: Tuple[int, int, int] = (256, 256, 256)
-    scene_bounds: Tuple[float, float, float, float, float, float] = (-1.0, -1.0, -1.0, 1.0, 1.0, 1.0)
+    grid_resolution: tuple[int, int, int] = (256, 256, 256)
+    scene_bounds: tuple[float, float, float, float, float, float] = (
+        -1.0,
+        -1.0,
+        -1.0,
+        1.0,
+        1.0,
+        1.0,
+    )
     
     # Spherical harmonics
     sh_degree: int = 2  # Degree of spherical harmonics (0-3)
     
     # Coarse-to-fine training
     use_coarse_to_fine: bool = True
-    coarse_resolutions: List[Tuple[int, int, int]] = [(64, 64, 64), (128, 128, 128), (256, 256, 256)]
-    coarse_epochs: List[int] = [2000, 5000, 10000]
+    coarse_resolutions: list[tuple[int, int, int]] = field(
+        default_factory=lambda: [(128, 128, 128), (256, 256, 256), (512, 512, 512)]
+    )
+    coarse_epochs: list[int] = field(default_factory=lambda: [2000, 5000, 10000])
     
     # Sparsity and regularization
     sparsity_threshold: float = 0.01
@@ -136,10 +145,19 @@ class SphericalHarmonics:
 class VoxelGrid(nn.Module):
     """Sparse voxel grid for storing density and spherical harmonic coefficients."""
     
-    def __init__(self, 
-                 resolution: Tuple[int, int, int],
-                 scene_bounds: Tuple[float, float, float, float, float, float],
-                 sh_degree: int = 2):
+    def __init__(
+        self,
+        resolution: tuple[int,
+        int,
+        int],
+        scene_bounds: tuple[float,
+        float,
+        float,
+        float,
+        float,
+        float],
+        sh_degree: int = 2,
+    ) -> None:
         super().__init__()
         
         self.resolution = resolution
@@ -172,17 +190,21 @@ class VoxelGrid(nn.Module):
     def world_to_voxel_coords(self, world_coords: torch.Tensor) -> torch.Tensor:
         """Convert world coordinates to voxel grid coordinates."""
         scene_min = self.scene_bounds[:3]
-        scene_size = self.scene_bounds[3:] - self.scene_bounds[:3]
+        scene_max = self.scene_bounds[3:]
+        scene_size = scene_max - scene_min
         
         # Normalize to [0, 1]
         normalized = (world_coords - scene_min) / scene_size
         
         # Scale to voxel resolution
-        voxel_coords = normalized * torch.tensor(self.resolution, device=world_coords.device).float()
+        voxel_coords = normalized * torch.tensor(
+            self.resolution,
+            device=world_coords.device,
+        )
         
         return voxel_coords
     
-    def trilinear_interpolation(self, coords: torch.Tensor) -> Tuple[torch.Tensor, torch.Tensor]:
+    def trilinear_interpolation(self, coords: torch.Tensor) -> tuple[torch.Tensor, torch.Tensor]:
         """
         Perform trilinear interpolation to get density and SH coefficients.
         
@@ -195,9 +217,12 @@ class VoxelGrid(nn.Module):
         # Convert to voxel coordinates
         voxel_coords = self.world_to_voxel_coords(coords)
         
+        # Get resolution as tensor
+        resolution_tensor = torch.tensor(self.resolution, device=coords.device)
+        max_coords = resolution_tensor.float() - 1.0
+        
         # Clamp coordinates to valid range
-        voxel_coords = torch.clamp(voxel_coords, 0, 
-                                  torch.tensor(self.resolution, device=coords.device).float() - 1)
+        voxel_coords = torch.clamp(voxel_coords, min=0.0, max=max_coords)
         
         # Get integer and fractional parts
         coords_floor = torch.floor(voxel_coords).long()
@@ -205,9 +230,9 @@ class VoxelGrid(nn.Module):
         
         # Get neighboring voxel indices
         x0, y0, z0 = coords_floor[..., 0], coords_floor[..., 1], coords_floor[..., 2]
-        x1 = torch.clamp(x0 + 1, 0, self.resolution[0] - 1)
-        y1 = torch.clamp(y0 + 1, 0, self.resolution[1] - 1)
-        z1 = torch.clamp(z0 + 1, 0, self.resolution[2] - 1)
+        x1 = torch.clamp(x0 + 1, min=0, max=self.resolution[0] - 1)
+        y1 = torch.clamp(y0 + 1, min=0, max=self.resolution[1] - 1)
+        z1 = torch.clamp(z0 + 1, min=0, max=self.resolution[2] - 1)
         
         # Get fractional weights
         dx, dy, dz = coords_frac[..., 0], coords_frac[..., 1], coords_frac[..., 2]
@@ -288,12 +313,14 @@ class VolumetricRenderer(nn.Module):
         super().__init__()
         self.config = config
     
-    def sample_points_along_rays(self, 
-                                ray_origins: torch.Tensor,
-                                ray_directions: torch.Tensor,
-                                near: float,
-                                far: float,
-                                num_samples: int) -> Tuple[torch.Tensor, torch.Tensor]:
+    def sample_points_along_rays(
+        self,
+        ray_origins: torch.Tensor,
+        ray_directions: torch.Tensor,
+        near: float,
+        far: float,
+        num_samples: int,
+    ) -> tuple[torch.Tensor, torch.Tensor]:
         """Sample points along rays."""
         device = ray_origins.device
         batch_size = ray_origins.shape[0]
@@ -315,11 +342,13 @@ class VolumetricRenderer(nn.Module):
         
         return points, t_vals
     
-    def volume_render(self,
-                     densities: torch.Tensor,
-                     colors: torch.Tensor,
-                     t_vals: torch.Tensor,
-                     ray_directions: torch.Tensor) -> Dict[str, torch.Tensor]:
+    def volume_render(
+        self,
+        densities: torch.Tensor,
+        colors: torch.Tensor,
+        t_vals: torch.Tensor,
+        ray_directions: torch.Tensor,
+    ) -> dict[str, torch.Tensor]:
         """Perform volume rendering."""
         # Compute distances between samples
         dists = t_vals[..., 1:] - t_vals[..., :-1]
@@ -333,8 +362,7 @@ class VolumetricRenderer(nn.Module):
         
         # Compute transmittance
         transmittance = torch.cumprod(1.0 - alpha + 1e-10, dim=-1)
-        transmittance = torch.cat([torch.ones_like(transmittance[..., :1]), 
-                                  transmittance[..., :-1]], dim=-1)
+        transmittance = torch.cat([torch.ones_like(transmittance[..., :1]), transmittance], dim=-1)
         
         # Compute weights
         weights = alpha * transmittance
@@ -349,11 +377,7 @@ class VolumetricRenderer(nn.Module):
         acc_weights = torch.sum(weights, dim=-1)
         
         return {
-            'rgb': rgb,
-            'depth': depth,
-            'weights': weights,
-            'alpha': alpha,
-            'acc_weights': acc_weights
+            'rgb': rgb, 'depth': depth, 'weights': weights, 'alpha': alpha, 'acc_weights': acc_weights
         }
 
 
@@ -366,9 +390,7 @@ class PlenoxelModel(nn.Module):
         
         # Initialize voxel grid
         self.voxel_grid = VoxelGrid(
-            resolution=config.grid_resolution,
-            scene_bounds=config.scene_bounds,
-            sh_degree=config.sh_degree
+            resolution=config.grid_resolution, scene_bounds=config.scene_bounds, sh_degree=config.sh_degree
         )
         
         # Volume renderer
@@ -377,10 +399,12 @@ class PlenoxelModel(nn.Module):
         # Current resolution level for coarse-to-fine training
         self.current_resolution_level = 0
     
-    def forward(self, 
-                ray_origins: torch.Tensor,
-                ray_directions: torch.Tensor,
-                num_samples: int = 192) -> Dict[str, torch.Tensor]:
+    def forward(
+        self,
+        ray_origins: torch.Tensor,
+        ray_directions: torch.Tensor,
+        num_samples: int = 192,
+    ) -> dict[str, torch.Tensor]:
         """
         Forward pass of Plenoxel model.
         
@@ -394,9 +418,7 @@ class PlenoxelModel(nn.Module):
         """
         # Sample points along rays
         points, t_vals = self.renderer.sample_points_along_rays(
-            ray_origins, ray_directions,
-            self.config.near_plane, self.config.far_plane,
-            num_samples
+            ray_origins, ray_directions, self.config.near_plane, self.config.far_plane, num_samples
         )
         
         # Flatten points for voxel grid query
@@ -426,15 +448,12 @@ class PlenoxelModel(nn.Module):
         
         # Add additional outputs
         render_outputs.update({
-            'densities': densities,
-            'colors': colors,
-            'points': points,
-            't_vals': t_vals
+            'densities': densities, 'colors': colors, 'points': points, 't_vals': t_vals
         })
         
         return render_outputs
     
-    def update_resolution(self, new_resolution: Tuple[int, int, int]):
+    def update_resolution(self, new_resolution: tuple[int, int, int]):
         """Update voxel grid resolution for coarse-to-fine training."""
         if new_resolution != self.voxel_grid.resolution:
             print(f"Updating resolution from {self.voxel_grid.resolution} to {new_resolution}")
@@ -442,9 +461,7 @@ class PlenoxelModel(nn.Module):
             # Create new voxel grid
             old_grid = self.voxel_grid
             new_grid = VoxelGrid(
-                resolution=new_resolution,
-                scene_bounds=self.config.scene_bounds,
-                sh_degree=self.config.sh_degree
+                resolution=new_resolution, scene_bounds=self.config.scene_bounds, sh_degree=self.config.sh_degree
             ).to(old_grid.density.device)
             
             # Upsample existing grid if needed
@@ -476,23 +493,22 @@ class PlenoxelModel(nn.Module):
         
         return new_grid
     
-    def prune_voxels(self, threshold: float = None):
+    def prune_voxels(self, threshold: float | None = None):
         """Prune low-density voxels."""
         if threshold is None:
             threshold = self.config.sparsity_threshold
         self.voxel_grid.prune_voxels(threshold)
     
-    def get_occupancy_stats(self) -> Dict[str, float]:
+    def get_occupancy_stats(self) -> dict[str, float]:
         """Get statistics about voxel occupancy."""
         mask = self.voxel_grid.get_occupancy_mask(self.config.sparsity_threshold)
         total_voxels = mask.numel()
         occupied_voxels = mask.sum().item()
         
         return {
-            'total_voxels': total_voxels,
-            'occupied_voxels': occupied_voxels,
-            'occupancy_ratio': occupied_voxels / total_voxels,
-            'sparsity_ratio': 1.0 - (occupied_voxels / total_voxels)
+            'total_voxels': total_voxels, 'occupied_voxels': occupied_voxels, 'occupancy_ratio': occupied_voxels / total_voxels, 'sparsity_ratio': 1.0 - (
+                occupied_voxels / total_voxels,
+            )
         }
 
 
@@ -503,9 +519,13 @@ class PlenoxelLoss(nn.Module):
         super().__init__()
         self.config = config
     
-    def forward(self, 
-                outputs: Dict[str, torch.Tensor],
-                targets: Dict[str, torch.Tensor]) -> Dict[str, torch.Tensor]:
+    def forward(
+        self,
+        outputs: dict[str,
+        torch.Tensor],
+        targets: dict[str,
+        torch.Tensor],
+    ) -> dict[str, torch.Tensor]:   
         """
         Compute Plenoxel losses.
         

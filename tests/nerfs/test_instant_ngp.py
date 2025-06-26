@@ -21,13 +21,10 @@ import os
 sys.path.append(os.path.join(os.path.dirname(__file__), '..', '..', 'src'))
 
 from nerfs.instant_ngp import (
-    InstantNGPConfig, InstantNGP, HashEncoder, SHEncoder,
-    InstantNGPLoss, InstantNGPRenderer, InstantNGPTrainer,
-    InstantNGPDataset, create_instant_ngp_dataloader
+    InstantNGPConfig, InstantNGP, HashEncoder, SHEncoder, InstantNGPLoss, InstantNGPRenderer, InstantNGPTrainer, InstantNGPDataset, create_instant_ngp_dataloader
 )
 from nerfs.instant_ngp.utils import (
-    contract_to_unisphere, morton_encode_3d, compute_tv_loss,
-    adaptive_sampling, estimate_normals
+    contract_to_unisphere, morton_encode_3d, compute_tv_loss, adaptive_sampling, estimate_normals
 )
 
 
@@ -276,8 +273,8 @@ class TestInstantNGPRenderer:
         )
         
         assert rgb_map.shape == (10, 3)
-        assert depth_map.shape == (10,)
-        assert acc_map.shape == (10,)
+        assert depth_map.shape == (10, )
+        assert acc_map.shape == (10, )
         assert weights.shape == (10, 64)
         
         # Check valid ranges
@@ -305,8 +302,8 @@ class TestInstantNGPRenderer:
         assert 'acc' in results
         
         assert results['rgb'].shape == (5, 3)
-        assert results['depth'].shape == (5,)
-        assert results['acc'].shape == (5,)
+        assert results['depth'].shape == (5, )
+        assert results['acc'].shape == (5, )
 
 
 class TestDataset:
@@ -316,8 +313,7 @@ class TestDataset:
         """Create a dummy NeRF dataset for testing."""
         # Create dummy transforms.json
         transforms = {
-            "camera_angle_x": 0.6911112070083618,
-            "frames": []
+            "camera_angle_x": 0.6911112070083618, "frames": []
         }
         
         # Create dummy images and poses
@@ -328,8 +324,7 @@ class TestDataset:
             pose[0, 3] = i * 0.1  # Slight x offset
             
             transforms["frames"].append({
-                "file_path": f"./image_{i:03d}",
-                "transform_matrix": pose.tolist()
+                "file_path": f"./image_{i:03d}", "transform_matrix": pose.tolist()
             })
             
             # Create dummy image
@@ -350,9 +345,7 @@ class TestDataset:
             self.create_dummy_dataset(tmp_path)
             
             dataset = InstantNGPDataset(
-                data_root=str(tmp_path),
-                split='train',
-                img_wh=(32, 32)
+                data_root=str(tmp_path), split='train', img_wh=(32, 32)
             )
             
             assert len(dataset) > 0
@@ -368,9 +361,7 @@ class TestDataset:
             
             # Test training dataset (returns rays)
             train_dataset = InstantNGPDataset(
-                data_root=str(tmp_path),
-                split='train',
-                img_wh=(16, 16)
+                data_root=str(tmp_path), split='train', img_wh=(16, 16)
             )
             
             item = train_dataset[0]
@@ -380,9 +371,7 @@ class TestDataset:
             
             # Test validation dataset (returns full images)
             val_dataset = InstantNGPDataset(
-                data_root=str(tmp_path),
-                split='val',
-                img_wh=(16, 16)
+                data_root=str(tmp_path), split='val', img_wh=(16, 16)
             )
             
             item = val_dataset[0]
@@ -398,11 +387,9 @@ class TestDataset:
             self.create_dummy_dataset(tmp_path)
             
             dataloader = create_instant_ngp_dataloader(
-                data_root=str(tmp_path),
-                split='train',
-                batch_size=64,
-                img_wh=(16, 16),
-                num_workers=0  # Avoid multiprocessing in tests
+                data_root=str(
+                    tmp_path,
+                )
             )
             
             batch = next(iter(dataloader))
@@ -421,9 +408,9 @@ class TestUtils:
     def test_contract_to_unisphere(self):
         """Test coordinate contraction."""
         positions = torch.tensor([
-            [0.5, 0.5, 0.5],      # Inside unit sphere
-            [2.0, 0.0, 0.0],      # Outside unit sphere
-            [0.0, 3.0, 4.0],      # Outside unit sphere
+            [0.5, 0.5, 0.5], # Inside unit sphere
+            [2.0, 0.0, 0.0], # Outside unit sphere
+            [0.0, 3.0, 4.0], # Outside unit sphere
         ])
         
         contracted = contract_to_unisphere(positions)
@@ -441,14 +428,11 @@ class TestUtils:
     def test_morton_encode_3d(self):
         """Test Morton encoding."""
         coords = torch.tensor([
-            [0, 0, 0],
-            [1, 1, 1],
-            [2, 3, 4],
-        ])
+            [0, 0, 0], [1, 1, 1], [2, 3, 4], ])
         
         encoded = morton_encode_3d(coords)
         
-        assert encoded.shape == (3,)
+        assert encoded.shape == (3, )
         assert encoded.dtype == torch.long
         assert (encoded >= 0).all()
     
@@ -482,11 +466,7 @@ class TestUtils:
         """Test normal estimation."""
         # Create simple positions
         positions = torch.tensor([
-            [0.0, 0.0, 0.0],
-            [0.1, 0.0, 0.0],
-            [0.0, 0.1, 0.0],
-            [0.0, 0.0, 0.1],
-        ])
+            [0.0, 0.0, 0.0], [0.1, 0.0, 0.0], [0.0, 0.1, 0.0], [0.0, 0.0, 0.1], ])
         
         # Mock density function (simple sphere)
         def density_fn(pos):
@@ -522,9 +502,7 @@ class TestTrainer:
         
         # Create dummy batch
         batch = {
-            'rays_o': torch.randn(64, 3),
-            'rays_d': torch.randn(64, 3),
-            'rgbs': torch.rand(64, 3)
+            'rays_o': torch.randn(64, 3), 'rays_d': torch.randn(64, 3), 'rgbs': torch.rand(64, 3)
         }
         
         # Normalize ray directions

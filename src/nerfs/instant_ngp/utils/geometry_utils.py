@@ -27,13 +27,17 @@ def estimate_normals(positions: torch.Tensor, density_fn, eps: float = 1e-3) -> 
     return normals
 
 
-def compute_surface_points(positions: torch.Tensor, density: torch.Tensor, threshold: float = 0.5) -> torch.Tensor:
+def compute_surface_points(
+    positions: torch.Tensor,
+    density: torch.Tensor,
+    threshold: float = 0.5,
+) -> torch.Tensor:
     """Extract surface points based on density threshold."""
     surface_mask = density.squeeze() > threshold
     return positions[surface_mask]
 
 
-def mesh_extraction(positions: torch.Tensor, density: torch.Tensor, threshold: float = 0.5):
+def mesh_extraction(positions: torch.Tensor, density: torch.Tensor, threshold: float = 0.5) -> tuple[torch.Tensor, torch.Tensor]:
     """Simple mesh extraction (placeholder)."""
     surface_points = compute_surface_points(positions, density, threshold)
     return surface_points, None  # vertices, faces 

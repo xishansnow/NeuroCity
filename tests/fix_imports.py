@@ -32,10 +32,9 @@ sys.path.append(os.path.join(os.path.dirname(__file__), '..', '..', 'src'))
     # Fix relative imports for NeRF modules
     patterns = [
         # Fix "from . import" to proper module imports
-        (r'from \. import \((.*?)\)', r'from nerfs.{module} import (\1)'),
-        (r'from \.([a-z_]+) import', r'from nerfs.{module}.\1 import'),
-        (r'from \. import ([a-z_A-Z0-9_, ]+)', r'from nerfs.{module} import \1'),
-    ]
+        (
+            r'from \. import \,
+        )
     
     # Determine module name from file path
     file_name = Path(file_path).stem
@@ -43,7 +42,10 @@ sys.path.append(os.path.join(os.path.dirname(__file__), '..', '..', 'src'))
         module_name = file_name[5:]  # Remove 'test_' prefix
         
         for pattern, replacement in patterns:
-            content = re.sub(pattern, replacement.format(module=module_name), content, flags=re.MULTILINE | re.DOTALL)
+            content = re.sub(
+                pattern,
+                replacement.format,
+            )
     
     # Write back the fixed content
     with open(file_path, 'w', encoding='utf-8') as f:

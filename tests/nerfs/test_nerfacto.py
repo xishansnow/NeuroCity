@@ -12,11 +12,15 @@ import tempfile
 import os
 import json
 from pathlib import Path
+import sys
 
-from .core import NerfactoModel, NerfactoConfig, NerfactoLoss
-from .dataset import NerfactoDataset, NerfactoDatasetConfig
-from .trainer import NerfactoTrainer, NerfactoTrainerConfig
-from .utils.camera_utils import generate_rays, sample_rays_uniform
+# Add src to path for imports
+sys.path.append(os.path.join(os.path.dirname(__file__), '..', '..', 'src'))
+
+from nerfs.nerfacto.core import NerfactoModel, NerfactoConfig, NerfactoLoss
+from nerfs.nerfacto.dataset import NerfactoDataset, NerfactoDatasetConfig
+from nerfs.nerfacto.trainer import NerfactoTrainer, NerfactoTrainerConfig
+from nerfs.nerfacto.utils.camera_utils import generate_rays, sample_rays_uniform
 
 
 class TestNerfactoCore(unittest.TestCase):
@@ -26,11 +30,8 @@ class TestNerfactoCore(unittest.TestCase):
         """Set up test fixtures."""
         self.device = "cuda" if torch.cuda.is_available() else "cpu"
         self.config = NerfactoConfig(
-            num_levels=4,  # Smaller for testing
-            base_resolution=16,
-            max_resolution=128,
-            hidden_dim=32,
-            num_layers=2
+            num_levels=4, # Smaller for testing
+            base_resolution=16, max_resolution=128, hidden_dim=32, num_layers=2
         )
     
     def test_model_creation(self):
@@ -47,7 +48,7 @@ class TestNerfactoCore(unittest.TestCase):
         # Count parameters
         num_params = sum(p.numel() for p in model.parameters())
         self.assertGreater(num_params, 0)
-        print(f"Model created with {num_params:,} parameters")
+        print(f"Model created with {num_params:, } parameters")
     
     def test_model_forward(self):
         """Test model forward pass."""
@@ -70,8 +71,8 @@ class TestNerfactoCore(unittest.TestCase):
         
         # Check shapes
         self.assertEqual(outputs['colors'].shape, (batch_size, 3))
-        self.assertEqual(outputs['densities'].shape, (batch_size,))
-        self.assertEqual(outputs['depths'].shape, (batch_size,))
+        self.assertEqual(outputs['densities'].shape, (batch_size, ))
+        self.assertEqual(outputs['depths'].shape, (batch_size, ))
         
         # Check value ranges
         self.assertTrue(torch.all(outputs['colors'] >= 0))
@@ -88,9 +89,10 @@ class TestNerfactoCore(unittest.TestCase):
         
         # Create test outputs and targets
         outputs = {
-            'colors': torch.rand(batch_size, 3),
-            'densities': torch.rand(batch_size),
-            'depths': torch.rand(batch_size)
+            'colors': torch.rand(
+                batch_size,
+                3,
+            )
         }
         
         targets = {
@@ -134,24 +136,14 @@ class TestNerfactoDataset(unittest.TestCase):
         
         # Create sample transforms.json
         transforms = {
-            "camera_angle_x": 0.6911112070083618,
-            "frames": [
+            "camera_angle_x": 0.6911112070083618, "frames": [
                 {
-                    "file_path": "./images/frame_001",
-                    "transform_matrix": [
-                        [1, 0, 0, 0],
-                        [0, 1, 0, 0],
-                        [0, 0, 1, 4],
-                        [0, 0, 0, 1]
+                    "file_path": "./images/frame_001", "transform_matrix": [
+                        [1, 0, 0, 0], [0, 1, 0, 0], [0, 0, 1, 4], [0, 0, 0, 1]
                     ]
-                },
-                {
-                    "file_path": "./images/frame_002",
-                    "transform_matrix": [
-                        [0, 0, 1, 4],
-                        [0, 1, 0, 0],
-                        [-1, 0, 0, 0],
-                        [0, 0, 0, 1]
+                }, {
+                    "file_path": "./images/frame_002", "transform_matrix": [
+                        [0, 0, 1, 4], [0, 1, 0, 0], [-1, 0, 0, 0], [0, 0, 0, 1]
                     ]
                 }
             ]
@@ -170,8 +162,7 @@ class TestNerfactoDataset(unittest.TestCase):
     def test_dataset_creation(self):
         """Test dataset creation."""
         config = NerfactoDatasetConfig(
-            data_dir=self.temp_dir,
-            data_format="instant_ngp"
+            data_dir=self.temp_dir, data_format="instant_ngp"
         )
         
         dataset = NerfactoDataset(config, split="train")
@@ -185,9 +176,7 @@ class TestNerfactoDataset(unittest.TestCase):
     def test_dataset_getitem(self):
         """Test dataset item retrieval."""
         config = NerfactoDatasetConfig(
-            data_dir=self.temp_dir,
-            data_format="instant_ngp",
-            image_width=50,  # Small for testing
+            data_dir=self.temp_dir, data_format="instant_ngp", image_width=50, # Small for testing
             image_height=50
         )
         
@@ -205,7 +194,7 @@ class TestNerfactoDataset(unittest.TestCase):
             # Check shapes
             self.assertEqual(item['image'].shape, (50, 50, 3))
             self.assertEqual(item['pose'].shape, (4, 4))
-            self.assertEqual(item['intrinsics'].shape, (4,))
+            self.assertEqual(item['intrinsics'].shape, (4, ))
             
             print("Dataset getitem test passed")
 
@@ -225,14 +214,13 @@ class TestNerfactoUtils(unittest.TestCase):
         # Create test camera parameters
         camera_poses = torch.eye(4).unsqueeze(0).repeat(batch_size, 1, 1)
         camera_intrinsics = torch.tensor([
-            [50, 50, 32, 32],  # fx, fy, cx, cy
+            [50, 50, 32, 32], # fx, fy, cx, cy
             [50, 50, 32, 32]
         ]).float()
         
         # Generate rays
         ray_origins, ray_directions = generate_rays(
-            camera_poses, camera_intrinsics, 
-            image_height, image_width, self.device
+            camera_poses, camera_intrinsics, image_height, image_width, self.device
         )
         
         # Check shapes
@@ -289,19 +277,14 @@ class TestNerfactoIntegration(unittest.TestCase):
         os.makedirs(images_dir, exist_ok=True)
         
         transforms = {
-            "camera_angle_x": 0.6911112070083618,
-            "frames": []
+            "camera_angle_x": 0.6911112070083618, "frames": []
         }
         
         # Create a few frames
         for i in range(3):
             frame = {
-                "file_path": f"./images/frame_{i:03d}",
-                "transform_matrix": [
-                    [1, 0, 0, 0],
-                    [0, 1, 0, 0],
-                    [0, 0, 1, 4],
-                    [0, 0, 0, 1]
+                "file_path": f"./images/frame_{i:03d}", "transform_matrix": [
+                    [1, 0, 0, 0], [0, 1, 0, 0], [0, 0, 1, 4], [0, 0, 0, 1]
                 ]
             }
             transforms["frames"].append(frame)
@@ -318,38 +301,22 @@ class TestNerfactoIntegration(unittest.TestCase):
         """Test end-to-end training pipeline."""
         # Create configurations
         model_config = NerfactoConfig(
-            num_levels=4,
-            base_resolution=16,
-            max_resolution=64,
-            hidden_dim=32,
-            num_layers=2
+            num_levels=4, base_resolution=16, max_resolution=64, hidden_dim=32, num_layers=2
         )
         
         dataset_config = NerfactoDatasetConfig(
-            data_dir=self.temp_dir,
-            data_format="instant_ngp",
-            image_width=32,
-            image_height=32
+            data_dir=self.temp_dir, data_format="instant_ngp", image_width=32, image_height=32
         )
         
         trainer_config = NerfactoTrainerConfig(
-            max_epochs=2,  # Very short for testing
-            learning_rate=1e-3,
-            batch_size=1,
-            eval_every_n_epochs=1,
-            save_every_n_epochs=1,
-            output_dir=self.temp_dir,
-            experiment_name="test_experiment",
-            use_mixed_precision=False,  # Disable for stability
+            max_epochs=2, # Very short for testing
+            learning_rate=1e-3, batch_size=1, eval_every_n_epochs=1, save_every_n_epochs=1, output_dir=self.temp_dir, experiment_name="test_experiment", use_mixed_precision=False, # Disable for stability
             use_wandb=False
         )
         
         # Create trainer
         trainer = NerfactoTrainer(
-            config=trainer_config,
-            model_config=model_config,
-            dataset_config=dataset_config,
-            device=self.device
+            config=trainer_config, model_config=model_config, dataset_config=dataset_config, device=self.device
         )
         
         # Run short training
@@ -368,10 +335,7 @@ def run_all_tests():
     
     # Create test suite
     test_classes = [
-        TestNerfactoCore,
-        TestNerfactoDataset,
-        TestNerfactoUtils,
-        TestNerfactoIntegration
+        TestNerfactoCore, TestNerfactoDataset, TestNerfactoUtils, TestNerfactoIntegration
     ]
     
     loader = unittest.TestLoader()

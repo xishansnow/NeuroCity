@@ -20,17 +20,12 @@ from .dataset import create_nerf_dataloader
     
     # Create configuration
     config = NeRFConfig(
-        netdepth=8,
-        netwidth=256,
-        N_samples=64,
-        N_importance=128
+        netdepth=8, netwidth=256, N_samples=64, N_importance=128
     )
     
     # Create data loader
     train_loader = create_nerf_dataloader(
-        'blender', 
-        'path/to/dataset', 
-        split='train'
+        'blender', 'path/to/dataset', split='train'
     )
     
     # Create trainer and train
@@ -40,20 +35,11 @@ from .dataset import create_nerf_dataloader
 """
 
 from .core import (
-    NeRFConfig,
-    NeRF, 
-    Embedder,
-    NeRFRenderer,
-    NeRFLoss,
-    raw2outputs,
-    sample_pdf
+    NeRFConfig, NeRF, Embedder, NeRFRenderer, NeRFLoss, raw2outputs, sample_pdf
 )
 
 from .dataset import (
-    BlenderDataset,
-    create_nerf_dataloader,
-    get_rays_np,
-    pose_spherical
+    BlenderDataset, create_nerf_dataloader, get_rays_np, pose_spherical
 )
 
 from .trainer import (
@@ -61,16 +47,7 @@ from .trainer import (
 )
 
 from .utils import (
-    to8b,
-    img2mse, 
-    mse2psnr,
-    get_rays,
-    render_path,
-    create_spherical_poses,
-    visualize_depth,
-    compute_ssim,
-    save_image_grid,
-    load_config_from_args
+    to8b, img2mse, mse2psnr, get_rays, render_path, create_spherical_poses, visualize_depth, compute_ssim, save_image_grid, load_config_from_args
 )
 
 __version__ = "1.0.0"
@@ -79,32 +56,8 @@ __email__ = "team@neurocity.ai"
 
 __all__ = [
     # Core components
-    'NeRFConfig',
-    'NeRF',
-    'Embedder', 
-    'NeRFRenderer',
-    'NeRFLoss',
-    'raw2outputs',
-    'sample_pdf',
-    
-    # Dataset
-    'BlenderDataset',
-    'create_nerf_dataloader',
-    'get_rays_np',
-    'pose_spherical',
-    
-    # Training
-    'NeRFTrainer',
-    
-    # Utils
-    'to8b',
-    'img2mse',
-    'mse2psnr', 
-    'get_rays',
-    'render_path',
-    'create_spherical_poses',
-    'visualize_depth',
-    'compute_ssim',
-    'save_image_grid',
-    'load_config_from_args'
+    'NeRFConfig', 'NeRF', 'Embedder', 'NeRFRenderer', 'NeRFLoss', 'raw2outputs', 'sample_pdf', # Dataset
+    'BlenderDataset', 'create_nerf_dataloader', 'get_rays_np', 'pose_spherical', # Training
+    'NeRFTrainer', # Utils
+    'to8b', 'img2mse', 'mse2psnr', 'get_rays', 'render_path', 'create_spherical_poses', 'visualize_depth', 'compute_ssim', 'save_image_grid', 'load_config_from_args'
 ]

@@ -8,11 +8,11 @@ import os
 import json
 import numpy as np
 import openvdb as vdb
-from typing import List, Tuple, Dict, Optional
+from typing import Dict, List, Optional, Tuple
 import requests
 import xml.etree.ElementTree as ET
 from shapely.geometry import Polygon, Point
-from shapely.ops import unary_union
+from shapely.ops import unary_nion 
 import trimesh
 import pyproj
 from scipy.spatial import cKDTree
@@ -24,10 +24,15 @@ logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 class OSMVDBConverter:
-    def __init__(self, 
-                 bbox: Tuple[float, float, float, float],
-                 voxel_size: float = 1.0,
-                 max_height: float = 200.0):
+    def __init__(
+        self,
+        bbox: tuple[float,
+        float,
+        float,
+        float],
+        voxel_size: float = 1.0,
+        max_height: float = 200.0,
+    )
         """
         初始化OSM到VDB转换器
         
@@ -45,18 +50,18 @@ class OSMVDBConverter:
         
         # 坐标转换器
         self.transformer = pyproj.Transformer.from_crs(
-            "EPSG:4326",  # WGS84
-            "EPSG:3857",  # Web Mercator
+            "EPSG:4326", # WGS84
+            "EPSG:3857", # Web Mercator
             always_xy=True
         )
         
         self.transformer_back = pyproj.Transformer.from_crs(
-            "EPSG:3857",  # Web Mercator
-            "EPSG:4326",  # WGS84
+            "EPSG:3857", # Web Mercator
+            "EPSG:4326", # WGS84
             always_xy=True
         )
         
-    def _calculate_grid_size(self) -> Tuple[int, int, int]:
+    def _calculate_grid_size(self) -> tuple[int, int, int]:
         """计算网格尺寸"""
         # 将经纬度转换为米
         min_lat, min_lon, max_lat, max_lon = self.bbox
@@ -90,8 +95,8 @@ class OSMVDBConverter:
         query = f"""
         [out:xml][timeout:25];
         (
-          way["building"]({min_lat},{min_lon},{max_lat},{max_lon});
-          relation["building"]({min_lat},{min_lon},{max_lat},{max_lon});
+          way["building"]({min_lat}, {min_lon}, {max_lat}, {max_lon});
+          relation["building"]({min_lat}, {min_lon}, {max_lat}, {max_lon});
         );
         out body;
         >;
@@ -117,7 +122,7 @@ class OSMVDBConverter:
             logger.error(f"下载OSM数据失败: {e}")
             raise
     
-    def parse_osm_buildings(self, osm_file: str) -> List[Dict]:
+    def parse_osm_buildings(self, osm_file: str) -> list[Dict]:
         """
         解析OSM文件中的建筑物数据
         
@@ -188,16 +193,13 @@ class OSMVDBConverter:
             
             if len(coordinates) >= 3:
                 buildings.append({
-                    'type': building_type,
-                    'height': height,
-                    'levels': levels,
-                    'coordinates': coordinates
+                    'type': building_type, 'height': height, 'levels': levels, 'coordinates': coordinates
                 })
         
         logger.info(f"找到 {len(buildings)} 个建筑物")
         return buildings
     
-    def convert_coordinates_to_meters(self, buildings: List[Dict]) -> List[Dict]:
+    def convert_coordinates_to_meters(self, buildings: list[Dict]) -> list[Dict]:
         """
         将建筑物坐标从经纬度转换为米
         
@@ -226,9 +228,12 @@ class OSMVDBConverter:
             min_y, max_y = min(y_coords), max(y_coords)
             
             converted_buildings.append({
-                **building,
-                'coordinates_meters': coords_meters,
-                'bbox': (min_x, min_y, max_x, max_y)
+                **building, 'coordinates_meters': coords_meters, 'bbox': (
+                    min_x,
+                    min_y,
+                    max_x,
+                    max_y,
+                )
             })
         
         return converted_buildings
@@ -299,8 +304,7 @@ class OSMVDBConverter:
         
         return None
     
-    def voxelize_mesh(self, mesh: trimesh.Trimesh, 
-                     grid_size: Tuple[int, int, int]) -> np.ndarray:
+    def voxelize_mesh(self, mesh: trimesh.Trimesh, grid_size: tuple[int, int, int]) -> np.ndarray:
         """
         将3D网格体素化
         
@@ -317,9 +321,7 @@ class OSMVDBConverter:
         x2, y2 = self.transformer.transform(max_lon, max_lat)
         
         bounds = [
-            [x1, x2],
-            [y1, y2],
-            [0, self.max_height]
+            [x1, x2], [y1, y2], [0, self.max_height]
         ]
         
         # 体素化
@@ -344,8 +346,11 @@ class OSMVDBConverter:
         
         return voxel_array
     
-    def create_vdb_from_buildings(self, buildings: List[Dict], 
-                                 output_path: str = "osm_buildings.vdb") -> str:
+    def create_vdb_from_buildings(
+        self,
+        buildings: list[Dict],
+        output_path: str = "osm_buildings.vdb",
+    )
         """
         从建筑物数据创建VDB文件
         
@@ -395,13 +400,9 @@ class OSMVDBConverter:
         # 保存元数据
         metadata_path = output_path.replace('.vdb', '_metadata.json')
         metadata = {
-            'bbox': self.bbox,
-            'voxel_size': self.voxel_size,
-            'max_height': self.max_height,
-            'grid_size': self.grid_size,
-            'total_buildings': len(buildings),
-            'successful_buildings': successful_buildings,
-            'buildings': buildings
+            'bbox': self.bbox, 'voxel_size': self.voxel_size, 'max_height': self.max_height, 'grid_size': self.grid_size, 'total_buildings': len(
+                buildings,
+            )
         }
         
         with open(metadata_path, 'w') as f:
@@ -412,9 +413,11 @@ class OSMVDBConverter:
         
         return output_path
     
-    def convert_osm_to_vdb(self, 
-                          osm_file: Optional[str] = None,
-                          output_path: str = "osm_buildings.vdb") -> str:
+    def convert_osm_to_vdb(
+        self,
+        osm_file: Optional[str] = None,
+        output_path: str = "osm_buildings.vdb",
+    )
         """
         完整的OSM到VDB转换流程
         
@@ -451,8 +454,7 @@ def main():
     
     # 创建转换器
     converter = OSMVDBConverter(
-        bbox=bbox,
-        voxel_size=2.0,  # 2米体素
+        bbox=bbox, voxel_size=2.0, # 2米体素
         max_height=100.0  # 最大高度100米
     )
     

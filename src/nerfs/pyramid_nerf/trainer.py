@@ -17,9 +17,7 @@ import logging
 from .core import PyNeRF, PyNeRFConfig, PyNeRFLoss
 from .dataset import PyNeRFDataset, MultiScaleDataset
 from .utils import (
-    compute_psnr, compute_ssim, log_pyramid_stats,
-    save_pyramid_model, apply_learning_rate_schedule,
-    create_training_schedule
+    compute_psnr, compute_ssim, log_pyramid_stats, save_pyramid_model, apply_learning_rate_schedule, create_training_schedule
 )
 
 logger = logging.getLogger(__name__)
@@ -31,14 +29,7 @@ class PyNeRFTrainer:
     """
     
     def __init__(
-        self,
-        model: PyNeRF,
-        config: PyNeRFConfig,
-        train_dataset: PyNeRFDataset,
-        val_dataset: Optional[PyNeRFDataset] = None,
-        device: str = "cuda",
-        log_dir: str = "./logs",
-        checkpoint_dir: str = "./checkpoints"
+        self, model: PyNeRF, config: PyNeRFConfig, train_dataset: PyNeRFDataset, val_dataset: Optional[PyNeRFDataset] = None, device: str = "cuda", log_dir: str = "./logs", checkpoint_dir: str = "./checkpoints"
     ):
         self.model = model.to(device)
         self.config = config
@@ -52,20 +43,13 @@ class PyNeRFTrainer:
         
         # Create data loaders
         self.train_loader = DataLoader(
-            train_dataset,
-            batch_size=1,  # Process one image at a time
-            shuffle=True,
-            num_workers=4,
-            pin_memory=True
+            train_dataset, batch_size=1, # Process one image at a time
+            shuffle=True, num_workers=4, pin_memory=True
         )
         
         if val_dataset is not None:
             self.val_loader = DataLoader(
-                val_dataset,
-                batch_size=1,
-                shuffle=False,
-                num_workers=2,
-                pin_memory=True
+                val_dataset, batch_size=1, shuffle=False, num_workers=2, pin_memory=True
             )
         
         # Loss function
@@ -73,17 +57,12 @@ class PyNeRFTrainer:
         
         # Optimizer
         self.optimizer = optim.Adam(
-            self.model.parameters(),
-            lr=config.learning_rate,
-            betas=(0.9, 0.999)
+            self.model.parameters(), lr=config.learning_rate, betas=(0.9, 0.999)
         )
         
         # Learning rate scheduler
         self.lr_schedule = create_training_schedule(
-            max_steps=config.max_steps,
-            warmup_steps=1000,
-            decay_steps=5000,
-            decay_rate=0.1
+            max_steps=config.max_steps, warmup_steps=1000, decay_steps=5000, decay_rate=0.1
         )
         
         # Tensorboard writer
@@ -100,7 +79,7 @@ class PyNeRFTrainer:
         
         logger.info("PyNeRF Trainer initialized")
     
-    def train_step(self, batch: Dict[str, torch.Tensor]) -> Dict[str, float]:
+    def train_step(self, batch: dict[str, torch.Tensor]) -> dict[str, float]:
         """
         Single training step
         
@@ -128,9 +107,10 @@ class PyNeRFTrainer:
         H, W = target_image.shape[:2]
         coords = torch.stack(
             torch.meshgrid(
-                torch.arange(H, device=self.device),
-                torch.arange(W, device=self.device),
-                indexing='ij'
+                torch.arange(
+                    H,
+                    device=self.device,
+                )
             ), dim=-1
         ).reshape(-1, 2)
         
@@ -166,7 +146,7 @@ class PyNeRFTrainer:
         
         return loss_dict
     
-    def validate(self) -> Dict[str, float]:
+    def validate(self) -> dict[str, float]:
         """
         Validation step
         
@@ -238,9 +218,9 @@ class PyNeRFTrainer:
                 val_ssims.append(ssim)
         
         return {
-            "val_loss": np.mean(val_losses),
-            "val_psnr": np.mean(val_psnrs),
-            "val_ssim": np.mean(val_ssims)
+            "val_loss": np.mean(
+                val_losses,
+            )
         }
     
     def save_checkpoint(self, is_best: bool = False):
@@ -251,26 +231,19 @@ class PyNeRFTrainer:
             is_best: Whether this is the best model so far
         """
         checkpoint_path = os.path.join(
-            self.checkpoint_dir, 
-            f"checkpoint_step_{self.global_step}.pth"
+            self.checkpoint_dir, f"checkpoint_step_{self.global_step}.pth"
         )
         
         save_pyramid_model(
-            self.model,
-            self.config.__dict__,
-            checkpoint_path,
-            epoch=self.epoch,
-            optimizer_state=self.optimizer.state_dict()
+            self.model, self.config.__dict__, checkpoint_path, epoch=self.epoch, optimizer_state=self.optimizer.state_dict(
+            )
         )
         
         if is_best:
             best_path = os.path.join(self.checkpoint_dir, "best_model.pth")
             save_pyramid_model(
-                self.model,
-                self.config.__dict__,
-                best_path,
-                epoch=self.epoch,
-                optimizer_state=self.optimizer.state_dict()
+                self.model, self.config.__dict__, best_path, epoch=self.epoch, optimizer_state=self.optimizer.state_dict(
+                )
             )
     
     def train(self):
@@ -339,22 +312,16 @@ class MultiScaleTrainer(PyNeRFTrainer):
     """
     
     def __init__(
-        self,
-        model: PyNeRF,
-        config: PyNeRFConfig,
-        train_dataset: MultiScaleDataset,
-        val_dataset: Optional[MultiScaleDataset] = None,
-        scale_schedule: Optional[Dict[int, int]] = None,
-        **kwargs
+        self, model: PyNeRF, config: PyNeRFConfig, train_dataset: MultiScaleDataset, val_dataset: Optional[MultiScaleDataset] = None, scale_schedule: Optional[dict[int, int]] = None, **kwargs
     ):
         super().__init__(model, config, train_dataset, val_dataset, **kwargs)
         
         # Scale schedule: {step: scale}
         if scale_schedule is None:
             self.scale_schedule = {
-                0: 8,      # Start with 8x downscale
-                2000: 4,   # 4x downscale
-                5000: 2,   # 2x downscale
+                0: 8, # Start with 8x downscale
+                2000: 4, # 4x downscale
+                5000: 2, # 2x downscale
                 10000: 1   # Full resolution
             }
         else:
@@ -372,7 +339,7 @@ class MultiScaleTrainer(PyNeRFTrainer):
                 scale = new_scale
         return scale
     
-    def train_step(self, batch: Dict[str, torch.Tensor]) -> Dict[str, float]:
+    def train_step(self, batch: dict[str, torch.Tensor]) -> dict[str, float]:
         """
         Multi-scale training step
         
@@ -407,9 +374,10 @@ class MultiScaleTrainer(PyNeRFTrainer):
         H, W = target_image.shape[:2]
         coords = torch.stack(
             torch.meshgrid(
-                torch.arange(H, device=self.device),
-                torch.arange(W, device=self.device),
-                indexing='ij'
+                torch.arange(
+                    H,
+                    device=self.device,
+                )
             ), dim=-1
         ).reshape(-1, 2)
         

@@ -1,6 +1,6 @@
 # SVRaster: 稀疏体素光栅化
 
-SVRaster 是一个高性能的稀疏体素光栅化实现，用于实时高保真度辐射场渲染。该软件包实现了论文"Sparse Voxels Rasterization: Real-time High-fidelity Radiance Field Rendering"中描述的方法，无需神经网络或3D高斯。
+SVRaster 是一个高性能的稀疏体素光栅化实现，用于实时高保真度辐射场渲染。该软件包实现了论文 "Sparse Voxels Rasterization: Real-time High-fidelity Radiance Field Rendering" 中描述的方法，无需神经网络或 3D 高斯。
 
 ## 主要特性
 
@@ -14,7 +14,7 @@ SVRaster 是一个高性能的稀疏体素光栅化实现，用于实时高保�
 
 ### 核心组件
 
-1. **AdaptiveSparseVoxels**: 管理基于八叉树LOD的稀疏体素表示
+1. **AdaptiveSparseVoxels**: 管理基于八叉树 LOD 的稀疏体素表示
 2. **VoxelRasterizer**: 高效稀疏体素渲染的定制光栅化器
 3. **SVRasterModel**: 结合稀疏体素和光栅化的主模型
 4. **SVRasterLoss**: 训练用损失函数
@@ -23,7 +23,7 @@ SVRaster 是一个高性能的稀疏体素光栅化实现，用于实时高保�
 
 - **自适应分配**: 显式地将稀疏体素分配到不同的细节层次
 - **莫顿排序**: 使用射线方向相关的莫顿排序确保正确的图元混合
-- **无神经网络**: 直接体素表示，无需MLP或3D高斯
+- **无神经网络**: 直接体素表示，无需 MLP 或 3D 高斯
 - **高效存储**: 仅保留叶节点，无需完整八叉树结构
 
 ## 安装
@@ -203,8 +203,8 @@ SVRasterTrainerConfig(
 
 ### 支持的数据集类型
 
-1. **Blender合成数据**: NeRF合成数据集格式
-2. **COLMAP**: 使用COLMAP处理的真实世界捕获数据
+1. **Blender 合成数据**: NeRF 合成数据集格式
+2. **COLMAP**: 使用 COLMAP 处理的真实世界捕获数据
 
 ### 目录结构
 
@@ -222,7 +222,7 @@ data/
 
 ### 自适应细分
 
-SVRaster根据渲染梯度自动细分体素：
+SVRaster 根据渲染梯度自动细分体素：
 
 ```python
 # 启用自适应细分
@@ -259,11 +259,11 @@ model_config.morton_ordering = True
 
 - 对大图像使用分块渲染
 - 启用混合精度训练
-- 根据GPU内存调整render_chunk_size
+- 根据 GPU 内存调整 render_chunk_size
 
 ```python
 trainer_config.use_mixed_precision = True
-trainer_config.render_chunk_size = 1024  # 根据GPU内存调整
+trainer_config.render_chunk_size = 1024  # 根据 GPU 内存调整
 ```
 
 ### 速度优化
@@ -274,7 +274,7 @@ trainer_config.render_chunk_size = 1024  # 根据GPU内存调整
 
 ## 评估指标
 
-SVRaster支持标准的NeRF评估指标：
+SVRaster 支持标准的 NeRF 评估指标：
 
 - **PSNR**: 峰值信噪比
 - **SSIM**: 结构相似性指数
@@ -284,9 +284,9 @@ SVRaster支持标准的NeRF评估指标：
 
 ### 常见问题
 
-1. **内存不足**: 减少render_chunk_size或图像分辨率
-2. **训练缓慢**: 启用混合精度并检查GPU利用率
-3. **质量差**: 增加max_octree_levels或调整细分阈值
+1. **内存不足**: 减少 render_chunk_size 或图像分辨率
+2. **训练缓慢**: 启用混合精度并检查 GPU 利用率
+3. **质量差**: 增加 max_octree_levels 或调整细分阈值
 4. **伪影**: 确保启用莫顿排序
 
 ### 性能提示
@@ -298,7 +298,7 @@ SVRaster支持标准的NeRF评估指标：
 
 ## 引用
 
-如果您在研究中使用SVRaster，请引用：
+如果您在研究中使用 SVRaster，请引用：
 
 ```bibtex
 @article{sun2024svraster,
@@ -319,4 +319,4 @@ SVRaster支持标准的NeRF评估指标：
 
 ## 致谢
 
-此实现基于Sun等人的论文"Sparse Voxels Rasterization: Real-time High-fidelity Radiance Field Rendering"。我们感谢作者的出色工作以及研究社区对神经辐射场的推进。 
+此实现基于 Sun 等人的论文 "Sparse Voxels Rasterization: Real-time High-fidelity Radiance Field Rendering"。我们感谢作者的出色工作以及研究社区对神经辐射场的推进。 

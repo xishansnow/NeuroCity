@@ -16,55 +16,30 @@ Based on the paper: "Grid-guided neural radiance fields for large urban scenes"
 """
 
 from .core import (
-    GridNeRF,
-    GridNeRFConfig, 
-    GridNeRFLoss,
-    GridNeRFRenderer,
-    GridGuidedMLP,
-    HierarchicalGrid
+    GridNeRF, GridNeRFConfig, GridNeRFLoss, GridNeRFRenderer, GridGuidedMLP, HierarchicalGrid
 )
 
 from .dataset import (
-    GridNeRFDataset,
-    KITTI360GridDataset,
-    create_dataset,
-    create_dataloader
+    GridNeRFDataset, KITTI360GridDataset, create_dataset, create_dataloader
 )
 
 from .trainer import (
-    GridNeRFTrainer,
-    main_worker,
-    setup_distributed_training
+    GridNeRFTrainer, main_worker, setup_distributed_training
 )
+
+from .logging_utils import setup_logging
 
 from .utils import (
     # Image metrics
-    compute_psnr,
-    compute_ssim,
-    compute_lpips,
-    
-    # Visualization and I/O
-    save_image,
-    load_image,
-    create_video_from_images,
-    create_comparison_grid,
-    
-    # Configuration
-    load_config,
-    save_config,
-    setup_logging,
-    
-    # Learning rate scheduling
-    get_learning_rate_scheduler,
-    CosineAnnealingWarmRestarts,
-    
-    # Mathematical utilities
-    positional_encoding,
-    safe_normalize,
-    get_ray_directions,
-    sample_along_rays,
-    volume_rendering
+    compute_psnr, compute_ssim, compute_lpips, # Visualization and I/O
+    save_image, load_image, create_video_from_images, create_comparison_grid
 )
+
+# Import additional functions from main utils module
+from . import utils as grid_utils
+load_config = grid_utils.load_config
+save_config = grid_utils.save_config
+get_learning_rate_scheduler = grid_utils.get_learning_rate_scheduler
 
 # Version info
 __version__ = "1.0.0"
@@ -74,102 +49,39 @@ __description__ = "Grid-guided Neural Radiance Fields for Large Urban Scenes"
 # Package metadata
 __all__ = [
     # Core classes
-    "GridNeRF",
-    "GridNeRFConfig",
-    "GridNeRFLoss", 
-    "GridNeRFRenderer",
-    "GridGuidedMLP",
-    "HierarchicalGrid",
-    
-    # Dataset classes
-    "GridNeRFDataset",
-    "KITTI360GridDataset",
-    "create_dataset",
-    "create_dataloader",
-    
-    # Training
-    "GridNeRFTrainer",
-    "main_worker",
-    "setup_distributed_training",
-    
-    # Utilities - Metrics
-    "compute_psnr",
-    "compute_ssim", 
-    "compute_lpips",
-    
-    # Utilities - I/O
-    "save_image",
-    "load_image",
-    "create_video_from_images",
-    "create_comparison_grid",
-    
-    # Utilities - Config
-    "load_config",
-    "save_config",
-    "setup_logging",
-    
-    # Utilities - Scheduling
-    "get_learning_rate_scheduler",
-    "CosineAnnealingWarmRestarts",
-    
-    # Utilities - Math
-    "positional_encoding",
-    "safe_normalize",
-    "get_ray_directions",
-    "sample_along_rays",
-    "volume_rendering"
+    "GridNeRF", "GridNeRFConfig", "GridNeRFLoss", "GridNeRFRenderer", "GridGuidedMLP", "HierarchicalGrid", # Dataset classes
+    "GridNeRFDataset", "KITTI360GridDataset", "create_dataset", "create_dataloader", # Training
+    "GridNeRFTrainer", "main_worker", "setup_distributed_training", # Utils
+    "setup_logging", "get_default_config", # Utilities - Metrics
+    "compute_psnr", "compute_ssim", "compute_lpips", # Utilities - I/O
+    "save_image", "load_image", "create_video_from_images", "create_comparison_grid", # Utilities - Config
+    "load_config", "save_config", # Utilities - Scheduling
+    "get_learning_rate_scheduler"
 ]
 
-# Default configuration
+# Default configuration with CORRECT parameter names
 DEFAULT_CONFIG = {
-    # Scene bounds
-    "scene_bounds": {
-        "min_bound": [-100, -100, -10],
-        "max_bound": [100, 100, 50]
-    },
+    # Scene bounds (tuple format)
+    "scene_bounds": (-100, -100, -10, 100, 100, 50), # Grid configuration
+    "base_grid_resolution": 64, # Correct parameter name
+    "max_grid_resolution": 512, # Correct parameter name  
+    "num_grid_levels": 4, # Correct parameter name
+    "grid_feature_dim": 32, # Network architecture
+    "mlp_hidden_dim": 256, # Correct parameter name
+    "mlp_num_layers": 4, # Correct parameter name
+    "view_dependent": True, "view_embed_dim": 27, # Training settings
+    "learning_rate": 5e-4, # Correct parameter name
+    "weight_decay": 1e-6, # Rendering settings
+    "near_plane": 0.1, # Correct parameter name
+    "far_plane": 1000.0, # Correct parameter name
+    "num_samples_coarse": 64, # Correct parameter name
+    "num_samples_fine": 128, # Correct parameter name
     
-    # Grid configuration
-    "grid_levels": 4,
-    "base_resolution": 64,
-    "resolution_multiplier": 2,
-    "grid_feature_dim": 32,
-    
-    # Network architecture
-    "density_layers": 3,
-    "density_hidden_dim": 256,
-    "color_layers": 2,
-    "color_hidden_dim": 128,
-    "position_encoding_levels": 10,
-    "direction_encoding_levels": 4,
-    
-    # Rendering
-    "num_samples": 64,
-    "num_importance_samples": 128,
-    "perturb": True,
-    "white_background": False,
-    
-    # Training
-    "batch_size": 1024,
-    "num_epochs": 200,
-    "grid_lr": 1e-2,
-    "mlp_lr": 5e-4,
-    "weight_decay": 1e-6,
-    "grad_clip_norm": 1.0,
-    
-    # Loss weights
-    "color_weight": 1.0,
-    "depth_weight": 0.1,
-    "grid_regularization_weight": 1e-4,
-    
-    # Evaluation
-    "eval_batch_size": 256,
-    "chunk_size": 1024,
-    
-    # Logging
-    "log_every_n_steps": 100,
-    "eval_every_n_epochs": 5,
-    "save_every_n_epochs": 10,
-    "render_every_n_epochs": 20
+    # Grid update settings
+    "grid_update_freq": 100, "density_threshold": 0.01, # Loss weights
+    "color_loss_weight": 1.0, # Correct parameter name
+    "depth_loss_weight": 0.1, # Correct parameter name
+    "grid_regularization_weight": 0.001  # Correct parameter name
 }
 
 
@@ -202,11 +114,8 @@ def create_grid_nerf_model(config: dict = None, device: str = "cuda") -> GridNeR
 
 
 def quick_setup(
-    data_path: str,
-    output_dir: str,
-    config: dict = None,
-    device: str = "cuda"
-) -> tuple:
+    data_path: str, output_dir: str, config: dict = None, device: str = "cuda"
+) -> tuple[GridNeRF, GridNeRFTrainer, GridNeRFDataset]:
     """
     Quick setup for Grid-NeRF training.
     
@@ -232,16 +141,12 @@ def quick_setup(
     
     # Create dataset
     dataset = create_dataset(
-        data_path=data_path,
-        split='train',
-        config=grid_config
+        data_path=data_path, split='train', config=grid_config
     )
     
     # Create trainer
     trainer = GridNeRFTrainer(
-        config=grid_config,
-        output_dir=output_dir,
-        device=torch.device(device)
+        config=grid_config, output_dir=output_dir, device=torch.device(device)
     )
     
     return model, trainer, dataset

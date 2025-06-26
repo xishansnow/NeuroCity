@@ -10,7 +10,7 @@ This module provides tools for:
 
 import numpy as np
 import torch
-from typing import List, Optional, Tuple, Dict, Any
+from typing import Dict, List, Optional, Tuple, Any
 import matplotlib.pyplot as plt
 from mpl_toolkits.mplot3d import Axes3D
 import json
@@ -33,9 +33,12 @@ class OctreeBuilder:
         """
         self.config = config
     
-    def build_from_sparse_points(self, 
-                                sparse_points: np.ndarray,
-                                scene_bounds: Optional[Tuple[np.ndarray, np.ndarray]] = None) -> OctreeNode:
+    def build_from_sparse_points(
+        self,
+        sparse_points: np.ndarray,
+        scene_bounds: Optional[tuple[np.ndarray,
+        np.ndarray]] = None,
+    ) -> OctreeNode:
         """
         Build octree from sparse points.
         
@@ -64,10 +67,7 @@ class OctreeBuilder:
         
         # Create root node
         root_node = OctreeNode(
-            center=scene_center,
-            size=scene_size,
-            level=0,
-            config=self.config
+            center=scene_center, size=scene_size, level=0, config=self.config
         )
         
         # Recursively build octree
@@ -75,10 +75,7 @@ class OctreeBuilder:
         
         return root_node
     
-    def _build_recursive(self, 
-                        node: OctreeNode,
-                        sparse_points: np.ndarray,
-                        current_depth: int):
+    def _build_recursive(self, node: OctreeNode, sparse_points: np.ndarray, current_depth: int):
         """
         Recursively build octree nodes.
         
@@ -105,7 +102,7 @@ class OctreeBuilder:
             for child in children:
                 self._build_recursive(child, sparse_points, current_depth + 1)
     
-    def _find_points_in_node(self, node: OctreeNode, points: np.ndarray) -> List[np.ndarray]:
+    def _find_points_in_node(self, node: OctreeNode, points: np.ndarray) -> list[np.ndarray]:
         """Find points within a node's bounding box."""
         if len(points) == 0:
             return []
@@ -118,7 +115,7 @@ class OctreeBuilder:
         
         return points_in_node
     
-    def _should_subdivide(self, node: OctreeNode, points_in_node: List[np.ndarray]) -> bool:
+    def _should_subdivide(self, node: OctreeNode, points_in_node: list[np.ndarray]) -> bool:
         """
         Determine if a node should be subdivided.
         
@@ -164,7 +161,7 @@ class OctreePruner:
         """
         self.config = config
     
-    def prune_octree(self, root_node: OctreeNode) -> Dict[str, Any]:
+    def prune_octree(self, root_node: OctreeNode) -> dict[str, Any]:
         """
         Prune octree by removing nodes with insufficient data.
         
@@ -184,10 +181,7 @@ class OctreePruner:
         nodes_after = self._count_nodes(root_node)
         
         stats = {
-            'nodes_before': nodes_before,
-            'nodes_after': nodes_after,
-            'nodes_pruned': pruned_count,
-            'compression_ratio': nodes_after / nodes_before if nodes_before > 0 else 1.0
+            'nodes_before': nodes_before, 'nodes_after': nodes_after, 'nodes_pruned': pruned_count, 'compression_ratio': nodes_after / nodes_before if nodes_before > 0 else 1.0
         }
         
         return stats
@@ -285,10 +279,12 @@ def calculate_gsd(node_size: float, grid_size: int) -> float:
     return node_size / grid_size
 
 
-def visualize_octree(root_node: OctreeNode, 
-                    max_depth: Optional[int] = None,
-                    show_sparse_points: bool = True,
-                    save_path: Optional[str] = None):
+def visualize_octree(
+    root_node: OctreeNode,
+    max_depth: Optional[int] = None,
+    show_sparse_points: bool = True,
+    save_path: Optional[str] = None,
+) -> None:
     """
     Visualize octree structure.
     
@@ -316,15 +312,19 @@ def visualize_octree(root_node: OctreeNode,
         min_bounds, max_bounds = node.get_aabb()
         
         # Create wireframe cube
-        _plot_cube_wireframe(ax, min_bounds, max_bounds, 
-                           color=colors[i], alpha=0.3, 
-                           linewidth=2 if node.is_leaf else 1)
+        _plot_cube_wireframe(
+            ax,
+            min_bounds,
+            max_bounds,
+            color=colors[i],
+            alpha=0.3,
+            linewidth=2 if node.is_leaf else 1,
+        )
         
         # Plot sparse points if requested
         if show_sparse_points and len(node.sparse_points) > 0:
             points = np.array(node.sparse_points)
-            ax.scatter(points[:, 0], points[:, 1], points[:, 2], 
-                      c='red', s=1, alpha=0.6)
+            ax.scatter(points[:, 0], points[:, 1], points[:, 2], c='red', s=1, alpha=0.6)
     
     # Set labels and title
     ax.set_xlabel('X')
@@ -334,7 +334,7 @@ def visualize_octree(root_node: OctreeNode,
                 f'Nodes: {len(nodes_to_plot)}, Max Depth: {max_depth or "All"}')
     
     # Equal aspect ratio
-    ax.set_box_aspect([1,1,1])
+    ax.set_box_aspect([1, 1, 1])
     
     # Save or show
     if save_path:
@@ -346,9 +346,11 @@ def visualize_octree(root_node: OctreeNode,
     plt.close()
 
 
-def _collect_nodes_recursive(node: OctreeNode, 
-                           nodes_list: List[OctreeNode],
-                           max_depth: Optional[int]):
+def _collect_nodes_recursive(
+    node: OctreeNode,
+    nodes_list: list[OctreeNode],
+    max_depth: Optional[int],
+) -> None:
     """Recursively collect nodes for visualization."""
     if max_depth is not None and node.level > max_depth:
         return
@@ -361,36 +363,44 @@ def _collect_nodes_recursive(node: OctreeNode,
                 _collect_nodes_recursive(child, nodes_list, max_depth)
 
 
-def _plot_cube_wireframe(ax, min_bounds: np.ndarray, max_bounds: np.ndarray,
-                        color='blue', alpha=0.3, linewidth=1):
+def _plot_cube_wireframe(
+    ax,
+    min_bounds: np.ndarray,
+    max_bounds: np.ndarray,
+    color='blue',
+    alpha=0.3,
+    linewidth=1,
+) -> None:
     """Plot a wireframe cube."""
     # Define cube vertices
     vertices = [
-        [min_bounds[0], min_bounds[1], min_bounds[2]],
-        [max_bounds[0], min_bounds[1], min_bounds[2]],
-        [max_bounds[0], max_bounds[1], min_bounds[2]],
-        [min_bounds[0], max_bounds[1], min_bounds[2]],
-        [min_bounds[0], min_bounds[1], max_bounds[2]],
-        [max_bounds[0], min_bounds[1], max_bounds[2]],
-        [max_bounds[0], max_bounds[1], max_bounds[2]],
-        [min_bounds[0], max_bounds[1], max_bounds[2]]
+        [min_bounds[0], min_bounds[1], min_bounds[2]], [max_bounds[0], min_bounds[1], min_bounds[2]], [max_bounds[0], max_bounds[1], min_bounds[2]], [min_bounds[0], max_bounds[1], min_bounds[2]], [min_bounds[0], min_bounds[1], max_bounds[2]], [max_bounds[0], min_bounds[1], max_bounds[2]], [max_bounds[0], max_bounds[1], max_bounds[2]], [min_bounds[0], max_bounds[1], max_bounds[2]]
     ]
     
     # Define cube edges
     edges = [
-        [0, 1], [1, 2], [2, 3], [3, 0],  # Bottom face
-        [4, 5], [5, 6], [6, 7], [7, 4],  # Top face
+        [0, 1], [1, 2], [2, 3], [3, 0], # Bottom face
+        [4, 5], [5, 6], [6, 7], [7, 4], # Top face
         [0, 4], [1, 5], [2, 6], [3, 7]   # Vertical edges
     ]
     
     # Plot edges
     for edge in edges:
         points = np.array([vertices[edge[0]], vertices[edge[1]]])
-        ax.plot3D(points[:, 0], points[:, 1], points[:, 2], 
-                 color=color, alpha=alpha, linewidth=linewidth)
+        ax.plot3D(
+            points[:,
+            0],
+            points[:,
+            1],
+            points[:,
+            2],
+            color=color,
+            alpha=alpha,
+            linewidth=linewidth,
+        )
 
 
-def analyze_octree_memory(root_node: OctreeNode) -> Dict[str, Any]:
+def analyze_octree_memory(root_node: OctreeNode) -> dict[str, Any]:
     """
     Analyze memory usage of octree structure.
     
@@ -401,14 +411,8 @@ def analyze_octree_memory(root_node: OctreeNode) -> Dict[str, Any]:
         Dictionary with memory analysis
     """
     analysis = {
-        'total_nodes': 0,
-        'leaf_nodes': 0,
-        'internal_nodes': 0,
-        'pruned_nodes': 0,
-        'nodes_by_level': {},
-        'memory_by_level': {},
-        'total_memory_mb': 0.0,
-        'average_memory_per_node_mb': 0.0
+        'total_nodes': 0, 'leaf_nodes': 0, 'internal_nodes': 0, 'pruned_nodes': 0, 'nodes_by_level': {
+        }
     }
     
     def analyze_recursive(node: OctreeNode):
@@ -462,16 +466,10 @@ def export_octree_structure(root_node: OctreeNode, export_path: str):
         root_node: Root node of the octree
         export_path: Path to save the JSON file
     """
-    def node_to_dict(node: OctreeNode) -> Dict[str, Any]:
+    def node_to_dict(node: OctreeNode) -> dict[str, Any]:
         node_dict = {
-            'center': node.center.tolist(),
-            'size': node.size,
-            'level': node.level,
-            'is_leaf': node.is_leaf,
-            'is_pruned': node.is_pruned,
-            'gsd': node.gsd,
-            'num_sparse_points': len(node.sparse_points),
-            'memory_size_mb': node.get_memory_size() / (1024 * 1024)
+            'center': node.center.tolist(
+            )
         }
         
         if not node.is_leaf:
@@ -485,8 +483,7 @@ def export_octree_structure(root_node: OctreeNode, export_path: str):
         return node_dict
     
     octree_data = {
-        'octree_structure': node_to_dict(root_node),
-        'analysis': analyze_octree_memory(root_node)
+        'octree_structure': node_to_dict(root_node), 'analysis': analyze_octree_memory(root_node)
     }
     
     with open(export_path, 'w') as f:

@@ -19,7 +19,7 @@ import numpy as np
 import os
 import json
 import time
-from typing import Dict, List, Optional, Tuple, Any, Union
+from typing import Dict, List, Optional, Tuple, Any
 from dataclasses import dataclass, field
 import wandb
 from tqdm import tqdm
@@ -53,8 +53,8 @@ class NerfactoTrainerConfig:
     
     # Progressive training
     use_progressive_training: bool = True
-    progressive_levels: List[int] = field(default_factory=lambda: [64, 128, 256, 512])
-    progressive_epochs: List[int] = field(default_factory=lambda: [5000, 10000, 20000, 30000])
+    progressive_levels: list[int] = field(default_factory=lambda: [64, 128, 256, 512])
+    progressive_epochs: list[int] = field(default_factory=lambda: [5000, 10000, 20000, 30000])
     
     # Loss weights scheduling
     color_loss_weight: float = 1.0
@@ -88,11 +88,13 @@ class NerfactoTrainerConfig:
 class NerfactoTrainer:
     """Main trainer class for Nerfacto."""
     
-    def __init__(self, 
-                 config: NerfactoTrainerConfig,
-                 model_config: NerfactoConfig,
-                 dataset_config: NerfactoDatasetConfig,
-                 device: str = "cuda"):
+    def __init__(
+        self,
+        config: NerfactoTrainerConfig,
+        model_config: NerfactoConfig,
+        dataset_config: NerfactoDatasetConfig,
+        device: str = "cuda",
+    ) -> None:
         self.config = config
         self.model_config = model_config
         self.dataset_config = dataset_config
@@ -106,24 +108,16 @@ class NerfactoTrainer:
         
         # Initialize datasets
         self.train_dataset = NerfactoDataset(dataset_config, split="train")
-        self.val_dataset = NerfactoDataset(dataset_config, split="val") if dataset_config.val_split_fraction > 0 else None
+        self.val_dataset = NerfactoDataset(dataset_config, split="val")
         
         # Initialize data loaders
         self.train_loader = DataLoader(
-            self.train_dataset,
-            batch_size=config.batch_size,
-            shuffle=True,
-            num_workers=4,
-            pin_memory=True
+            self.train_dataset, batch_size=config.batch_size, shuffle=True, num_workers=4, pin_memory=True
         )
         
         if self.val_dataset:
             self.val_loader = DataLoader(
-                self.val_dataset,
-                batch_size=1,
-                shuffle=False,
-                num_workers=2,
-                pin_memory=True
+                self.val_dataset, batch_size=1, shuffle=False, num_workers=2, pin_memory=True
             )
         
         # Initialize optimizer
@@ -165,9 +159,7 @@ class NerfactoTrainer:
         
         if encoding_params:
             param_groups.append({
-                'params': encoding_params,
-                'lr': self.config.learning_rate,
-                'name': 'encoding'
+                'params': encoding_params, 'lr': self.config.learning_rate, 'name': 'encoding'
             })
         
         # Network parameters (standard learning rate)
@@ -179,9 +171,7 @@ class NerfactoTrainer:
         
         if network_params:
             param_groups.append({
-                'params': network_params,
-                'lr': self.config.learning_rate * 0.1,
-                'name': 'network'
+                'params': network_params, 'lr': self.config.learning_rate * 0.1, 'name': 'network'
             })
         
         # Proposal network parameters (if any)
@@ -192,10 +182,7 @@ class NerfactoTrainer:
         
         if proposal_params:
             param_groups.append({
-                'params': proposal_params,
-                'lr': self.config.learning_rate * 0.01,
-                'weight_decay': self.config.proposal_weights_decay,
-                'name': 'proposal'
+                'params': proposal_params, 'lr': self.config.learning_rate * 0.01, 'weight_decay': self.config.proposal_weights_decay, 'name': 'proposal'
             })
         
         # Fallback: all parameters
@@ -204,7 +191,7 @@ class NerfactoTrainer:
         
         return optim.AdamW(param_groups, weight_decay=self.config.weight_decay)
     
-    def _create_scheduler(self):
+    def _create_scheduler(self) -> optim.lr_scheduler.LRScheduler:
         """Create learning rate scheduler."""
         if self.config.lr_scheduler == "exponential":
             # Exponential decay
@@ -213,22 +200,18 @@ class NerfactoTrainer:
         
         elif self.config.lr_scheduler == "cosine":
             return optim.lr_scheduler.CosineAnnealingLR(
-                self.optimizer, 
-                T_max=self.config.max_epochs,
-                eta_min=self.config.lr_final
+                self.optimizer, T_max=self.config.max_epochs, eta_min=self.config.lr_final
             )
         
         elif self.config.lr_scheduler == "step":
             return optim.lr_scheduler.StepLR(
-                self.optimizer,
-                step_size=self.config.lr_decay_steps,
-                gamma=self.config.lr_decay_rate
+                self.optimizer, step_size=self.config.lr_decay_steps, gamma=self.config.lr_decay_rate
             )
         
         else:
             return optim.lr_scheduler.LambdaLR(self.optimizer, lr_lambda=lambda epoch: 1.0)
     
-    def setup_logging(self):
+    def setup_logging(self) -> None:
         """Setup logging with TensorBoard and optionally Weights & Biases."""
         # TensorBoard
         self.writer = SummaryWriter(os.path.join(self.output_dir, "logs"))
@@ -236,27 +219,21 @@ class NerfactoTrainer:
         # Weights & Biases
         if self.config.use_wandb:
             wandb.init(
-                project=self.config.wandb_project,
-                name=self.config.experiment_name,
-                config={
-                    "trainer_config": self.config.__dict__,
-                    "model_config": self.model_config.__dict__,
-                    "dataset_config": self.dataset_config.__dict__
+                project=self.config.wandb_project, name=self.config.experiment_name, config={
+                    "trainer_config": self.config.__dict__, "model_config": self.model_config.__dict__, "dataset_config": self.dataset_config.__dict__
                 }
             )
     
-    def save_configs(self):
+    def save_configs(self) -> None:
         """Save configuration files."""
         configs = {
-            "trainer_config": self.config.__dict__,
-            "model_config": self.model_config.__dict__,
-            "dataset_config": self.dataset_config.__dict__
+            "trainer_config": self.config.__dict__, "model_config": self.model_config.__dict__, "dataset_config": self.dataset_config.__dict__
         }
         
         with open(os.path.join(self.output_dir, "config.json"), 'w') as f:
             json.dump(configs, f, indent=2, default=str)
     
-    def update_progressive_training(self):
+    def update_progressive_training(self) -> None:
         """Update progressive training parameters."""
         if not self.config.use_progressive_training:
             return
@@ -273,14 +250,17 @@ class NerfactoTrainer:
             self.current_resolution_level = target_level
             target_resolution = self.config.progressive_levels[target_level]
             
-            print(f"Progressive training: Switching to resolution {target_resolution} at epoch {self.epoch}")
+            print(f"Progressive training: Switching to resolution {target_resolution}")
             
             # Update model resolution if applicable
             if hasattr(self.model.field, 'set_resolution'):
                 self.model.field.set_resolution(target_resolution)
     
-    def compute_loss(self, outputs: Dict[str, torch.Tensor], 
-                    targets: Dict[str, torch.Tensor]) -> Dict[str, torch.Tensor]:
+    def compute_loss(
+        self,
+        outputs: dict[str, torch.Tensor],
+        targets: dict[str, torch.Tensor]
+    ) -> dict[str, torch.Tensor]:
         """Compute training loss."""
         losses = self.loss_fn(outputs, targets)
         
@@ -296,7 +276,7 @@ class NerfactoTrainer:
         
         return losses
     
-    def train_step(self, batch: Dict[str, torch.Tensor]) -> Dict[str, float]:
+    def train_step(self, batch: dict[str, torch.Tensor]) -> dict[str, float]:
         """Single training step."""
         # Move batch to device
         for key in batch:
@@ -353,7 +333,7 @@ class NerfactoTrainer:
         
         return loss_dict
     
-    def validate(self) -> Dict[str, float]:
+    def validate(self) -> dict[str, float]:
         """Validation step."""
         if self.val_dataset is None:
             return {}
@@ -384,27 +364,24 @@ class NerfactoTrainer:
         self.model.train()
         
         return {
-            'val_loss': np.mean(val_losses),
-            'val_psnr': np.mean(val_psnrs)
+            'val_loss': np.mean(val_losses), 'val_psnr': np.mean(val_psnrs)
         }
     
-    def save_checkpoint(self, is_best: bool = False):
+    def save_checkpoint(self, is_best: bool = False) -> None:
         """Save model checkpoint."""
         checkpoint = {
-            'epoch': self.epoch,
-            'step': self.step,
-            'model_state_dict': self.model.state_dict(),
-            'optimizer_state_dict': self.optimizer.state_dict(),
-            'scheduler_state_dict': self.scheduler.state_dict(),
-            'best_psnr': self.best_psnr,
-            'config': self.config.__dict__
+            'epoch': self.epoch, 'step': self.step, 'model_state_dict': self.model.state_dict()
         }
         
         if self.scaler is not None:
             checkpoint['scaler_state_dict'] = self.scaler.state_dict()
         
         # Save regular checkpoint
-        checkpoint_path = os.path.join(self.output_dir, "checkpoints", f"checkpoint_epoch_{self.epoch}.pth")
+        checkpoint_path = os.path.join(
+            self.output_dir,
+            "checkpoints",
+            f"checkpoint_epoch_{self.epoch}.pth"
+        )
         torch.save(checkpoint, checkpoint_path)
         
         # Save best checkpoint
@@ -415,7 +392,7 @@ class NerfactoTrainer:
         # Keep only recent checkpoints
         self.cleanup_checkpoints()
     
-    def cleanup_checkpoints(self):
+    def cleanup_checkpoints(self) -> None:
         """Remove old checkpoints to save disk space."""
         checkpoint_dir = os.path.join(self.output_dir, "checkpoints")
         checkpoints = [f for f in os.listdir(checkpoint_dir) if f.startswith("checkpoint_epoch_")]
@@ -428,7 +405,7 @@ class NerfactoTrainer:
             for checkpoint in checkpoints[:-self.config.keep_n_checkpoints]:
                 os.remove(os.path.join(checkpoint_dir, checkpoint))
     
-    def log_metrics(self, metrics: Dict[str, float], prefix: str = "train"):
+    def log_metrics(self, metrics: dict[str, float], prefix: str = "train") -> None:
         """Log metrics to TensorBoard and wandb."""
         # TensorBoard
         for key, value in metrics.items():
@@ -438,7 +415,7 @@ class NerfactoTrainer:
         if self.config.use_wandb:
             wandb.log({f"{prefix}/{key}": value for key, value in metrics.items()}, step=self.step)
     
-    def train(self):
+    def train(self) -> None:
         """Main training loop."""
         print(f"Starting training for {self.config.max_epochs} epochs")
         print(f"Training dataset: {len(self.train_dataset)} images")
@@ -469,9 +446,8 @@ class NerfactoTrainer:
                     
                     # Update progress bar
                     progress_bar.set_postfix({
-                        'loss': f"{losses['total_loss']:.6f}",
-                        'lr': f"{self.optimizer.param_groups[0]['lr']:.2e}"
-                    })
+                        'loss': f"{losses['total_loss']:.6f}"
+                        })
                 
                 self.step += 1
             
@@ -511,7 +487,7 @@ class NerfactoTrainer:
         if self.config.use_wandb:
             wandb.finish()
     
-    def load_checkpoint(self, checkpoint_path: str):
+    def load_checkpoint(self, checkpoint_path: str) -> None:
         """Load model from checkpoint."""
         checkpoint = torch.load(checkpoint_path, map_location=self.device)
         
@@ -530,18 +506,13 @@ class NerfactoTrainer:
 
 
 def create_nerfacto_trainer(
-    data_dir: str,
-    output_dir: str = "outputs",
-    experiment_name: str = "nerfacto_experiment",
-    **kwargs
+    data_dir: str, output_dir: str = "outputs", experiment_name: str = "nerfacto_experiment", **kwargs: Any
 ) -> NerfactoTrainer:
     """Factory function to create Nerfacto trainer."""
     
     # Create configs
     trainer_config = NerfactoTrainerConfig(
-        output_dir=output_dir,
-        experiment_name=experiment_name,
-        **kwargs
+        output_dir=output_dir, experiment_name=experiment_name, **kwargs
     )
     
     model_config = NerfactoConfig()

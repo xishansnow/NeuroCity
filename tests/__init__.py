@@ -24,18 +24,14 @@ __author__ = "NeuroCity Team"
 
 # Available test modules
 TEST_MODULES = [
-    'nerfs',
-    'demos', 
-    'datagen',
-    'gfv',
-    'neuralvdb'
+    'nerfs', 'demos', 'datagen', 'gfv', 'neuralvdb'
 ]
 
-def list_test_modules():
+def list_test_modules() -> list[str]:
     """List all available test modules."""
     return TEST_MODULES
 
-def get_test_info():
+def get_test_info() -> dict[str, str]:
     """Get information about test modules."""
     return {
         'nerfs': 'Tests for all Neural Radiance Fields implementations',

@@ -1,10 +1,10 @@
 # Block-NeRF: 可扩展的大场景神经视图合成
 
-本包实现了Block-NeRF，这是一种通过将大场景分解为独立训练的NeRF块来实现可扩展神经视图合成的方法。
+本包实现了 Block-NeRF，这是一种通过将大场景分解为独立训练的 NeRF 块来实现可扩展神经视图合成的方法。
 
 ## 概述
 
-Block-NeRF通过以下方式解决了将NeRF应用到大场景的挑战：
+Block-NeRF 通过以下方式解决了将 NeRF 应用到大场景的挑战：
 - **块分解**：将场景分解为可管理的块
 - **外观嵌入**：处理光照和环境变化
 - **姿态细化**：改善相机姿态对齐
@@ -15,7 +15,7 @@ Block-NeRF通过以下方式解决了将NeRF应用到大场景的挑战：
 
 ### 核心组件
 
-- **BlockNeRF模型**：带有基于块分解的主模型
+- **BlockNeRF 模型**：带有基于块分解的主模型
 - **块管理器**：处理块组织和选择
 - **可见性网络**：预测块可见性以实现高效渲染
 - **外观嵌入**：控制环境变化
@@ -30,7 +30,7 @@ Block-NeRF通过以下方式解决了将NeRF应用到大场景的挑战：
 - ✅ 姿态细化和优化
 - ✅ 曝光和光照控制
 - ✅ 无缝块过渡
-- ✅ 多GPU训练支持
+- ✅ 多 GPU 训练支持
 
 ## 安装
 
@@ -38,7 +38,7 @@ Block-NeRF通过以下方式解决了将NeRF应用到大场景的挑战：
 # 安装依赖
 pip install torch torchvision numpy opencv-python pillow matplotlib tqdm tensorboard
 
-# 包已可从src/nerfs/block_nerf目录使用
+# 包已可从 src/nerfs/block_nerf 目录使用
 ```
 
 ## 快速开始
@@ -70,7 +70,7 @@ model = BlockNeRF(config, block_manager)
 ### 训练脚本
 
 ```bash
-# 训练Block-NeRF模型
+# 训练 Block-NeRF 模型
 python train_block_nerf.py \
     --data_dir /path/to/waymo/data \
     --exp_name waymo_block_nerf \
@@ -200,7 +200,7 @@ class VisibilityNetwork(nn.Module):
 
 ## 数据集支持
 
-### Waymo开放数据集
+### Waymo 开放数据集
 
 ```python
 from block_nerf.dataset import WaymoDataset
@@ -269,7 +269,7 @@ optimizer_nerf = torch.optim.Adam(model.parameters(), lr=5e-4)
 optimizer_poses = torch.optim.Adam(poses, lr=1e-4)
 
 for step in range(max_steps):
-    # NeRF前向传播
+    # NeRF 前向传播
     rgb_pred = model(rays_o, rays_d, block_ids, appearance_codes)
     
     # 计算损失
@@ -301,7 +301,7 @@ def composite_blocks(block_colors, block_weights, block_depths):
     # 深度排序
     sorted_indices = torch.argsort(block_depths)
     
-    # Alpha合成
+    # Alpha 合成
     final_color = torch.zeros_like(block_colors[0])
     accumulated_alpha = torch.zeros(block_colors.shape[:-1])
     
@@ -424,7 +424,7 @@ torch.nn.utils.clip_grad_norm_(model.parameters(), max_norm=1.0)
 ### 自动驾驶场景
 
 ```python
-# Waymo数据集训练
+# Waymo 数据集训练
 python train_block_nerf.py \
     --dataset waymo \
     --data_dir /path/to/waymo \
@@ -447,7 +447,7 @@ python train_block_nerf.py \
 
 ## 许可证
 
-Apache 2.0许可证
+Apache 2.0 许可证
 
 ## 引用
 
@@ -462,4 +462,4 @@ Apache 2.0许可证
 
 ## 贡献
 
-欢迎贡献代码和报告问题！请查看CONTRIBUTING.md了解详细信息。 
+欢迎贡献代码和报告问题！请查看 CONTRIBUTING.md 了解详细信息。 

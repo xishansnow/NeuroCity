@@ -7,41 +7,51 @@ import torch
 import torch.nn.functional as F
 import imageio
 import os
-from typing import Tuple, Dict, Any
+from typing import Any
 
 
-def to8b(x):
+def to8b(x: np.ndarray) -> np.ndarray:
     """Convert to 8-bit image."""
     return (255*np.clip(x, 0, 1)).astype(np.uint8)
 
 
-def img2mse(x, y):
+def img2mse(x: torch.Tensor, y: torch.Tensor) -> torch.Tensor:
     """Compute mean squared error between images."""
     return torch.mean((x - y) ** 2)
 
 
-def mse2psnr(mse):
+def mse2psnr(mse: torch.Tensor) -> torch.Tensor:
     """Convert MSE to PSNR."""
     return -10. * torch.log10(mse)
 
 
-def get_rays(H, W, K, c2w):
+def get_rays(
+    H: int,
+    W: int,
+    K: torch.Tensor,
+    c2w: torch.Tensor
+):
     """Get ray origins and directions from camera parameters."""
     i, j = torch.meshgrid(
-        torch.linspace(0, W-1, W), 
-        torch.linspace(0, H-1, H), 
-        indexing='ij'
+        torch.linspace(0, W-1, W), torch.linspace(0, H-1, H), indexing='ij'
     )
     i = i.t()
     j = j.t()
     
     dirs = torch.stack([(i-K[0][2])/K[0][0], -(j-K[1][2])/K[1][1], -torch.ones_like(i)], -1)
-    rays_d = torch.sum(dirs[..., np.newaxis, :] * c2w[:3,:3], -1)
-    rays_o = c2w[:3,-1].expand(rays_d.shape)
+    rays_d = torch.sum(dirs[..., np.newaxis, :] * c2w[:3, :3], -1)
+    rays_o = c2w[:3, -1].expand(rays_d.shape)
     return rays_o, rays_d
 
 
-def render_path(render_poses, hwf, K, chunk, render_kwargs, savedir=None):
+def render_path(
+    render_poses: torch.Tensor,
+    hwf: tuple[int, int,float],
+    K: torch.Tensor,
+    chunk: int,
+    render_kwargs: dict[str,Any],
+    savedir: str | None = None
+):
     """Render images along a path."""
     H, W, focal = hwf
     
@@ -53,8 +63,13 @@ def render_path(render_poses, hwf, K, chunk, render_kwargs, savedir=None):
         rays_o = rays_o.reshape(-1, 3)
         rays_d = rays_d.reshape(-1, 3)
         
-        rgb, disp, acc, extras = render(H, W, K, chunk=chunk, rays=torch.cat([rays_o, rays_d], -1),
-                                       **render_kwargs)
+        rgb, disp, acc, extras = render(
+            H,
+            W,
+            K,
+            chunk=chunk,
+            rays=torch.cat,
+        )
         rgbs.append(rgb.cpu().numpy())
         disps.append(disp.cpu().numpy())
         
@@ -69,8 +84,20 @@ def render_path(render_poses, hwf, K, chunk, render_kwargs, savedir=None):
     return rgbs, disps
 
 
-def render(H, W, K, chunk=1024*32, rays=None, c2w=None, ndc=True,
-           near=0., far=1., use_viewdirs=False, c2w_staticcam=None, **kwargs):
+def render(
+    H: int,
+    W: int,
+    K: torch.Tensor,
+    chunk: int = 1024*32,
+    rays: torch.Tensor | None = None,
+    c2w: torch.Tensor | None = None,
+    ndc: bool = True,
+    near: float = 0.,
+    far: float = 1.,
+    use_viewdirs: bool = False,
+    c2w_staticcam: torch.Tensor | None = None,
+    **kwargs
+):
     """Render rays."""
     if c2w is not None:
         # Special case to render full image
@@ -114,7 +141,11 @@ def render(H, W, K, chunk=1024*32, rays=None, c2w=None, ndc=True,
     return ret_list + [ret_dict]
 
 
-def batchify_rays(rays_flat, chunk=1024*32, **kwargs):
+def batchify_rays(
+    rays_flat: torch.Tensor,
+    chunk: int = 1024*32,
+    **kwargs
+):
     """Render rays in smaller minibatches to avoid OOM."""
     all_ret = {}
     for i in range(0, rays_flat.shape[0], chunk):
@@ -128,7 +159,14 @@ def batchify_rays(rays_flat, chunk=1024*32, **kwargs):
     return all_ret
 
 
-def ndc_rays(H, W, K, near, rays_o, rays_d):
+def ndc_rays(
+    H: int,
+    W: int,
+    K: torch.Tensor,
+    near: float,
+    rays_o: torch.Tensor,
+    rays_d: torch.Tensor
+):
     """Normalized device coordinate rays."""
     # Shift ray origins to near plane
     t = -(near + rays_o[..., 2]) / rays_d[..., 2]
@@ -149,33 +187,22 @@ def ndc_rays(H, W, K, near, rays_o, rays_d):
     return rays_o, rays_d
 
 
-def create_spherical_poses(radius=4.0, n_poses=120):
+def create_spherical_poses(radius: float = 4.0, n_poses: int = 120) -> torch.Tensor:
     """Create spherical camera poses for rendering."""
-    def trans_t(t):
+    def trans_t(t: float) -> torch.Tensor:
         return torch.tensor([
-            [1, 0, 0, 0],
-            [0, 1, 0, 0], 
-            [0, 0, 1, t],
-            [0, 0, 0, 1]
+            [1, 0, 0, 0], [0, 1, 0, 0], [0, 0, 1, t], [0, 0, 0, 1]
         ], dtype=torch.float32)
 
-    def rot_phi(phi):
+    def rot_phi(phi: float) -> torch.Tensor:
         return torch.tensor([
-            [1, 0, 0, 0],
-            [0, np.cos(phi), -np.sin(phi), 0],
-            [0, np.sin(phi), np.cos(phi), 0],
-            [0, 0, 0, 1]
-        ], dtype=torch.float32)
+            [1, 0, 0, 0], [0, np.cos(phi), -np.sin(phi), 0], [0, np.sin(phi), np.cos(phi), 0], [0, 0, 0, 1]], dtype=torch.float32)
 
-    def rot_theta(th):
+    def rot_theta(th: float) -> torch.Tensor:
         return torch.tensor([
-            [np.cos(th), 0, -np.sin(th), 0],
-            [0, 1, 0, 0],
-            [np.sin(th), 0, np.cos(th), 0],
-            [0, 0, 0, 1]
-        ], dtype=torch.float32)
+            [np.cos(th), 0, -np.sin(th), 0], [0, 1, 0, 0], [np.sin(th), 0, np.cos(th), 0], [0, 0, 0, 1]], dtype=torch.float32)
 
-    def pose_spherical(theta, phi, radius):
+    def pose_spherical(theta: float, phi: float, radius: float) -> torch.Tensor:
         c2w = trans_t(radius)
         c2w = rot_phi(phi / 180. * np.pi) @ c2w
         c2w = rot_theta(theta / 180. * np.pi) @ c2w
@@ -189,14 +216,14 @@ def create_spherical_poses(radius=4.0, n_poses=120):
     return torch.stack(render_poses, 0)
 
 
-def visualize_depth(depth, near=2.0, far=6.0):
+def visualize_depth(depth: np.ndarray, near: float = 2.0, far: float = 6.0) -> np.ndarray:
     """Visualize depth map."""
     depth_vis = (depth - near) / (far - near)
     depth_vis = np.clip(depth_vis, 0, 1)
     return depth_vis
 
 
-def compute_ssim(img1, img2):
+def compute_ssim(img1: torch.Tensor | np.ndarray, img2: torch.Tensor | np.ndarray) -> float:
     """Compute SSIM between two images."""
     # Convert to tensors if needed
     if isinstance(img1, np.ndarray):
@@ -230,7 +257,7 @@ def compute_ssim(img1, img2):
     return ssim_map.mean().item()
 
 
-def save_image_grid(images, save_path, nrow=4):
+def save_image_grid(images: torch.Tensor | np.ndarray, save_path: str, nrow: int = 4) -> None:
     """Save a grid of images."""
     from torchvision.utils import make_grid
     
@@ -248,7 +275,7 @@ def save_image_grid(images, save_path, nrow=4):
     imageio.imwrite(save_path, grid_np)
 
 
-def load_config_from_args(args):
+def load_config_from_args(args: Any) -> Any:
     """Load NeRF config from command line arguments."""
     from .core import NeRFConfig
     

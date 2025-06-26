@@ -24,13 +24,8 @@ class MultiScaleRenderer(nn.Module):
         self.white_background = False
         
     def render(
-        self,
-        rgb: torch.Tensor,
-        sigma: torch.Tensor,
-        z_vals: torch.Tensor,
-        rays_d: torch.Tensor,
-        noise_std: float = 0.0
-    ) -> Dict[str, torch.Tensor]:
+        self, rgb: torch.Tensor, sigma: torch.Tensor, z_vals: torch.Tensor, rays_d: torch.Tensor, noise_std: float = 0.0
+    ) -> dict[str, torch.Tensor]:
         """
         Volume rendering with alpha compositing
         
@@ -47,8 +42,7 @@ class MultiScaleRenderer(nn.Module):
         # Calculate distances between samples
         dists = z_vals[..., 1:] - z_vals[..., :-1]
         dists = torch.cat([
-            dists,
-            torch.full_like(dists[..., :1], 1e10)
+            dists, torch.full_like(dists[..., :1], 1e10)
         ], dim=-1)
         
         # Apply ray direction magnitude
@@ -65,10 +59,8 @@ class MultiScaleRenderer(nn.Module):
         # Calculate transmittance
         transmittance = torch.cumprod(
             torch.cat([
-                torch.ones_like(alpha[..., :1]),
-                1.0 - alpha[..., :-1]
-            ], dim=-1),
-            dim=-1
+                torch.ones_like(alpha[..., :1]), 1.0 - alpha[..., :-1]
+            ], dim=-1), dim=-1
         )
         
         # Calculate weights
@@ -89,29 +81,16 @@ class MultiScaleRenderer(nn.Module):
         
         # Calculate disparity map
         disp_map = 1.0 / torch.max(
-            1e-10 * torch.ones_like(depth_map),
-            depth_map / acc_map
+            1e-10 * torch.ones_like(depth_map), depth_map / acc_map
         )
         
         return {
-            "rgb": rgb_map,
-            "depth": depth_map,
-            "acc": acc_map,
-            "weights": weights,
-            "disp": disp_map,
-            "transmittance": transmittance,
-            "alpha": alpha
+            "rgb": rgb_map, "depth": depth_map, "acc": acc_map, "weights": weights, "disp": disp_map, "transmittance": transmittance, "alpha": alpha
         }
     
     def render_multiscale(
-        self,
-        rgb_scales: List[torch.Tensor],
-        sigma_scales: List[torch.Tensor],
-        z_vals: torch.Tensor,
-        rays_d: torch.Tensor,
-        distances: torch.Tensor,
-        scale_thresholds: List[float]
-    ) -> Dict[str, torch.Tensor]:
+        self, rgb_scales: list[torch.Tensor], sigma_scales: list[torch.Tensor], z_vals: torch.Tensor, rays_d: torch.Tensor, distances: torch.Tensor, scale_thresholds: list[float]
+    ) -> dict[str, torch.Tensor]:
         """
         Render with multiple scales based on distance
         
@@ -167,10 +146,7 @@ class LevelOfDetailRenderer(nn.Module):
     """
     
     def __init__(
-        self,
-        config,
-        num_lod_levels: int = 4,
-        lod_thresholds: List[float] = None
+        self, config, num_lod_levels: int = 4, lod_thresholds: list[float] = None
     ):
         super().__init__()
         
@@ -207,12 +183,8 @@ class LevelOfDetailRenderer(nn.Module):
         return lod_levels
     
     def adaptive_sampling(
-        self,
-        rays_o: torch.Tensor,
-        rays_d: torch.Tensor,
-        bounds: torch.Tensor,
-        distances: torch.Tensor
-    ) -> Tuple[torch.Tensor, torch.Tensor]:
+        self, rays_o: torch.Tensor, rays_d: torch.Tensor, bounds: torch.Tensor, distances: torch.Tensor
+    ) -> tuple[torch.Tensor, torch.Tensor]:
         """
         Adaptive sampling based on level-of-detail
         
@@ -272,13 +244,8 @@ class LevelOfDetailRenderer(nn.Module):
         return all_points, all_z_vals
     
     def forward(
-        self,
-        model: nn.Module,
-        rays_o: torch.Tensor,
-        rays_d: torch.Tensor,
-        bounds: torch.Tensor,
-        distances: torch.Tensor
-    ) -> Dict[str, torch.Tensor]:
+        self, model: nn.Module, rays_o: torch.Tensor, rays_d: torch.Tensor, bounds: torch.Tensor, distances: torch.Tensor
+    ) -> dict[str, torch.Tensor]:
         """
         Forward pass with level-of-detail rendering
         
@@ -322,7 +289,7 @@ class ProgressiveRenderer(nn.Module):
         """Set current training stage"""
         self.current_stage = stage
     
-    def get_stage_params(self) -> Tuple[int, float]:
+    def get_stage_params(self) -> tuple[int, float]:
         """Get parameters for current stage"""
         stage = min(self.current_stage, len(self.stage_sample_counts) - 1)
         
@@ -332,12 +299,8 @@ class ProgressiveRenderer(nn.Module):
         return num_samples, noise_level
     
     def render(
-        self,
-        rgb: torch.Tensor,
-        sigma: torch.Tensor,
-        z_vals: torch.Tensor,
-        rays_d: torch.Tensor
-    ) -> Dict[str, torch.Tensor]:
+        self, rgb: torch.Tensor, sigma: torch.Tensor, z_vals: torch.Tensor, rays_d: torch.Tensor
+    ) -> dict[str, torch.Tensor]:
         """
         Progressive rendering based on current stage
         
@@ -356,7 +319,13 @@ class ProgressiveRenderer(nn.Module):
         # Subsample if needed
         if rgb.shape[1] > num_samples:
             # Uniform subsampling
-            indices = torch.linspace(0, rgb.shape[1] - 1, num_samples, dtype=torch.long, device=rgb.device)
+            indices = torch.linspace(
+                0,
+                rgb.shape[1] - 1,
+                num_samples,
+                dtype=torch.long,
+                device=rgb.device,
+            )
             rgb = rgb[:, indices]
             sigma = sigma[:, indices]
             z_vals = z_vals[:, indices]
@@ -371,11 +340,7 @@ class HierarchicalRenderer(nn.Module):
     """
     
     def __init__(
-        self,
-        config,
-        num_coarse: int = 64,
-        num_fine: int = 128,
-        use_viewdirs: bool = True
+        self, config, num_coarse: int = 64, num_fine: int = 128, use_viewdirs: bool = True
     ):
         super().__init__()
         
@@ -388,11 +353,7 @@ class HierarchicalRenderer(nn.Module):
         self.base_renderer = MultiScaleRenderer(config)
     
     def importance_sample(
-        self,
-        z_vals: torch.Tensor,
-        weights: torch.Tensor,
-        num_samples: int,
-        det: bool = False
+        self, z_vals: torch.Tensor, weights: torch.Tensor, num_samples: int, det: bool = False
     ) -> torch.Tensor:
         """
         Importance sampling based on coarse weights
@@ -443,13 +404,8 @@ class HierarchicalRenderer(nn.Module):
         return samples
     
     def forward(
-        self,
-        model: nn.Module,
-        rays_o: torch.Tensor,
-        rays_d: torch.Tensor,
-        bounds: torch.Tensor,
-        distances: Optional[torch.Tensor] = None
-    ) -> Dict[str, torch.Tensor]:
+        self, model: nn.Module, rays_o: torch.Tensor, rays_d: torch.Tensor, bounds: torch.Tensor, distances: Optional[torch.Tensor] = None
+    ) -> dict[str, torch.Tensor]:
         """
         Hierarchical rendering with coarse-to-fine sampling
         
@@ -473,10 +429,7 @@ class HierarchicalRenderer(nn.Module):
             
             # Importance sample fine points
             z_vals_fine = self.importance_sample(
-                z_vals_coarse,
-                coarse_outputs["weights"],
-                self.num_fine,
-                det=not self.training
+                z_vals_coarse, coarse_outputs["weights"], self.num_fine, det=not self.training
             )
             
             # Combine coarse and fine samples

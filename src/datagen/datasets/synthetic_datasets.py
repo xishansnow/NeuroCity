@@ -7,7 +7,7 @@
 import torch
 from torch.utils.data import Dataset
 import numpy as np
-from typing import Tuple, Dict, Optional, List
+from typing import Dict, List, Optional, Tuple
 import logging
 
 logger = logging.getLogger(__name__)
@@ -16,10 +16,12 @@ logger = logging.getLogger(__name__)
 class SyntheticVoxelDataset(Dataset):
     """合成体素数据集"""
     
-    def __init__(self, 
-                 coordinates: np.ndarray,
-                 labels: np.ndarray,
-                 transform: Optional[callable] = None):
+    def __init__(
+        self,
+        coordinates: np.ndarray,
+        labels: np.ndarray,
+        transform: Optional[callable] = None,
+    )
         """
         初始化合成体素数据集
         
@@ -48,10 +50,12 @@ class SyntheticVoxelDataset(Dataset):
 class SDFDataset(Dataset):
     """SDF数据集"""
     
-    def __init__(self, 
-                 coordinates: np.ndarray,
-                 sdf_values: np.ndarray,
-                 transform: Optional[callable] = None):
+    def __init__(
+        self,
+        coordinates: np.ndarray,
+        sdf_values: np.ndarray,
+        transform: Optional[callable] = None,
+    )
         """
         初始化SDF数据集
         
@@ -80,10 +84,12 @@ class SDFDataset(Dataset):
 class OccupancyDataset(Dataset):
     """占用网格数据集"""
     
-    def __init__(self, 
-                 coordinates: np.ndarray,
-                 occupancy: np.ndarray,
-                 transform: Optional[callable] = None):
+    def __init__(
+        self,
+        coordinates: np.ndarray,
+        occupancy: np.ndarray,
+        transform: Optional[callable] = None,
+    )
         """
         初始化占用数据集
         
@@ -112,11 +118,13 @@ class OccupancyDataset(Dataset):
 class MultiModalDataset(Dataset):
     """多模态数据集"""
     
-    def __init__(self,
-                 coordinates: np.ndarray,
-                 sdf_values: np.ndarray,
-                 occupancy: np.ndarray,
-                 normals: Optional[np.ndarray] = None):
+    def __init__(
+        self,
+        coordinates: np.ndarray,
+        sdf_values: np.ndarray,
+        occupancy: np.ndarray,
+        normals: Optional[np.ndarray] = None,
+    )
         """
         初始化多模态数据集
         
@@ -140,9 +148,7 @@ class MultiModalDataset(Dataset):
     
     def __getitem__(self, idx):
         result = {
-            'coordinates': self.coordinates[idx],
-            'sdf': self.sdf_values[idx],
-            'occupancy': self.occupancy[idx]
+            'coordinates': self.coordinates[idx], 'sdf': self.sdf_values[idx], 'occupancy': self.occupancy[idx]
         }
         
         if self.normals is not None:

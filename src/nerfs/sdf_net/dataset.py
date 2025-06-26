@@ -8,7 +8,7 @@ import torch.utils.data as data
 import numpy as np
 import json
 import os
-from typing import Dict, List, Tuple, Optional, Union
+from typing import Dict, List, Optional, Tuple, Any, Union
 import trimesh
 from scipy.spatial.distance import cdist
 
@@ -30,18 +30,7 @@ class SDFDataset(data.Dataset):
     """
     
     def __init__(
-        self,
-        data_root: str,
-        split: str = 'train',
-        num_points: int = 100000,
-        surface_sampling: float = 0.4,
-        near_surface_sampling: float = 0.4,
-        uniform_sampling: float = 0.2,
-        surface_std: float = 0.01,
-        near_surface_std: float = 0.1,
-        bbox_size: float = 1.1,
-        clamp_distance: float = 0.1,
-        transform: Optional = None
+        self, data_root: str, split: str = 'train', num_points: int = 100000, surface_sampling: float = 0.4, near_surface_sampling: float = 0.4, uniform_sampling: float = 0.2, surface_std: float = 0.01, near_surface_std: float = 0.1, bbox_size: float = 1.1, clamp_distance: float = 0.1, transform: Optional = None
     ):
         self.data_root = data_root
         self.split = split
@@ -68,7 +57,7 @@ class SDFDataset(data.Dataset):
         
         print(f"Loaded {len(self.data_list)} {split} samples")
     
-    def _load_data_list(self) -> List[Dict]:
+    def _load_data_list(self) -> list[Dict]:
         """加载数据列表"""
         split_file = os.path.join(self.data_root, f'{self.split}.json')
         
@@ -83,8 +72,10 @@ class SDFDataset(data.Dataset):
                 for filename in os.listdir(mesh_dir):
                     if filename.endswith(('.obj', '.ply', '.off')):
                         data_list.append({
-                            'mesh_path': os.path.join(mesh_dir, filename),
-                            'shape_id': filename.split('.')[0]
+                            'mesh_path': os.path.join(
+                                mesh_dir,
+                                filename,
+                            )
                         })
         
         return data_list
@@ -92,7 +83,7 @@ class SDFDataset(data.Dataset):
     def __len__(self) -> int:
         return len(self.data_list)
     
-    def __getitem__(self, idx: int) -> Dict[str, torch.Tensor]:
+    def __getitem__(self, idx: int) -> dict[str, torch.Tensor]:
         """获取数据样本
         
         Returns:
@@ -109,9 +100,9 @@ class SDFDataset(data.Dataset):
         
         # 构建样本
         sample = {
-            'points': torch.from_numpy(points).float(),
-            'sdf': torch.from_numpy(sdf).float(),
-            'shape_id': data_info.get('shape_id', idx)
+            'points': torch.from_numpy(
+                points,
+            )
         }
         
         if self.transform:
@@ -154,9 +145,8 @@ class SDFDataset(data.Dataset):
         return mesh
     
     def _sample_points(
-        self,
-        mesh: trimesh.Trimesh
-    ) -> Tuple[np.ndarray, np.ndarray]:
+        self, mesh: trimesh.Trimesh
+    ) -> tuple[np.ndarray, np.ndarray]:
         """采样点和SDF标签
         
         Args:
@@ -204,9 +194,7 @@ class SDFDataset(data.Dataset):
         return points, sdf.reshape(-1, 1)
     
     def _sample_surface_points(
-        self,
-        mesh: trimesh.Trimesh,
-        num_points: int
+        self, mesh: trimesh.Trimesh, num_points: int
     ) -> np.ndarray:
         """在表面采样点"""
         try:
@@ -230,9 +218,7 @@ class SDFDataset(data.Dataset):
                 return vertices[indices]
     
     def _sample_near_surface_points(
-        self,
-        mesh: trimesh.Trimesh,
-        num_points: int
+        self, mesh: trimesh.Trimesh, num_points: int
     ) -> np.ndarray:
         """在表面附近采样点"""
         try:
@@ -251,15 +237,12 @@ class SDFDataset(data.Dataset):
     def _sample_uniform_points(self, num_points: int) -> np.ndarray:
         """均匀采样空间点"""
         points = np.random.uniform(
-            -self.bbox_size, self.bbox_size,
-            (num_points, 3)
+            -self.bbox_size, self.bbox_size, (num_points, 3)
         )
         return points
     
     def _compute_sdf(
-        self,
-        mesh: trimesh.Trimesh,
-        points: np.ndarray
+        self, mesh: trimesh.Trimesh, points: np.ndarray
     ) -> np.ndarray:
         """计算点的SDF值"""
         try:
@@ -295,11 +278,7 @@ class SyntheticSDFDataset(data.Dataset):
     """
     
     def __init__(
-        self,
-        num_samples: int = 1000,
-        num_points: int = 10000,
-        shape_types: List[str] = ['sphere', 'cube', 'cylinder'],
-        **kwargs
+        self, num_samples: int = 1000, num_points: int = 10000, shape_types: list[str] = ['sphere', 'cube', 'cylinder'], **kwargs
     ):
         self.num_samples = num_samples
         self.num_points = num_points
@@ -310,7 +289,7 @@ class SyntheticSDFDataset(data.Dataset):
     def __len__(self) -> int:
         return self.num_samples
     
-    def __getitem__(self, idx: int) -> Dict[str, torch.Tensor]:
+    def __getitem__(self, idx: int) -> dict[str, torch.Tensor]:
         """生成合成数据样本"""
         # 随机选择形状类型
         shape_type = np.random.choice(self.shape_types)
@@ -330,16 +309,11 @@ class SyntheticSDFDataset(data.Dataset):
         return {
             'points': torch.from_numpy(points).float(),
             'sdf': torch.from_numpy(sdf).float(),
-            'shape_id': f"{shape_type}_{idx}",
-            'shape_type': shape_type
+            'shape_id': f"{shape_type}",
         }
     
     def _compute_synthetic_sdf(
-        self,
-        points: np.ndarray,
-        shape_type: str,
-        scale: float,
-        center: np.ndarray
+        self, points: np.ndarray, shape_type: str, scale: float, center: np.ndarray
     ) -> np.ndarray:
         """计算合成形状的SDF"""
         # 将点转换到形状坐标系
@@ -381,11 +355,7 @@ class LatentSDFDataset(data.Dataset):
     """
     
     def __init__(
-        self,
-        data_root: str,
-        split: str = 'train',
-        latent_codes_path: Optional[str] = None,
-        **kwargs
+        self, data_root: str, split: str = 'train', latent_codes_path: Optional[str] = None, **kwargs
     ):
         super().__init__()
         
@@ -401,7 +371,7 @@ class LatentSDFDataset(data.Dataset):
     def __len__(self) -> int:
         return len(self.base_dataset)
     
-    def __getitem__(self, idx: int) -> Dict[str, torch.Tensor]:
+    def __getitem__(self, idx: int) -> dict[str, torch.Tensor]:
         """获取带潜在编码的数据样本"""
         sample = self.base_dataset[idx]
         
@@ -431,11 +401,7 @@ class LatentSDFDataset(data.Dataset):
 
 
 def create_sdf_dataloader(
-    dataset: data.Dataset,
-    batch_size: int = 8,
-    shuffle: bool = True,
-    num_workers: int = 4,
-    **kwargs
+    dataset: data.Dataset, batch_size: int = 8, shuffle: bool = True, num_workers: int = 4, **kwargs
 ) -> data.DataLoader:
     """创建SDF网络数据加载器"""
     
@@ -446,9 +412,7 @@ def create_sdf_dataloader(
         shape_ids = [item['shape_id'] for item in batch]
         
         batch_dict = {
-            'points': points,
-            'sdf': sdf,
-            'shape_ids': shape_ids
+            'points': points, 'sdf': sdf, 'shape_ids': shape_ids
         }
         
         # 添加其他可能的键
@@ -461,12 +425,7 @@ def create_sdf_dataloader(
         return batch_dict
     
     return data.DataLoader(
-        dataset,
-        batch_size=batch_size,
-        shuffle=shuffle,
-        num_workers=num_workers,
-        collate_fn=collate_fn,
-        **kwargs
+        dataset, batch_size=batch_size, shuffle=shuffle, num_workers=num_workers, collate_fn=collate_fn, **kwargs
     )
 
 
@@ -496,9 +455,7 @@ class RandomRotationSDF(SDFTransform):
         
         # 创建反对称矩阵
         K = np.array([
-            [0, -axis[2], axis[1]],
-            [axis[2], 0, -axis[0]],
-            [-axis[1], axis[0], 0]
+            [0, -axis[2], axis[1]], [axis[2], 0, -axis[0]], [-axis[1], axis[0], 0]
         ])
         
         # 旋转矩阵
@@ -528,7 +485,7 @@ class RandomNoiseSDF(SDFTransform):
 class ComposeSDF(SDFTransform):
     """组合多个变换"""
     
-    def __init__(self, transforms: List[SDFTransform]):
+    def __init__(self, transforms: list[SDFTransform]):
         self.transforms = transforms
     
     def __call__(self, sample: Dict) -> Dict:

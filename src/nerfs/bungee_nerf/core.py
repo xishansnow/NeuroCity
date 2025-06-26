@@ -6,7 +6,7 @@ Implements the main BungeeNeRF model with progressive training blocks
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-from typing import Dict, List, Optional, Tuple, Union
+from typing import Dict, List, Optional, Tuple, Any, Union
 from dataclasses import dataclass
 import numpy as np
 import logging
@@ -35,7 +35,7 @@ class BungeeNeRFConfig:
     # MLP architecture
     hidden_dim: int = 256
     num_layers: int = 8
-    skip_layers: List[int] = None
+    skip_layers: list[int] = None
     
     # Progressive blocks
     block_hidden_dim: int = 128
@@ -52,8 +52,8 @@ class BungeeNeRFConfig:
     perturb: bool = True
     
     # Multi-scale parameters
-    scale_weights: List[float] = None
-    distance_thresholds: List[float] = None
+    scale_weights: list[float] = None
+    distance_thresholds: list[float] = None
     
     # Loss weights
     color_loss_weight: float = 1.0
@@ -75,12 +75,7 @@ class ProgressiveBlock(nn.Module):
     """
     
     def __init__(
-        self,
-        input_dim: int,
-        hidden_dim: int = 128,
-        num_layers: int = 4,
-        output_dim: int = 3,
-        activation: str = "relu"
+        self, input_dim: int, hidden_dim: int = 128, num_layers: int = 4, output_dim: int = 3, activation: str = "relu"
     ):
         super().__init__()
         
@@ -149,9 +144,7 @@ class BungeeNeRF(nn.Module):
         
         # Progressive positional encoder
         self.pos_encoder = ProgressivePositionalEncoder(
-            num_freqs_base=config.num_freqs_base,
-            num_freqs_max=config.num_freqs_max,
-            include_input=config.include_input
+            num_freqs_base=config.num_freqs_base, num_freqs_max=config.num_freqs_max, include_input=config.include_input
         )
         
         # Base MLP network
@@ -164,7 +157,7 @@ class BungeeNeRF(nn.Module):
         # Multi-scale renderer
         self.renderer = MultiScaleRenderer(config)
         
-        logger.info(f"BungeeNeRF initialized with {self.count_parameters():,} parameters")
+        logger.info(f"BungeeNeRF initialized with {self.count_parameters():, } parameters")
     
     def _build_base_mlp(self, input_dim: int, config: BungeeNeRFConfig) -> nn.Module:
         """Build base MLP network"""
@@ -193,9 +186,7 @@ class BungeeNeRF(nn.Module):
         sigma_layer = nn.Linear(config.hidden_dim, 1)
         
         return nn.ModuleDict({
-            'backbone': nn.Sequential(*layers),
-            'rgb_head': rgb_layer,
-            'sigma_head': sigma_layer
+            'backbone': nn.Sequential(*layers), 'rgb_head': rgb_layer, 'sigma_head': sigma_layer
         })
     
     def add_progressive_block(self, stage: int):
@@ -207,10 +198,7 @@ class BungeeNeRF(nn.Module):
             
             # Create new progressive block
             block = ProgressiveBlock(
-                input_dim=base_features,
-                hidden_dim=self.config.block_hidden_dim,
-                num_layers=self.config.block_num_layers,
-                output_dim=3  # RGB output
+                input_dim=base_features, hidden_dim=self.config.block_hidden_dim, num_layers=self.config.block_num_layers, output_dim=3  # RGB output
             )
             
             self.progressive_blocks.append(block)
@@ -231,12 +219,8 @@ class BungeeNeRF(nn.Module):
         logger.info(f"Set current stage to {stage}")
     
     def forward(
-        self,
-        rays_o: torch.Tensor,
-        rays_d: torch.Tensor,
-        bounds: torch.Tensor,
-        distances: Optional[torch.Tensor] = None
-    ) -> Dict[str, torch.Tensor]:
+        self, rays_o: torch.Tensor, rays_d: torch.Tensor, bounds: torch.Tensor, distances: Optional[torch.Tensor] = None
+    ) -> dict[str, torch.Tensor]:
         """
         Forward pass through BungeeNeRF
         
@@ -282,7 +266,8 @@ class BungeeNeRF(nn.Module):
             for stage, block in enumerate(self.progressive_blocks):
                 if stage <= self.current_stage:
                     # Apply block based on distance threshold
-                    threshold = self.config.distance_thresholds[min(stage, len(self.config.distance_thresholds) - 1)]
+                    threshold = self.config.distance_thresholds[min(stage, len(self.config.distance_thresholds))]
+                    
                     mask = distances_expanded < threshold
                     
                     if mask.any():
@@ -293,7 +278,7 @@ class BungeeNeRF(nn.Module):
                             block_rgb = torch.sigmoid(block(block_features))
                             
                             # Blend with base RGB
-                            weight = self.config.scale_weights[min(stage, len(self.config.scale_weights) - 1)]
+                            weight = self.config.scale_weights[min(stage, len(self.config.scale_weights))]
                             rgb_final[mask] = rgb_final[mask] * (1 - weight) + block_rgb * weight
         
         # Reshape back to ray format
@@ -305,7 +290,7 @@ class BungeeNeRF(nn.Module):
         
         return outputs
     
-    def _forward_base_mlp(self, x: torch.Tensor) -> Dict[str, torch.Tensor]:
+    def _forward_base_mlp(self, x: torch.Tensor) -> dict[str, torch.Tensor]:
         """Forward pass through base MLP"""
         
         # Store input for skip connections
@@ -325,16 +310,11 @@ class BungeeNeRF(nn.Module):
         sigma = self.base_mlp['sigma_head'](features)
         
         return {
-            'backbone': features,
-            'rgb': rgb,
-            'sigma': sigma
+            'backbone': features, 'rgb': rgb, 'sigma': sigma
         }
     
     def _sample_along_rays(
-        self,
-        rays_o: torch.Tensor,
-        rays_d: torch.Tensor,
-        bounds: torch.Tensor
+        self, rays_o: torch.Tensor, rays_d: torch.Tensor, bounds: torch.Tensor
     ) -> torch.Tensor:
         """Sample points along rays"""
         
@@ -366,14 +346,12 @@ class BungeeNeRF(nn.Module):
         """Count total number of parameters"""
         return sum(p.numel() for p in self.parameters() if p.requires_grad)
     
-    def get_progressive_info(self) -> Dict[str, any]:
+    def get_progressive_info(self) -> dict[str, any]:
         """Get information about progressive structure"""
         return {
-            "current_stage": self.current_stage,
-            "num_stages": self.config.num_stages,
-            "num_progressive_blocks": len(self.progressive_blocks),
-            "total_parameters": self.count_parameters(),
-            "pos_encoder_freqs": self.pos_encoder.get_current_freqs()
+            "current_stage": self.current_stage, "num_stages": self.config.num_stages, "num_progressive_blocks": len(
+                self.progressive_blocks
+            )
         }
 
 
@@ -387,11 +365,8 @@ class BungeeNeRFLoss(nn.Module):
         self.config = config
     
     def forward(
-        self,
-        outputs: Dict[str, torch.Tensor],
-        targets: Dict[str, torch.Tensor],
-        stage: int = 0
-    ) -> Dict[str, torch.Tensor]:
+        self, outputs: dict[str, torch.Tensor], targets: dict[str, torch.Tensor], stage: int = 0
+    ) -> dict[str, torch.Tensor]:
         """
         Compute BungeeNeRF loss
         

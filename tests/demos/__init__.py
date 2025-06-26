@@ -16,10 +16,9 @@ Author: NeuroCity Team
 
 # Available demo tests
 DEMO_TESTS = [
-    'test_gfv_basic',
-    'quick_test'
+    'test_gfv_basic', 'quick_test'
 ]
 
-def list_demo_tests():
+def list_demo_tests() -> list[str]:
     """List all available demo tests."""
     return DEMO_TESTS 

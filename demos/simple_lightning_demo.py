@@ -61,7 +61,7 @@ class SimpleNeRF(pl.LightningModule):
         encoded.append(x)  # 原始坐标
         return torch.cat(encoded, dim=-1)
     
-    def forward(self, positions: torch.Tensor) -> Dict[str, torch.Tensor]:
+    def forward(self, positions: torch.Tensor) -> dict[str, torch.Tensor]:
         """前向传播"""
         # 位置编码
         encoded_pos = self.positional_encoding(positions)
@@ -74,11 +74,10 @@ class SimpleNeRF(pl.LightningModule):
         color = torch.sigmoid(output[..., 1:])  # 颜色 [0, 1]
         
         return {
-            'density': density,
-            'color': color
+            'density': density, 'color': color
         }
     
-    def training_step(self, batch: Dict[str, torch.Tensor], batch_idx: int) -> torch.Tensor:
+    def training_step(self, batch: dict[str, torch.Tensor], batch_idx: int) -> torch.Tensor:
         """训练步骤"""
         positions = batch['positions']  # [N, 3]
         target_colors = batch['colors']  # [N, 3]
@@ -98,7 +97,12 @@ class SimpleNeRF(pl.LightningModule):
         
         return color_loss
     
-    def validation_step(self, batch: Dict[str, torch.Tensor], batch_idx: int) -> Dict[str, torch.Tensor]:
+    def validation_step(
+        self,
+        batch: dict[str,
+        torch.Tensor],
+        batch_idx: int,
+    )
         """验证步骤"""
         positions = batch['positions']
         target_colors = batch['colors']
@@ -117,8 +121,7 @@ class SimpleNeRF(pl.LightningModule):
         self.log('val/psnr', psnr, on_step=False, on_epoch=True, prog_bar=True)
         
         return {
-            'val_loss': val_loss,
-            'val_psnr': psnr
+            'val_loss': val_loss, 'val_psnr': psnr
         }
     
     def on_validation_epoch_end(self):
@@ -129,8 +132,7 @@ class SimpleNeRF(pl.LightningModule):
     def configure_optimizers(self):
         """配置优化器和调度器"""
         optimizer = torch.optim.Adam(
-            self.parameters(),
-            lr=self.config.learning_rate
+            self.parameters(), lr=self.config.learning_rate
         )
         
         scheduler = torch.optim.lr_scheduler.ExponentialLR(
@@ -138,10 +140,8 @@ class SimpleNeRF(pl.LightningModule):
         )
         
         return {
-            "optimizer": optimizer,
-            "lr_scheduler": {
-                "scheduler": scheduler,
-                "interval": "epoch"
+            "optimizer": optimizer, "lr_scheduler": {
+                "scheduler": scheduler, "interval": "epoch"
             }
         }
 
@@ -160,11 +160,10 @@ class MockNeRFDataset(torch.utils.data.Dataset):
         position = torch.randn(3) * 2  # [-2, 2] 范围内的位置
         
         # 简单的颜色函数：基于位置生成颜色
-        color = torch.sigmoid(position)  # 将位置映射到[0,1]颜色
+        color = torch.sigmoid(position)  # 将位置映射到[0, 1]颜色
         
         return {
-            'positions': position,
-            'colors': color
+            'positions': position, 'colors': color
         }
 
 
@@ -176,10 +175,7 @@ def demonstrate_lightning_advantages():
     
     # 1. 创建配置
     config = SimpleNeRFConfig(
-        hidden_dim=64,
-        num_layers=3,
-        learning_rate=1e-3,
-        pe_freq=6
+        hidden_dim=64, num_layers=3, learning_rate=1e-3, pe_freq=6
     )
     
     # 2. 创建模型
@@ -199,41 +195,27 @@ def demonstrate_lightning_advantages():
     # 4. 创建回调函数
     callbacks = [
         ModelCheckpoint(
-            dirpath="checkpoints/simple_nerf",
-            filename="best-{epoch:02d}-{val/psnr:.2f}",
-            monitor="val/psnr",
-            mode="max",
-            save_top_k=3
-        ),
-        EarlyStopping(
-            monitor="val/psnr",
-            mode="max",
-            patience=20,
-            verbose=True
-        ),
-        LearningRateMonitor(logging_interval="epoch")
+            dirpath="checkpoints/simple_nerf", filename="best-{
+                epoch:02d,
+            }
+        ), EarlyStopping(
+            monitor="val/psnr", mode="max", patience=20, verbose=True
+        ), LearningRateMonitor(logging_interval="epoch")
     ]
     
     # 5. 创建日志记录器
     logger = TensorBoardLogger(
-        save_dir="logs",
-        name="simple_nerf",
-        version="demo"
+        save_dir="logs", name="simple_nerf", version="demo"
     )
     
     # 6. 创建训练器（这里展示Lightning的强大功能）
     trainer = pl.Trainer(
-        max_epochs=50,
-        devices=1,  # 使用1个GPU（如果可用）
-        accelerator="auto",  # 自动选择硬件
-        precision="16-mixed",  # 混合精度训练
-        callbacks=callbacks,
-        logger=logger,
-        gradient_clip_val=1.0,  # 梯度裁剪
-        log_every_n_steps=10,
-        val_check_interval=0.5,  # 每半个epoch验证一次
-        enable_progress_bar=True,
-        enable_model_summary=True
+        max_epochs=50, devices=1, # 使用1个GPU（如果可用）
+        accelerator="auto", # 自动选择硬件
+        precision="16-mixed", # 混合精度训练
+        callbacks=callbacks, logger=logger, gradient_clip_val=1.0, # 梯度裁剪
+        log_every_n_steps=10, val_check_interval=0.5, # 每半个epoch验证一次
+        enable_progress_bar=True, enable_model_summary=True
     )
     
     # 7. 展示Lightning的功能
@@ -248,7 +230,7 @@ def demonstrate_lightning_advantages():
     print("✅ 自动验证循环")
     print("✅ GPU/CPU自动选择")
     
-    print(f"\n📊 模型参数: {sum(p.numel() for p in model.parameters()):,}")
+    print(f"\n📊 模型参数: {sum(p.numel() for p in model.parameters()):, }")
     print(f"📁 检查点保存到: checkpoints/simple_nerf/")
     print(f"📈 日志保存到: logs/simple_nerf/demo/")
     
@@ -314,9 +296,14 @@ if __name__ == "__main__":
     import argparse
     
     parser = argparse.ArgumentParser(description="PyTorch Lightning NeRF Demo")
-    parser.add_argument("--mode", type=str, default="demo", 
-                       choices=["demo", "compare"], 
-                       help="运行模式")
+    parser.add_argument(
+        "--mode",
+        type=str,
+        default="demo",
+        choices=["demo",
+        "compare"],
+        help="运行模式",
+    )
     
     args = parser.parse_args()
     

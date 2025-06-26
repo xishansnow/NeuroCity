@@ -59,11 +59,9 @@ class MockBungeeNeRF(torch.nn.Module):
             scale_hidden = max(scale_hidden, 64)
             
             network = torch.nn.Sequential(
-                torch.nn.Linear(63, scale_hidden),  # 位置编码后的维度
-                torch.nn.ReLU(),
-                torch.nn.Linear(scale_hidden, scale_hidden),
-                torch.nn.ReLU(),
-                torch.nn.Linear(scale_hidden, 4)  # density + color
+                torch.nn.Linear(63, scale_hidden), # 位置编码后的维度
+                torch.nn.ReLU(
+                )
             )
             self.networks[f'scale_{scale}'] = network
     
@@ -75,7 +73,11 @@ class MockBungeeNeRF(torch.nn.Module):
                 encoded.append(fn(2.**i * x))
         return torch.cat(encoded, dim=-1)
     
-    def forward(self, positions: torch.Tensor, step: Optional[int] = None) -> Dict[str, torch.Tensor]:
+    def forward(
+        self,
+        positions: torch.Tensor,
+        step: Optional[int] = None,
+    )
         """前向传播"""
         if step is None:
             step = self.training_step
@@ -94,17 +96,17 @@ class MockBungeeNeRF(torch.nn.Module):
         color = torch.sigmoid(output[..., 1:])
         
         return {
-            'density': density,
-            'color': color,
-            'current_scale': current_scale,
-        }
+            'density': density, 'color': color, 'current_scale': current_scale, }
     
     def set_training_step(self, step: int):
         """设置训练步数"""
         self.training_step = step
 
 
-def create_multiscale_dataset(num_views: int = 50, max_resolution: int = 128) -> Dict[str, torch.Tensor]:
+def create_multiscale_dataset(
+    num_views: int = 50,
+    max_resolution: int = 128,
+)
     """创建多尺度数据集"""
     print(f"📊 创建多尺度数据集: {num_views}个视角, 最大分辨率{max_resolution}x{max_resolution}")
     
@@ -120,9 +122,7 @@ def create_multiscale_dataset(num_views: int = 50, max_resolution: int = 128) ->
             for i in range(num_views):
                 theta = 2 * np.pi * i / num_views
                 cam_pos = torch.tensor([
-                    4.0 * np.cos(theta),
-                    4.0 * np.sin(theta),
-                    2.0
+                    4.0 * np.cos(theta), 4.0 * np.sin(theta), 2.0
                 ])
                 
                 # 简化：只生成少量光线
@@ -140,18 +140,20 @@ def create_multiscale_dataset(num_views: int = 50, max_resolution: int = 128) ->
                     colors.append(color)
             
             datasets[f'res_{res}'] = {
-                'ray_origins': torch.stack(ray_origins),
-                'ray_directions': torch.stack(ray_directions),
-                'colors': torch.stack(colors),
-                'resolution': res
+                'ray_origins': torch.stack(
+                    ray_origins,
+                )
             }
     
     return datasets
 
 
-def progressive_training(model: MockBungeeNeRF, 
-                        datasets: Dict[str, torch.Tensor],
-                        num_epochs_per_scale: int = 100) -> List[Dict]:
+def progressive_training(
+    model: MockBungeeNeRF,
+    datasets: dict[str,
+    torch.Tensor],
+    num_epochs_per_scale: int = 100,
+)
     """渐进式训练"""
     print(f"🚀 开始Bungee NeRF渐进式训练")
     
@@ -203,13 +205,8 @@ def progressive_training(model: MockBungeeNeRF,
                     psnr = -10 * np.log10(mse) if mse > 0 else float('inf')
                     
                     training_history.append({
-                        'step': total_step,
-                        'epoch': epoch,
-                        'resolution': resolution,
-                        'loss': color_loss.item(),
-                        'psnr': psnr,
-                        'current_scale': outputs['current_scale'],
-                    })
+                        'step': total_step, 'epoch': epoch, 'resolution': resolution, 'loss': color_loss.item(
+                        )
                     
                     print(f"  Epoch {epoch:3d}: Loss={color_loss.item():.6f}, PSNR={psnr:.2f}dB, "
                           f"Scale={outputs['current_scale']}")
@@ -243,7 +240,7 @@ def demonstrate_bungee_nerf():
     # 3. 创建模型
     model = MockBungeeNeRF(config)
     total_params = sum(p.numel() for p in model.parameters())
-    print(f"🧠 模型参数数量: {total_params:,}")
+    print(f"🧠 模型参数数量: {total_params:, }")
     
     # 4. 渐进式训练
     training_history = progressive_training(model, datasets, num_epochs_per_scale=50)
@@ -258,7 +255,7 @@ def demonstrate_bungee_nerf():
         print(f"   - 最终PSNR: {final_metrics['psnr']:.2f} dB")
         print(f"   - 最大训练尺度: {final_metrics['current_scale']}")
     
-    print(f"   - 总参数量: {total_params:,}")
+    print(f"   - 总参数量: {total_params:, }")
     print(f"   - 模型大小: {total_params * 4 / 1024 / 1024:.2f} MB")
     
     print("\n🎉 Bungee NeRF演示完成!")

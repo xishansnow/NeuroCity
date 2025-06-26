@@ -6,7 +6,7 @@ Implements multi-resolution hash encoding for PyNeRF
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-from typing import Optional, List, Tuple
+from typing import List, Optional, Tuple
 import numpy as np
 import logging
 
@@ -19,13 +19,7 @@ class HashEncoder(nn.Module):
     """
     
     def __init__(
-        self,
-        resolution: int = 64,
-        hash_table_size: int = 2**20,
-        features_per_level: int = 4,
-        num_levels: int = 1,
-        finest_resolution: Optional[int] = None,
-        log2_hashmap_size: int = 20
+        self, resolution: int = 64, hash_table_size: int = 2**20, features_per_level: int = 4, num_levels: int = 1, finest_resolution: Optional[int] = None, log2_hashmap_size: int = 20
     ):
         super().__init__()
         
@@ -77,10 +71,7 @@ class HashEncoder(nn.Module):
         return hash_val % self.hash_table_size
     
     def interpolate_features(
-        self,
-        positions: torch.Tensor,
-        resolution: int,
-        hash_table: torch.Tensor
+        self, positions: torch.Tensor, resolution: int, hash_table: torch.Tensor
     ) -> torch.Tensor:
         """
         Trilinear interpolation of hash table features
@@ -113,9 +104,7 @@ class HashEncoder(nn.Module):
             for j in [0, 1]:
                 for k in [0, 1]:
                     corner_coords = torch.stack([
-                        coords_floor[:, 0] + i,
-                        coords_floor[:, 1] + j,
-                        coords_floor[:, 2] + k
+                        coords_floor[:, 0] + i, coords_floor[:, 1] + j, coords_floor[:, 2] + k
                     ], dim=-1)
                     corners.append(corner_coords)
         
@@ -158,9 +147,7 @@ class HashEncoder(nn.Module):
         features = []
         for level in range(self.num_levels):
             level_features = self.interpolate_features(
-                positions,
-                self.resolutions[level],
-                self.hash_tables[level]
+                positions, self.resolutions[level], self.hash_tables[level]
             )
             features.append(level_features)
         
@@ -174,13 +161,7 @@ class PyramidEncoder(nn.Module):
     """
     
     def __init__(
-        self,
-        num_levels: int = 8,
-        base_resolution: int = 16,
-        scale_factor: float = 2.0,
-        max_resolution: int = 2048,
-        hash_table_size: int = 2**20,
-        features_per_level: int = 4
+        self, num_levels: int = 8, base_resolution: int = 16, scale_factor: float = 2.0, max_resolution: int = 2048, hash_table_size: int = 2**20, features_per_level: int = 4
     ):
         super().__init__()
         
@@ -195,16 +176,14 @@ class PyramidEncoder(nn.Module):
         
         for level in range(num_levels):
             resolution = min(
-                base_resolution * (scale_factor ** level),
-                max_resolution
+                base_resolution * (scale_factor ** level), max_resolution
             )
             self.resolutions.append(int(resolution))
             
             encoder = HashEncoder(
-                resolution=int(resolution),
-                hash_table_size=hash_table_size,
-                features_per_level=features_per_level,
-                num_levels=1
+                resolution=int(
+                    resolution,
+                )
             )
             self.encoders[f"level_{level}"] = encoder
         
@@ -212,9 +191,7 @@ class PyramidEncoder(nn.Module):
         logger.info(f"Resolutions: {self.resolutions}")
     
     def forward(
-        self,
-        positions: torch.Tensor,
-        level: Optional[int] = None
+        self, positions: torch.Tensor, level: Optional[int] = None
     ) -> torch.Tensor:
         """
         Forward pass through pyramid encoder
@@ -240,9 +217,7 @@ class PyramidEncoder(nn.Module):
             return torch.cat(features, dim=-1)
     
     def get_level_features(
-        self,
-        positions: torch.Tensor,
-        level: int
+        self, positions: torch.Tensor, level: int
     ) -> torch.Tensor:
         """Get features for a specific pyramid level"""
         encoder = self.encoders[f"level_{level}"]
@@ -265,11 +240,7 @@ class PositionalEncoding(nn.Module):
     """
     
     def __init__(
-        self,
-        num_freqs: int = 10,
-        max_freq_log2: int = 9,
-        include_input: bool = True,
-        log_sampling: bool = True
+        self, num_freqs: int = 10, max_freq_log2: int = 9, include_input: bool = True, log_sampling: bool = True
     ):
         super().__init__()
         
@@ -320,9 +291,7 @@ class IntegratedPositionalEncoding(nn.Module):
     """
     
     def __init__(
-        self,
-        num_freqs: int = 10,
-        max_freq_log2: int = 9
+        self, num_freqs: int = 10, max_freq_log2: int = 9
     ):
         super().__init__()
         
@@ -336,9 +305,7 @@ class IntegratedPositionalEncoding(nn.Module):
         self.output_dim = 3 * num_freqs * 2  # sin and cos for each frequency
     
     def forward(
-        self,
-        positions: torch.Tensor,
-        covariances: torch.Tensor
+        self, positions: torch.Tensor, covariances: torch.Tensor
     ) -> torch.Tensor:
         """
         Apply integrated positional encoding
@@ -355,8 +322,7 @@ class IntegratedPositionalEncoding(nn.Module):
         for freq in self.freq_bands:
             # Compute variance for this frequency
             variance = torch.sum(
-                covariances * (freq ** 2), 
-                dim=(-2, -1)
+                covariances * (freq ** 2), dim=(-2, -1)
             )
             
             # Integrated encoding with Gaussian weighting

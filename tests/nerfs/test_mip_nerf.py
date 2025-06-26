@@ -8,10 +8,14 @@ import torch
 import numpy as np
 import unittest
 from pathlib import Path
+import sys
+import os
 
-from .core import (
-    MipNeRFConfig, IntegratedPositionalEncoder, ConicalFrustum,
-    MipNeRFMLP, MipNeRFRenderer, MipNeRF, MipNeRFLoss
+# Add src to path for imports
+sys.path.append(os.path.join(os.path.dirname(__file__), '..', '..', 'src'))
+
+from nerfs.mip_nerf.core import (
+    MipNeRFConfig, IntegratedPositionalEncoder, ConicalFrustum, MipNeRFMLP, MipNeRFRenderer, MipNeRF, MipNeRFLoss
 )
 
 
@@ -21,11 +25,8 @@ class TestMipNeRFCore(unittest.TestCase):
     def setUp(self):
         """Set up test fixtures"""
         self.config = MipNeRFConfig(
-            netdepth=4,  # Smaller for testing
-            netwidth=64,
-            num_samples=32,
-            num_importance=32,
-            max_deg_point=8
+            netdepth=4, # Smaller for testing
+            netwidth=64, num_samples=32, num_importance=32, max_deg_point=8
         )
         self.device = 'cuda' if torch.cuda.is_available() else 'cpu'
         self.batch_size = 100
@@ -129,7 +130,7 @@ class TestMipNeRFCore(unittest.TestCase):
         self.assertIn('weights', render_output)
         
         self.assertEqual(render_output['rgb'].shape, (self.batch_size, 3))
-        self.assertEqual(render_output['depth'].shape, (self.batch_size,))
+        self.assertEqual(render_output['depth'].shape, (self.batch_size, ))
         self.assertEqual(render_output['weights'].shape, (self.batch_size, 32))
         
         print(f"✓ Renderer test passed: {render_output['rgb'].shape}")
@@ -173,15 +174,13 @@ class TestMipNeRFCore(unittest.TestCase):
         # Create mock predictions
         pred = {
             'coarse': {
-                'rgb': torch.rand(self.batch_size, 3),
-                'depth': torch.rand(self.batch_size)
+                'rgb': torch.rand(self.batch_size, 3), 'depth': torch.rand(self.batch_size)
             }
         }
         
         if self.config.num_importance > 0:
             pred['fine'] = {
-                'rgb': torch.rand(self.batch_size, 3),
-                'depth': torch.rand(self.batch_size)
+                'rgb': torch.rand(self.batch_size, 3), 'depth': torch.rand(self.batch_size)
             }
         
         target = torch.rand(self.batch_size, 3)
@@ -239,7 +238,7 @@ class TestMipNeRFUtils(unittest.TestCase):
             origins = torch.randn(100, 3)
             directions = torch.randn(100, 3)
             directions = torch.nn.functional.normalize(directions, dim=-1)
-            radii = torch.full((100,), 0.001)
+            radii = torch.full((100, ), 0.001)
             
             rays = cast_rays(origins, directions, radii, near=2.0, far=6.0)
             
@@ -260,10 +259,7 @@ def run_performance_test():
     print("="*50)
     
     config = MipNeRFConfig(
-        netdepth=8,
-        netwidth=256,
-        num_samples=64,
-        num_importance=128
+        netdepth=8, netwidth=256, num_samples=64, num_importance=128
     )
     
     device = 'cuda' if torch.cuda.is_available() else 'cpu'
@@ -273,7 +269,7 @@ def run_performance_test():
     batch_sizes = [100, 500, 1000] if device == 'cuda' else [100, 200]
     
     print(f"Device: {device}")
-    print(f"Model parameters: {sum(p.numel() for p in model.parameters()):,}")
+    print(f"Model parameters: {sum(p.numel() for p in model.parameters()):, }")
     
     import time
     

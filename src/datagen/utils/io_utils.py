@@ -7,7 +7,7 @@ IO工具函数
 import numpy as np
 import json
 import os
-from typing import Dict, Any, Optional
+from typing import Dict, Optional, Any
 import logging
 
 logger = logging.getLogger(__name__)
@@ -49,7 +49,7 @@ def load_numpy_data(filepath: str) -> np.ndarray:
         return np.load(filepath)
 
 
-def save_json_metadata(metadata: Dict[str, Any], filepath: str):
+def save_json_metadata(metadata: dict[str, Any], filepath: str):
     """
     保存JSON元数据
     
@@ -65,7 +65,7 @@ def save_json_metadata(metadata: Dict[str, Any], filepath: str):
     logger.info(f"元数据已保存: {filepath}")
 
 
-def load_json_metadata(filepath: str) -> Dict[str, Any]:
+def load_json_metadata(filepath: str) -> dict[str, Any]:
     """
     加载JSON元数据
     
@@ -132,8 +132,7 @@ def compute_sdf_cylinder(points, center=[0, 0, 0], radius=1.0, height=2.0, axis=
     
     outside_distance = np.linalg.norm(
         np.column_stack([
-            np.maximum(radial_distance, 0),
-            np.maximum(axial_distance, 0)
+            np.maximum(radial_distance, 0), np.maximum(axial_distance, 0)
         ]), axis=1
     )
     

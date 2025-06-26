@@ -8,7 +8,7 @@ high-resolution photogrammetric images and large-scale scenes.
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-from typing import Dict, List, Tuple, Optional, Any, Union
+from typing import Dict, List, Optional, Tuple, Any, Union
 import numpy as np
 import math
 
@@ -36,8 +36,13 @@ class MultiResolutionRenderer(nn.Module):
             for i in range(self.num_lods)
         ]
     
-    def determine_lod(self, rays_o: torch.Tensor, rays_d: torch.Tensor,
-                     scene_bounds: torch.Tensor, target_resolution: float) -> torch.Tensor:
+    def determine_lod(
+        self,
+        rays_o: torch.Tensor,
+        rays_d: torch.Tensor,
+        scene_bounds: torch.Tensor,
+        target_resolution: float,
+    ) -> torch.Tensor:
         """
         Determine level of detail for each ray
         
@@ -61,7 +66,9 @@ class MultiResolutionRenderer(nn.Module):
         normalized_distances = distances / scene_size
         
         # Calculate ray angles (how perpendicular to viewing direction)
-        ray_angles = torch.abs(torch.sum(rays_d * F.normalize(scene_center - rays_o, dim=-1), dim=-1))
+        ray_angles = torch.abs(
+            torch.sum,
+        )
         
         # Combine distance and angle to determine LOD
         # Closer distances and direct angles get higher detail
@@ -76,8 +83,14 @@ class MultiResolutionRenderer(nn.Module):
         
         return lod_levels
     
-    def adaptive_sampling(self, rays_o: torch.Tensor, rays_d: torch.Tensor,
-                         near: float, far: float, lod_levels: torch.Tensor) -> Dict[str, torch.Tensor]:
+    def adaptive_sampling(
+        self,
+        rays_o: torch.Tensor,
+        rays_d: torch.Tensor,
+        near: float,
+        far: float,
+        lod_levels: torch.Tensor,
+    ) -> dict[str, torch.Tensor]:
         """
         Adaptive sampling based on LOD levels
         
@@ -100,10 +113,9 @@ class MultiResolutionRenderer(nn.Module):
             mask = (lod_levels == lod)
             if mask.any():
                 lod_groups[lod] = {
-                    'mask': mask,
-                    'rays_o': rays_o[mask],
-                    'rays_d': rays_d[mask],
-                    'indices': torch.where(mask)
+                    'mask': mask, 'rays_o': rays_o[mask], 'rays_d': rays_d[mask], 'indices': torch.where(
+                        mask,
+                    )
                 }
         
         # Sample for each LOD group
@@ -124,19 +136,23 @@ class MultiResolutionRenderer(nn.Module):
                 # Pad with far values if fewer samples
                 padding = all_t_vals.shape[-1] - t_vals.shape[-1]
                 t_vals = torch.cat([
-                    t_vals, 
-                    torch.full((*t_vals.shape[:-1], padding), far, device=device)
+                    t_vals, torch.full((*t_vals.shape[:-1], padding), far, device=device)
                 ], dim=-1)
             
             all_t_vals[indices] = t_vals[:, :all_t_vals.shape[-1]]
         
         return {
-            't_vals': all_t_vals,
-            'lod_groups': lod_groups
+            't_vals': all_t_vals, 'lod_groups': lod_groups
         }
     
-    def _sample_along_rays(self, rays_o: torch.Tensor, rays_d: torch.Tensor,
-                          near: float, far: float, num_samples: int) -> torch.Tensor:
+    def _sample_along_rays(
+        self,
+        rays_o: torch.Tensor,
+        rays_d: torch.Tensor,
+        near: float,
+        far: float,
+        num_samples: int,
+    ) -> torch.Tensor:
         """Sample points along rays"""
         t_vals = torch.linspace(0., 1., num_samples, device=rays_o.device)
         
@@ -167,9 +183,16 @@ class AdaptiveLODRenderer(nn.Module):
         self.refinement_levels = 3
         self.refinement_threshold = 0.05
         
-    def render_with_lod(self, model: nn.Module, rays_o: torch.Tensor, rays_d: torch.Tensor,
-                       scene_bounds: torch.Tensor, near: float, far: float,
-                       target_resolution: float = 1.0) -> Dict[str, torch.Tensor]:
+    def render_with_lod(
+        self,
+        model: nn.Module,
+        rays_o: torch.Tensor,
+        rays_d: torch.Tensor,
+        scene_bounds: torch.Tensor,
+        near: float,
+        far: float,
+        target_resolution: float = 1.0,
+    ) -> dict[str, torch.Tensor]:
         """
         Render with adaptive level of detail
         
@@ -208,9 +231,14 @@ class AdaptiveLODRenderer(nn.Module):
         
         return results
     
-    def _render_lod_groups(self, model: nn.Module, sampling_results: Dict,
-                          rays_o: torch.Tensor, rays_d: torch.Tensor,
-                          lod_levels: torch.Tensor) -> Dict[str, torch.Tensor]:
+    def _render_lod_groups(
+        self,
+        model: nn.Module,
+        sampling_results: Dict,
+        rays_o: torch.Tensor,
+        rays_d: torch.Tensor,
+        lod_levels: torch.Tensor,
+    ) -> dict[str, torch.Tensor]:
         """Render each LOD group separately"""
         
         batch_shape = rays_o.shape[:-1]
@@ -250,15 +278,19 @@ class AdaptiveLODRenderer(nn.Module):
             alpha_output[indices] = rendered['acc_alpha']
         
         return {
-            'rgb': rgb_output,
-            'depth': depth_output,
-            'acc_alpha': alpha_output,
-            'lod_levels': lod_levels
+            'rgb': rgb_output, 'depth': depth_output, 'acc_alpha': alpha_output, 'lod_levels': lod_levels
         }
     
-    def _progressive_refinement(self, model: nn.Module, initial_results: Dict,
-                               rays_o: torch.Tensor, rays_d: torch.Tensor,
-                               near: float, far: float, lod_levels: torch.Tensor) -> Dict[str, torch.Tensor]:
+    def _progressive_refinement(
+        self,
+        model: nn.Module,
+        initial_results: Dict,
+        rays_o: torch.Tensor,
+        rays_d: torch.Tensor,
+        near: float,
+        far: float,
+        lod_levels: torch.Tensor,
+    ) -> dict[str, torch.Tensor]:
         """Apply progressive refinement to high-detail areas"""
         
         results = initial_results.copy()
@@ -305,8 +337,14 @@ class AdaptiveLODRenderer(nn.Module):
         
         return results
     
-    def _dense_sampling(self, rays_o: torch.Tensor, rays_d: torch.Tensor,
-                       near: float, far: float, num_samples: int) -> torch.Tensor:
+    def _dense_sampling(
+        self,
+        rays_o: torch.Tensor,
+        rays_d: torch.Tensor,
+        near: float,
+        far: float,
+        num_samples: int,
+    ) -> torch.Tensor:
         """Dense sampling for progressive refinement"""
         
         # Use importance sampling based on previous results
@@ -323,8 +361,13 @@ class AdaptiveLODRenderer(nn.Module):
         
         return t_vals
     
-    def _volume_render(self, densities: torch.Tensor, colors: torch.Tensor,
-                      t_vals: torch.Tensor, rays_d: torch.Tensor) -> Dict[str, torch.Tensor]:
+    def _volume_render(
+        self,
+        densities: torch.Tensor,
+        colors: torch.Tensor,
+        t_vals: torch.Tensor,
+        rays_d: torch.Tensor,
+    ) -> dict[str, torch.Tensor]:
         """Volume rendering computation"""
         
         # Compute distances between samples
@@ -340,8 +383,7 @@ class AdaptiveLODRenderer(nn.Module):
         # Compute transmittance
         transmittance = torch.cumprod(1.0 - alpha + 1e-10, dim=-1)
         transmittance = torch.cat([
-            torch.ones_like(transmittance[..., :1]),
-            transmittance[..., :-1]
+            torch.ones_like(transmittance[..., :1]), transmittance[..., :-1]
         ], dim=-1)
         
         # Compute weights
@@ -353,10 +395,7 @@ class AdaptiveLODRenderer(nn.Module):
         acc_alpha = torch.sum(weights, dim=-1)
         
         return {
-            'rgb': rgb,
-            'depth': depth,
-            'acc_alpha': acc_alpha,
-            'weights': weights
+            'rgb': rgb, 'depth': depth, 'acc_alpha': acc_alpha, 'weights': weights
         }
 
 
@@ -374,9 +413,18 @@ class PhotogrammetricVolumetricRenderer(nn.Module):
         self.depth_regularization = True
         self.semantic_rendering = hasattr(config, 'lambda_semantic') and config.lambda_semantic > 0
         
-    def render_photogrammetric(self, model: nn.Module, rays_o: torch.Tensor, rays_d: torch.Tensor,
-                              scene_bounds: torch.Tensor, camera_intrinsics: torch.Tensor,
-                              image_resolution: Tuple[int, int], near: float, far: float) -> Dict[str, torch.Tensor]:
+    def render_photogrammetric(
+        self,
+        model: nn.Module,
+        rays_o: torch.Tensor,
+        rays_d: torch.Tensor,
+        scene_bounds: torch.Tensor,
+        camera_intrinsics: torch.Tensor,
+        image_resolution: tuple[int,
+        int],
+        near: float,
+        far: float,
+    ) -> dict[str, torch.Tensor]:
         """
         Render with photogrammetric optimizations
         
@@ -415,8 +463,12 @@ class PhotogrammetricVolumetricRenderer(nn.Module):
         
         return results
     
-    def _add_depth_regularization(self, results: Dict, rays_o: torch.Tensor, 
-                                 rays_d: torch.Tensor) -> Dict[str, torch.Tensor]:
+    def _add_depth_regularization(
+        self,
+        results: Dict,
+        rays_o: torch.Tensor,
+        rays_d: torch.Tensor,
+    ) -> dict[str, torch.Tensor]:   
         """Add depth regularization for better geometric consistency"""
         
         # Compute depth gradients for smoothness
@@ -433,14 +485,21 @@ class PhotogrammetricVolumetricRenderer(nn.Module):
         
         # Depth variance for confidence estimation
         if 'weights' in results:
-            depth_variance = torch.sum(results['weights'] * (results.get('t_vals', depth) - depth.unsqueeze(-1))**2, dim=-1)
+            depth_variance = torch.sum(
+                results['weights'] * (results['depth'] - results['depth_mean']) ** 2,
+            )
             results['depth_variance'] = depth_variance
             results['depth_confidence'] = 1.0 / (1.0 + depth_variance)
         
         return results
     
-    def _add_semantic_rendering(self, model: nn.Module, results: Dict,
-                               rays_o: torch.Tensor, rays_d: torch.Tensor) -> Dict[str, torch.Tensor]:
+    def _add_semantic_rendering(
+        self,
+        model: nn.Module,
+        results: Dict,
+        rays_o: torch.Tensor,
+        rays_d: torch.Tensor,
+    ) -> dict[str, torch.Tensor]:
         """Add semantic rendering if supported by the model"""
         
         # Check if model supports semantic output
@@ -452,10 +511,20 @@ class PhotogrammetricVolumetricRenderer(nn.Module):
         
         return results
     
-    def _compute_photogrammetric_metrics(self, results: Dict, 
-                                       camera_intrinsics: torch.Tensor) -> Dict[str, torch.Tensor]:
+    def _compute_photogrammetric_metrics(
+        self,
+        results: Dict,
+        camera_intrinsics: torch.Tensor,
+    ) -> dict[str, torch.Tensor]:
         """Compute photogrammetric quality metrics"""
-        
+        # cannot import name 'AdaptiveOctree' from 'nerfs.mega_nerf_plus.spatial_partitioner'
+        from nerfs.mega_nerf_plus.spatial_partitioner import AdaptiveOctree
+
+        # Get the octree
+        octree = AdaptiveOctree(self.config)
+
+        # Get the partitions
+        partitions = octree.get_partitions(self.config)
         # Reprojection accuracy (simplified)
         if 'depth' in results:
             focal_length = camera_intrinsics[0, 0]  # Assuming fx
@@ -477,8 +546,14 @@ class PhotogrammetricVolumetricRenderer(nn.Module):
         
         return results
     
-    def batch_render(self, model: nn.Module, rays_batch: Dict[str, torch.Tensor],
-                    scene_bounds: torch.Tensor, chunk_size: int = 1024) -> Dict[str, torch.Tensor]:
+    def batch_render(
+        self,
+        model: nn.Module,
+        rays_batch: dict[str,
+        torch.Tensor],
+        scene_bounds: torch.Tensor,
+        chunk_size: int = 1024,
+    ) -> dict[str, torch.Tensor]:
         """
         Batch rendering for large numbers of rays
         
@@ -507,11 +582,10 @@ class PhotogrammetricVolumetricRenderer(nn.Module):
             
             # Render chunk
             chunk_results = self.render_photogrammetric(
-                model, chunk_rays_o, chunk_rays_d, scene_bounds,
-                rays_batch.get('intrinsics', torch.eye(3)),
-                rays_batch.get('resolution', (1024, 1024)),
-                rays_batch.get('near', 0.1),
-                rays_batch.get('far', 100.0)
+                model, chunk_rays_o, chunk_rays_d, scene_bounds, rays_batch.get(
+                    'intrinsics',
+                    torch.eye,
+                )
             )
             
             # Accumulate results
@@ -519,8 +593,12 @@ class PhotogrammetricVolumetricRenderer(nn.Module):
                 # Initialize with first chunk
                 for key, value in chunk_results.items():
                     if isinstance(value, torch.Tensor):
-                        all_results[key] = torch.zeros(total_rays, *value.shape[1:], 
-                                                     device=value.device, dtype=value.dtype)
+                        all_results[key] = torch.zeros(
+                            total_rays,
+                            *value.shape[1:],
+                            device=value.device,
+                            dtype=value.dtype,
+                        )
                         all_results[key][i:end_i] = value
                     else:
                         all_results[key] = value

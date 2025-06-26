@@ -11,15 +11,8 @@ import os
 # Add parent directory to path for imports
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-from . import (
-    BungeeNeRF, BungeeNeRFConfig, ProgressiveBlock,
-    ProgressivePositionalEncoder, MultiScaleEncoder,
-    MultiScaleRenderer, LevelOfDetailRenderer,
-    BungeeNeRFDataset, MultiScaleDataset,
-    BungeeNeRFTrainer, ProgressiveTrainer,
-    compute_scale_factor, get_level_of_detail,
-    progressive_positional_encoding, multiscale_sampling,
-    compute_multiscale_loss, save_bungee_model, load_bungee_model
+from nerfs.bungee_nerf import (
+    BungeeNeRF, BungeeNeRFConfig, ProgressiveBlock, ProgressivePositionalEncoder, MultiScaleEncoder, MultiScaleRenderer, LevelOfDetailRenderer, BungeeNeRFDataset, MultiScaleDataset, BungeeNeRFTrainer, ProgressiveTrainer, compute_scale_factor, get_level_of_detail, progressive_positional_encoding, multiscale_sampling, compute_multiscale_loss, save_bungee_model, load_bungee_model
 )
 
 logging.basicConfig(level=logging.INFO)
@@ -31,11 +24,7 @@ def test_config():
     logger.info("Testing BungeeNeRF configuration...")
     
     config = BungeeNeRFConfig(
-        num_stages=4,
-        base_resolution=16,
-        max_resolution=2048,
-        hidden_dim=256,
-        num_layers=8
+        num_stages=4, base_resolution=16, max_resolution=2048, hidden_dim=256, num_layers=8
     )
     
     assert config.num_stages == 4
@@ -55,9 +44,7 @@ def test_progressive_encoder():
     logger.info("Testing progressive positional encoder...")
     
     encoder = ProgressivePositionalEncoder(
-        num_freqs_base=4,
-        num_freqs_max=10,
-        include_input=True
+        num_freqs_base=4, num_freqs_max=10, include_input=True
     )
     
     # Test encoding
@@ -82,9 +69,7 @@ def test_multiscale_encoder():
     logger.info("Testing multi-scale encoder...")
     
     encoder = MultiScaleEncoder(
-        num_scales=4,
-        base_freqs=4,
-        max_freqs=10
+        num_scales=4, base_freqs=4, max_freqs=10
     )
     
     batch_size = 100
@@ -110,10 +95,7 @@ def test_progressive_block():
     logger.info("Testing progressive block...")
     
     block = ProgressiveBlock(
-        input_dim=256,
-        hidden_dim=128,
-        num_layers=4,
-        output_dim=3
+        input_dim=256, hidden_dim=128, num_layers=4, output_dim=3
     )
     
     batch_size = 100
@@ -132,10 +114,8 @@ def test_bungee_nerf_model():
     logger.info("Testing BungeeNeRF model...")
     
     config = BungeeNeRFConfig(
-        num_stages=2,  # Smaller for testing
-        hidden_dim=128,
-        num_layers=4,
-        num_samples=32
+        num_stages=2, # Smaller for testing
+        hidden_dim=128, num_layers=4, num_samples=32
     )
     
     model = BungeeNeRF(config)
@@ -159,7 +139,7 @@ def test_bungee_nerf_model():
     assert "rgb" in outputs
     assert "depth" in outputs
     assert outputs["rgb"].shape == (batch_size, 3)
-    assert outputs["depth"].shape == (batch_size,)
+    assert outputs["depth"].shape == (batch_size, )
     assert not torch.isnan(outputs["rgb"]).any()
     assert not torch.isnan(outputs["depth"]).any()
     
@@ -195,8 +175,8 @@ def test_multiscale_renderer():
     assert "depth" in outputs
     assert "acc" in outputs
     assert outputs["rgb"].shape == (batch_size, 3)
-    assert outputs["depth"].shape == (batch_size,)
-    assert outputs["acc"].shape == (batch_size,)
+    assert outputs["depth"].shape == (batch_size, )
+    assert outputs["acc"].shape == (batch_size, )
     
     logger.info("✓ Multi-scale renderer test passed")
 

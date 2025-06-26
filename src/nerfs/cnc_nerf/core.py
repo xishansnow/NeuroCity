@@ -15,7 +15,7 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 import numpy as np
-from typing import Dict, List, Optional, Tuple, Union, Any
+from typing import Dict, List, Optional, Tuple, Any
 from dataclasses import dataclass
 import math
 
@@ -162,10 +162,22 @@ class HashEmbeddingEncoder(nn.Module):
             corner_features.append(features)
         
         # Trilinear interpolation
-        c00 = corner_features[0] * (1 - coords_frac[:, 0:1]) + corner_features[1] * coords_frac[:, 0:1]
-        c01 = corner_features[2] * (1 - coords_frac[:, 0:1]) + corner_features[3] * coords_frac[:, 0:1]
-        c10 = corner_features[4] * (1 - coords_frac[:, 0:1]) + corner_features[5] * coords_frac[:, 0:1]
-        c11 = corner_features[6] * (1 - coords_frac[:, 0:1]) + corner_features[7] * coords_frac[:, 0:1]
+        c00 = corner_features[0] * (
+            1 - coords_frac[:,
+            0:1],
+        )
+        c01 = corner_features[2] * (
+            1 - coords_frac[:,
+            0:1],
+        )
+        c10 = corner_features[4] * (
+            1 - coords_frac[:,
+            0:1],
+        )
+        c11 = corner_features[6] * (
+            1 - coords_frac[:,
+            0:1],
+        )
         
         c0 = c00 * (1 - coords_frac[:, 1:2]) + c10 * coords_frac[:, 1:2]
         c1 = c01 * (1 - coords_frac[:, 1:2]) + c11 * coords_frac[:, 1:2]
@@ -183,10 +195,11 @@ class HashEmbeddingEncoder(nn.Module):
         
         # Get 4 corner coordinates
         corners = [
-            coords_floor,
-            coords_floor + torch.tensor([1, 0], device=coords_2d.device),
-            coords_floor + torch.tensor([0, 1], device=coords_2d.device),
-            coords_floor + torch.tensor([1, 1], device=coords_2d.device)
+            coords_floor, coords_floor + torch.tensor(
+                [1,
+                0],
+                device=coords_2d.device,
+            )
         ]
         
         # Get features for each corner
@@ -206,8 +219,14 @@ class HashEmbeddingEncoder(nn.Module):
             corner_features.append(features)
         
         # Bilinear interpolation
-        top = corner_features[0] * (1 - coords_frac[:, 0:1]) + corner_features[1] * coords_frac[:, 0:1]
-        bottom = corner_features[2] * (1 - coords_frac[:, 0:1]) + corner_features[3] * coords_frac[:, 0:1]
+        top = corner_features[0] * (
+            1 - coords_frac[:,
+            0:1],
+        )
+        bottom = corner_features[2] * (
+            1 - coords_frac[:,
+            0:1],
+        )
         result = top * (1 - coords_frac[:, 1:2]) + bottom * coords_frac[:, 1:2]
         
         return result
@@ -270,15 +289,13 @@ class LevelWiseContextModel(ContextModel):
         
         # Context fuser MLP - simplified for proper dimension handling
         self.context_fuser = nn.Sequential(
-            nn.Linear(1, config.context_fuser_hidden),  # Start with just frequency
-            nn.LeakyReLU(0.2),
-            nn.Linear(config.context_fuser_hidden, config.context_fuser_hidden),
-            nn.LeakyReLU(0.2),
-            nn.Linear(config.context_fuser_hidden, config.feature_dim),
-            nn.Sigmoid()
+            nn.Linear(1, config.context_fuser_hidden), # Start with just frequency
+            nn.LeakyReLU(
+                0.2,
+            )
         )
     
-    def build_context(self, embeddings_list: List[torch.Tensor], level: int) -> torch.Tensor:
+    def build_context(self, embeddings_list: list[torch.Tensor], level: int) -> torch.Tensor:
         """Build context from previous levels."""
         current_embeddings = embeddings_list[level]
         
@@ -288,7 +305,7 @@ class LevelWiseContextModel(ContextModel):
         
         return context
     
-    def forward(self, embeddings_list: List[torch.Tensor], level: int) -> torch.Tensor:
+    def forward(self, embeddings_list: list[torch.Tensor], level: int) -> torch.Tensor:
         """Predict probability distribution for current level."""
         context = self.build_context(embeddings_list, level)
         probabilities = self.context_fuser(context)
@@ -309,7 +326,7 @@ class DimensionWiseContextModel(ContextModel):
         
         # Lighter context fuser for 2D embeddings - simplified
         self.context_fuser_2d = nn.Sequential(
-            nn.Linear(1, config.feature_dim),  # Start simple with frequency only
+            nn.Linear(1, config.feature_dim), # Start simple with frequency only
             nn.Sigmoid()
         )
     
@@ -329,8 +346,12 @@ class DimensionWiseContextModel(ContextModel):
         pvf = torch.cat([pvf_xy.flatten(), pvf_xz.flatten(), pvf_yz.flatten()])
         return pvf
     
-    def forward(self, embeddings_2d_list: List[torch.Tensor], 
-                embeddings_3d: torch.Tensor, level: int) -> torch.Tensor:
+    def forward(
+        self,
+        embeddings_2d_list: list[torch.Tensor],
+        embeddings_3d: torch.Tensor,
+        level: int,
+    ) -> torch.Tensor:
         """Predict probability for 2D embeddings using 3D context."""
         # Simplified: just use frequency of current 2D embeddings
         current_embeddings_2d = embeddings_2d_list[level]
@@ -401,7 +422,7 @@ class ArithmeticCoder(nn.Module):
             encoded_size = len(quantized) * 0.1
             return b"compressed" * int(encoded_size)
     
-    def decode(self, encoded_data: bytes, shape: Tuple[int, ...]) -> torch.Tensor:
+    def decode(self, encoded_data: bytes, shape: tuple[int, ...]) -> torch.Tensor:
         """Decode embeddings from compressed data."""
         # Placeholder implementation
         if self.config.use_binarization:
@@ -501,21 +522,19 @@ class CNCRenderer(nn.Module):
                            config.feature_dim * config.num_2d_levels * 3)
         
         self.density_net = nn.Sequential(
-            nn.Linear(total_feature_dim, 64),
-            nn.ReLU(),
-            nn.Linear(64, 1)
+            nn.Linear(total_feature_dim, 64), nn.ReLU(), nn.Linear(64, 1)
         )
         
         self.color_net = nn.Sequential(
-            nn.Linear(total_feature_dim + 3, 64),  # +3 for view direction
-            nn.ReLU(),
-            nn.Linear(64, 64), 
-            nn.ReLU(),
-            nn.Linear(64, 3),
-            nn.Sigmoid()
+            nn.Linear(total_feature_dim + 3, 64), # +3 for view direction
+            nn.ReLU(), nn.Linear(64, 64), nn.ReLU(), nn.Linear(64, 3), nn.Sigmoid()
         )
     
-    def forward(self, coords: torch.Tensor, view_dirs: Optional[torch.Tensor] = None) -> Dict[str, torch.Tensor]:
+    def forward(
+        self,
+        coords: torch.Tensor,
+        view_dirs: Optional[torch.Tensor] = None,
+    ) -> dict[str, torch.Tensor]:
         """Forward pass for rendering."""
         # Encode features
         features = self.hash_encoder(coords)
@@ -533,9 +552,7 @@ class CNCRenderer(nn.Module):
         color = self.color_net(color_input)
         
         return {
-            'density': density.squeeze(-1),
-            'color': color,
-            'features': features
+            'density': density.squeeze(-1), 'color': color, 'features': features
         }
 
 
@@ -552,7 +569,11 @@ class CNCNeRF(nn.Module):
         self.original_size = 0
         self.compressed_size = 0
     
-    def forward(self, coords: torch.Tensor, view_dirs: Optional[torch.Tensor] = None) -> Dict[str, torch.Tensor]:
+    def forward(
+        self,
+        coords: torch.Tensor,
+        view_dirs: Optional[torch.Tensor] = None,
+    ) -> dict[str, torch.Tensor]:
         """Forward pass."""
         return self.renderer(coords, view_dirs)
     
@@ -590,13 +611,11 @@ class CNCNeRF(nn.Module):
         
         return total_entropy_loss
     
-    def compress_model(self) -> Dict[str, Any]:
+    def compress_model(self) -> dict[str, Any]:
         """Compress the model and return compression info."""
         compression_info = {
-            'compressed_data': {},
-            'compression_ratio': 0.0,
-            'original_size': 0,
-            'compressed_size': 0
+            'compressed_data': {
+            }
         }
         
         # Calculate original size
@@ -612,7 +631,10 @@ class CNCNeRF(nn.Module):
             embeddings_3d.append(embedding_weights)
             
             probabilities = self.renderer.level_context_model(embeddings_3d, level)
-            compressed_data = self.renderer.arithmetic_coder.encode(embedding_weights, probabilities)
+            compressed_data = self.renderer.arithmetic_coder.encode(
+                embedding_weights,
+                probabilities,
+            )
             
             compression_info['compressed_data'][f'3d_level_{level}'] = compressed_data
             total_compressed_size += len(compressed_data)
@@ -626,7 +648,10 @@ class CNCNeRF(nn.Module):
             embeddings_2d.append(embedding_weights)
             
             probabilities = self.renderer.dimension_context_model(embeddings_2d, finest_3d, level)
-            compressed_data = self.renderer.arithmetic_coder.encode(embedding_weights, probabilities)
+            compressed_data = self.renderer.arithmetic_coder.encode(
+                embedding_weights,
+                probabilities,
+            )
             
             compression_info['compressed_data'][f'2d_level_{level}'] = compressed_data
             total_compressed_size += len(compressed_data)
@@ -635,9 +660,7 @@ class CNCNeRF(nn.Module):
         compression_ratio = original_size / total_compressed_size if total_compressed_size > 0 else 1.0
         
         compression_info.update({
-            'compression_ratio': compression_ratio,
-            'original_size': original_size,
-            'compressed_size': total_compressed_size
+            'compression_ratio': compression_ratio, 'original_size': original_size, 'compressed_size': total_compressed_size
         })
         
         self.compression_ratio = compression_ratio
@@ -646,11 +669,10 @@ class CNCNeRF(nn.Module):
         
         return compression_info
     
-    def get_compression_stats(self) -> Dict[str, float]:
+    def get_compression_stats(self) -> dict[str, float]:
         """Get compression statistics."""
         return {
-            'compression_ratio': self.compression_ratio,
-            'original_size_mb': self.original_size / (1024 * 1024),
-            'compressed_size_mb': self.compressed_size / (1024 * 1024),
-            'size_reduction_percent': (1 - self.compressed_size / self.original_size) * 100 if self.original_size > 0 else 0
+            'compression_ratio': self.compression_ratio, 'original_size_mb': self.original_size / (
+                1024 * 1024,
+            )
         } 

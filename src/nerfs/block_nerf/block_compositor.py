@@ -21,23 +21,25 @@ class AppearanceMatcher:
         self.max_iterations = max_iterations
         self.learning_rate = learning_rate
     
-    def match_appearance(self,
-                        source_block,
-                        target_block,
-                        matching_point: torch.Tensor,
-                        source_appearance_id: int,
-                        target_appearance_id: int,
-                        viewing_direction: torch.Tensor) -> torch.Tensor:
+    def match_appearance(
+        self,
+        source_block,
+        target_block,
+        matching_point: torch.Tensor,
+        source_appearance_id: int,
+        target_appearance_id: int,
+        viewing_direction: torch.Tensor
+    ):
         """
         Match appearance of target block to source block
         
         Args:
             source_block: Source Block-NeRF (reference)
             target_block: Target Block-NeRF (to be matched)
-            matching_point: 3D point for comparison (3,)
+            matching_point: 3D point for comparison (3, )
             source_appearance_id: Appearance ID for source
             target_appearance_id: Appearance ID for target (to be optimized)
-            viewing_direction: Viewing direction (3,)
+            viewing_direction: Viewing direction (3, )
             
         Returns:
             Optimized appearance embedding for target block
@@ -60,10 +62,9 @@ class AppearanceMatcher:
         # Render reference color from source block
         with torch.no_grad():
             source_outputs = source_block.network(
-                positions=matching_point.unsqueeze(0),
-                directions=viewing_direction.unsqueeze(0),
-                appearance_embedding=source_embedding,
-                exposure=source_block.encode_exposure(exposure)
+                positions=matching_point.unsqueeze(
+                    0,
+                )
             )
             target_color = source_outputs['color']
         
@@ -76,10 +77,9 @@ class AppearanceMatcher:
             
             # Render with current target embedding
             target_outputs = target_block.network(
-                positions=matching_point.unsqueeze(0),
-                directions=viewing_direction.unsqueeze(0),
-                appearance_embedding=target_embedding,
-                exposure=target_block.encode_exposure(exposure)
+                positions=matching_point.unsqueeze(
+                    0,
+                )
             )
             
             # Compute loss
@@ -105,15 +105,21 @@ class BlockCompositor:
     Composes multiple Block-NeRF renderings into final images
     """
     
-    def __init__(self,
-                 interpolation_method: str = 'inverse_distance',
-                 power: float = 2.0,
-                 use_appearance_matching: bool = True):
+    def __init__(
+        self,
+        interpolation_method: str = 'inverse_distance',
+        power: float = 2.0,
+        use_appearance_matching: bool = True    
+    ):
         """
         Initialize Block Compositor
         
         Args:
-            interpolation_method: Method for combining blocks ('inverse_distance', 'visibility', 'nearest')
+            interpolation_method: Method for combining blocks (
+                'inverse_distance',
+                'visibility',
+                'nearest',
+            )
             power: Power for inverse distance weighting
             use_appearance_matching: Whether to perform appearance matching
         """
@@ -123,22 +129,24 @@ class BlockCompositor:
         self.appearance_matcher = AppearanceMatcher()
         
         # Cache for appearance matched embeddings
-        self.appearance_cache: Dict[Tuple[str, str, int], torch.Tensor] = {}
+        self.appearance_cache: dict[tuple[str, str, int], torch.Tensor] = {}
     
-    def compute_interpolation_weights(self,
-                                    camera_position: torch.Tensor,
-                                    block_centers: List[torch.Tensor],
-                                    method: Optional[str] = None) -> torch.Tensor:
+    def compute_interpolation_weights(
+        self,
+        camera_position: torch.Tensor,
+        block_centers: list[torch.Tensor],
+        method: Optional[str] = None
+    ):
         """
         Compute interpolation weights for blocks
         
         Args:
-            camera_position: Camera position (3,)
+            camera_position: Camera position (3, )
             block_centers: List of block center positions
             method: Override interpolation method
             
         Returns:
-            Normalized weights (num_blocks,)
+            Normalized weights (num_blocks, )
         """
         if method is None:
             method = self.interpolation_method
@@ -175,16 +183,18 @@ class BlockCompositor:
         else:
             raise ValueError(f"Unknown interpolation method: {method}")
     
-    def render_blocks(self,
-                     blocks: List,
-                     block_names: List[str],
-                     ray_origins: torch.Tensor,
-                     ray_directions: torch.Tensor,
-                     appearance_ids: torch.Tensor,
-                     exposure_values: torch.Tensor,
-                     near: float = 0.1,
-                     far: float = 100.0,
-                     num_samples: int = 64) -> List[Dict[str, torch.Tensor]]:
+    def render_blocks(
+        self,
+        blocks: List,
+        block_names: list[str],
+        ray_origins: torch.Tensor,
+        ray_directions: torch.Tensor,
+        appearance_ids: torch.Tensor,
+        exposure_values: torch.Tensor,
+        near: float = 0.1,
+        far: float = 100.0,
+        num_samples: int = 64  
+    ):
         """
         Render all blocks for given rays
         
@@ -193,7 +203,7 @@ class BlockCompositor:
             block_names: List of block names
             ray_origins: Ray origins (N, 3)
             ray_directions: Ray directions (N, 3)
-            appearance_ids: Appearance IDs (N,)
+            appearance_ids: Appearance IDs (N, )
             exposure_values: Exposure values (N, 1)
             near: Near plane distance
             far: Far plane distance
@@ -231,10 +241,7 @@ class BlockCompositor:
         for i, (block, block_name) in enumerate(zip(blocks, block_names)):
             # Forward pass through block
             outputs = block(
-                positions=points_flat,
-                directions=directions_flat,
-                appearance_ids=appearance_ids_flat,
-                exposure_values=exposure_flat
+                positions=points_flat, directions=directions_flat, appearance_ids=appearance_ids_flat, exposure_values=exposure_flat
             )
             
             # Reshape outputs
@@ -249,10 +256,12 @@ class BlockCompositor:
         
         return block_outputs
     
-    def volume_render(self,
-                     densities: torch.Tensor,
-                     colors: torch.Tensor,
-                     t_vals: torch.Tensor) -> Dict[str, torch.Tensor]:
+    def volume_render(
+        self,
+        densities: torch.Tensor,
+        colors: torch.Tensor,
+        t_vals: torch.Tensor
+    ):
         """
         Perform volume rendering
         
@@ -273,8 +282,7 @@ class BlockCompositor:
         
         # Compute transmittance
         transmittance = torch.cumprod(
-            torch.cat([torch.ones_like(alphas[:, :1]), 1.0 - alphas[:, :-1] + 1e-10], dim=1),
-            dim=1
+            torch.cat([torch.ones_like(alphas[:, :1]), 1.0 - alphas[:, :-1] + 1e-10], dim=1), dim=1
         )[:, :-1]
         
         # Compute weights
@@ -290,24 +298,22 @@ class BlockCompositor:
         opacity = torch.sum(weights, dim=1)
         
         return {
-            'rgb': rgb,
-            'depth': depth,
-            'opacity': opacity,
-            'weights': weights,
-            'alphas': alphas,
-            'transmittance': transmittance
+            'rgb': rgb, 'depth': depth, 'opacity': opacity, 'weights': weights, 'alphas': alphas, 'transmittance': transmittance
         }
     
-    def composite_blocks(self,
-                        block_outputs: List[Dict[str, torch.Tensor]],
-                        interpolation_weights: torch.Tensor,
-                        camera_position: torch.Tensor) -> Dict[str, torch.Tensor]:
+    def composite_blocks(
+        self,
+        block_outputs: list[dict[str,
+        torch.Tensor]],
+        interpolation_weights: torch.Tensor,
+        camera_position: torch.Tensor   
+    ):
         """
         Composite multiple block renderings
         
         Args:
             block_outputs: List of rendering outputs from each block
-            interpolation_weights: Weights for combining blocks (num_blocks,)
+            interpolation_weights: Weights for combining blocks (num_blocks, )
             camera_position: Camera position for distance-based weighting
             
         Returns:
@@ -337,23 +343,21 @@ class BlockCompositor:
             final_opacity += weight * output['opacity']
         
         return {
-            'rgb': final_rgb,
-            'depth': final_depth,
-            'opacity': final_opacity,
-            'weights': weights,
-            'individual_outputs': block_outputs
+            'rgb': final_rgb, 'depth': final_depth, 'opacity': final_opacity, 'weights': weights, 'individual_outputs': block_outputs
         }
     
-    def render_with_blocks(self,
-                          blocks: List,
-                          block_names: List[str],
-                          block_centers: List[torch.Tensor],
-                          camera_position: torch.Tensor,
-                          ray_origins: torch.Tensor,
-                          ray_directions: torch.Tensor,
-                          appearance_ids: torch.Tensor,
-                          exposure_values: torch.Tensor,
-                          **render_kwargs) -> Dict[str, torch.Tensor]:
+    def render_with_blocks(
+        self,
+        blocks: List,
+        block_names: list[str],
+        block_centers: list[torch.Tensor],
+        camera_position: torch.Tensor,
+        ray_origins: torch.Tensor,
+        ray_directions: torch.Tensor,
+        appearance_ids: torch.Tensor,
+        exposure_values: torch.Tensor,
+        **render_kwargs
+    ):
         """
         Complete rendering pipeline with multiple blocks
         
@@ -373,8 +377,7 @@ class BlockCompositor:
         """
         # Render individual blocks
         block_outputs = self.render_blocks(
-            blocks, block_names, ray_origins, ray_directions,
-            appearance_ids, exposure_values, **render_kwargs
+            blocks, block_names, ray_origins, ray_directions, appearance_ids, exposure_values, **render_kwargs
         )
         
         # Compute interpolation weights
@@ -396,6 +399,19 @@ class BlockCompositor:
     def get_cache_stats(self) -> Dict:
         """Get statistics about the appearance cache"""
         return {
-            'cache_size': len(self.appearance_cache),
-            'cache_keys': list(self.appearance_cache.keys())
-        } 
+            'cache_size': len(
+                self.appearance_cache,
+            )
+        }
+
+    def forward(
+        self, 
+        rays_o: torch.Tensor, 
+        rays_d: torch.Tensor, 
+        block_outputs: list[dict[str, torch.Tensor]], 
+        block_weights: torch.Tensor, 
+        **kwargs
+    ) -> dict[str, torch.Tensor]:
+        """Forward pass for rays"""
+        # Implementation of the forward method
+        pass 

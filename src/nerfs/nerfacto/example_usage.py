@@ -20,43 +20,61 @@ def main():
     parser = argparse.ArgumentParser(description="Nerfacto Example Usage")
     
     # Data arguments
-    parser.add_argument("--data_dir", type=str, required=True,
-                       help="Path to the dataset directory")
-    parser.add_argument("--data_format", type=str, default="colmap",
-                       choices=["colmap", "blender", "instant_ngp"],
-                       help="Data format")
+    parser.add_argument("--data_dir", type=str, required=True, help="Path to the dataset directory")
+    parser.add_argument(
+        "--data_format",
+        type=str,
+        default="colmap",
+        choices=["colmap",
+        "blender",
+        "instant_ngp"],
+        help="Data format",
+    )
     
     # Training arguments
-    parser.add_argument("--output_dir", type=str, default="outputs",
-                       help="Output directory for results")
-    parser.add_argument("--experiment_name", type=str, default="nerfacto_experiment",
-                       help="Experiment name")
-    parser.add_argument("--max_epochs", type=int, default=30000,
-                       help="Maximum number of training epochs")
-    parser.add_argument("--learning_rate", type=float, default=5e-4,
-                       help="Learning rate")
-    parser.add_argument("--batch_size", type=int, default=1,
-                       help="Batch size")
+    parser.add_argument(
+        "--output_dir",
+        type=str,
+        default="outputs",
+        help="Output directory for results",
+    )
+    parser.add_argument(
+        "--experiment_name",
+        type=str,
+        default="nerfacto_experiment",
+        help="Experiment name",
+    )
+    parser.add_argument(
+        "--max_epochs",
+        type=int,
+        default=30000,
+        help="Maximum number of training epochs",
+    )
+    parser.add_argument("--learning_rate", type=float, default=5e-4, help="Learning rate")
+    parser.add_argument("--batch_size", type=int, default=1, help="Batch size")
     
     # Model arguments
-    parser.add_argument("--num_levels", type=int, default=16,
-                       help="Number of hash levels")
-    parser.add_argument("--base_resolution", type=int, default=16,
-                       help="Base hash grid resolution")
-    parser.add_argument("--max_resolution", type=int, default=2048,
-                       help="Maximum hash grid resolution")
+    parser.add_argument("--num_levels", type=int, default=16, help="Number of hash levels")
+    parser.add_argument("--base_resolution", type=int, default=16, help="Base hash grid resolution")
+    parser.add_argument(
+        "--max_resolution",
+        type=int,
+        default=2048,
+        help="Maximum hash grid resolution",
+    )
     
     # Hardware arguments
-    parser.add_argument("--device", type=str, default="cuda",
-                       help="Device to use (cuda/cpu)")
-    parser.add_argument("--num_workers", type=int, default=4,
-                       help="Number of data loading workers")
+    parser.add_argument("--device", type=str, default="cuda", help="Device to use (cuda/cpu)")
+    parser.add_argument("--num_workers", type=int, default=4, help="Number of data loading workers")
     
     # Evaluation arguments
-    parser.add_argument("--eval_only", action="store_true",
-                       help="Only run evaluation")
-    parser.add_argument("--checkpoint_path", type=str, default=None,
-                       help="Path to checkpoint for evaluation")
+    parser.add_argument("--eval_only", action="store_true", help="Only run evaluation")
+    parser.add_argument(
+        "--checkpoint_path",
+        type=str,
+        default=None,
+        help="Path to checkpoint for evaluation",
+    )
     
     args = parser.parse_args()
     
@@ -75,33 +93,20 @@ def main():
     
     # Create configurations
     model_config = NerfactoConfig(
-        num_levels=args.num_levels,
-        base_resolution=args.base_resolution,
-        max_resolution=args.max_resolution
+        num_levels=args.num_levels, base_resolution=args.base_resolution, max_resolution=args.max_resolution
     )
     
     dataset_config = NerfactoDatasetConfig(
-        data_dir=args.data_dir,
-        data_format=args.data_format,
-        auto_scale=True
+        data_dir=args.data_dir, data_format=args.data_format, auto_scale=True
     )
     
     trainer_config = NerfactoTrainerConfig(
-        max_epochs=args.max_epochs,
-        learning_rate=args.learning_rate,
-        batch_size=args.batch_size,
-        output_dir=args.output_dir,
-        experiment_name=args.experiment_name,
-        use_mixed_precision=True,
-        use_wandb=False  # Set to True if you want to use Weights & Biases
+        max_epochs=args.max_epochs, learning_rate=args.learning_rate, batch_size=args.batch_size, output_dir=args.output_dir, experiment_name=args.experiment_name, use_mixed_precision=True, use_wandb=False  # Set to True if you want to use Weights & Biases
     )
     
     # Create trainer
     trainer = NerfactoTrainer(
-        config=trainer_config,
-        model_config=model_config,
-        dataset_config=dataset_config,
-        device=args.device
+        config=trainer_config, model_config=model_config, dataset_config=dataset_config, device=args.device
     )
     
     if args.eval_only:
@@ -136,7 +141,7 @@ def main():
         print("Training completed!")
 
 
-def demo_basic_usage():
+def demo_basic_usage() -> None:
     """Demonstrate basic usage of Nerfacto components."""
     print("=" * 50)
     print("Nerfacto Basic Usage Demo")
@@ -145,12 +150,7 @@ def demo_basic_usage():
     # 1. Create model configuration
     print("1. Creating model configuration...")
     config = NerfactoConfig(
-        num_levels=16,
-        base_resolution=16,
-        max_resolution=2048,
-        features_per_level=2,
-        hidden_dim=64,
-        num_layers=2
+        num_levels=16, base_resolution=16, max_resolution=2048, features_per_level=2, hidden_dim=64, num_layers=2
     )
     print(f"   Model config: {config}")
     
@@ -160,7 +160,7 @@ def demo_basic_usage():
     model = NerfactoModel(config).to(device)
     
     num_params = sum(p.numel() for p in model.parameters())
-    print(f"   Model created with {num_params:,} parameters")
+    print(f"   Model created with {num_params:, } parameters")
     
     # 3. Test forward pass
     print("3. Testing forward pass...")
@@ -181,7 +181,7 @@ def demo_basic_usage():
     print("Demo completed successfully!")
 
 
-def create_sample_dataset():
+def create_sample_dataset() -> None:
     """Create a sample synthetic dataset for testing."""
     print("Creating sample synthetic dataset...")
     
@@ -193,8 +193,7 @@ def create_sample_dataset():
     
     # Create transforms.json file
     transforms = {
-        "camera_angle_x": 0.6911112070083618,
-        "frames": []
+        "camera_angle_x": 0.6911112070083618, "frames": []
     }
     
     # Generate some sample camera poses
@@ -212,15 +211,13 @@ def create_sample_dataset():
         
         # Look at origin
         transform_matrix = [
-            [math.cos(angle + math.pi/2), 0, math.sin(angle + math.pi/2), x],
-            [0, 1, 0, y],
-            [-math.sin(angle + math.pi/2), 0, math.cos(angle + math.pi/2), z],
-            [0, 0, 0, 1]
+            [math.cos(
+                angle + math.pi/2,
+            )
         ]
         
         frame = {
-            "file_path": f"./images/frame_{i:04d}",
-            "transform_matrix": transform_matrix
+            "file_path": f"./images/frame_{i:04d}", "transform_matrix": transform_matrix
         }
         
         transforms["frames"].append(frame)

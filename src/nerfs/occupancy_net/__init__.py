@@ -14,7 +14,5 @@ from .dataset import OccupancyDataset
 from .trainer import OccupancyTrainer
 
 __all__ = [
-    'OccupancyNetwork',
-    'OccupancyDataset', 
-    'OccupancyTrainer'
+    'OccupancyNetwork', 'OccupancyDataset', 'OccupancyTrainer'
 ] 

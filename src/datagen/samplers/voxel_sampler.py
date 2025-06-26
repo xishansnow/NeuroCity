@@ -8,7 +8,7 @@
 import numpy as np
 import json
 import os
-from typing import List, Tuple, Dict, Optional, Union, Any
+from typing import Dict, List, Optional, Tuple, Any
 import random
 from scipy.spatial import cKDTree
 import logging
@@ -19,10 +19,12 @@ logger = logging.getLogger(__name__)
 class VoxelSampler:
     """体素采样器类"""
     
-    def __init__(self, 
-                 tiles_dir: str = "tiles",
-                 voxel_size: float = 1.0,
-                 sample_ratio: float = 0.1):
+    def __init__(
+        self,
+        tiles_dir: str = "tiles",
+        voxel_size: float = 1.0,
+        sample_ratio: float = 0.1,
+    )
         """
         初始化体素采样器
         
@@ -70,8 +72,7 @@ class VoxelSampler:
                             metadata = json.load(f)
                     
                     self.tiles_data[(tile_x, tile_y)] = {
-                        'voxels': voxel_data,
-                        'metadata': metadata
+                        'voxels': voxel_data, 'metadata': metadata
                     }
                     
                     logger.info(f"加载tile ({tile_x}, {tile_y}): {voxel_data.shape}")
@@ -81,7 +82,11 @@ class VoxelSampler:
         
         logger.info(f"成功加载 {len(self.tiles_data)} 个tiles")
     
-    def get_tile_coordinates(self, tile_x: int, tile_y: int) -> Tuple[np.ndarray, np.ndarray, np.ndarray]:
+    def get_tile_coordinates(
+        self,
+        tile_x: int,
+        tile_y: int,
+    )
         """
         获取tile的坐标网格
         
@@ -100,20 +105,21 @@ class VoxelSampler:
         
         # 创建坐标网格
         x_coords, y_coords, z_coords = np.meshgrid(
-            np.arange(grid_size[0]) * self.voxel_size + tile_origin[0],
-            np.arange(grid_size[1]) * self.voxel_size + tile_origin[1],
-            np.arange(grid_size[2]) * self.voxel_size,
-            indexing='ij'
+            np.arange(
+                grid_size[0],
+            )
         )
         
         return x_coords, y_coords, z_coords
     
-    def sample_uniform(self, 
-                      tile_x: int, 
-                      tile_y: int, 
-                      n_samples: int = 10000,
-                      include_occupied: bool = True,
-                      include_free: bool = True) -> Dict[str, np.ndarray]:
+    def sample_uniform(
+        self,
+        tile_x: int,
+        tile_y: int,
+        n_samples: int = 10000,
+        include_occupied: bool = True,
+        include_free: bool = True,
+    )
         """
         均匀采样
         
@@ -164,16 +170,18 @@ class VoxelSampler:
                 labels.append(0.0)  # 自由
         
         return {
-            'coordinates': np.array(samples),
-            'labels': np.array(labels),
-            'tile_index': (tile_x, tile_y)
+            'coordinates': np.array(
+                samples,
+            )
         }
     
-    def sample_stratified(self, 
-                         tile_x: int, 
-                         tile_y: int, 
-                         n_samples: int = 10000,
-                         occupied_ratio: float = 0.3) -> Dict[str, np.ndarray]:
+    def sample_stratified(
+        self,
+        tile_x: int,
+        tile_y: int,
+        n_samples: int = 10000,
+        occupied_ratio: float = 0.3,
+    )
         """
         分层采样（确保占用和自由体素的平衡）
         
@@ -226,17 +234,19 @@ class VoxelSampler:
                 labels.append(0.0)  # 自由
         
         return {
-            'coordinates': np.array(samples),
-            'labels': np.array(labels),
-            'tile_index': (tile_x, tile_y)
+            'coordinates': np.array(
+                samples,
+            )
         }
     
-    def sample_near_surface(self, 
-                           tile_x: int, 
-                           tile_y: int, 
-                           n_samples: int = 10000,
-                           surface_threshold: float = 0.5,
-                           noise_std: float = 2.0) -> Dict[str, np.ndarray]:
+    def sample_near_surface(
+        self,
+        tile_x: int,
+        tile_y: int,
+        n_samples: int = 10000,
+        surface_threshold: float = 0.5,
+        noise_std: float = 2.0,
+    )
         """
         表面附近采样（用于SDF训练）
         
@@ -282,13 +292,19 @@ class VoxelSampler:
                 samples.append(sample_coord)
                 
                 # 计算简化的SDF（距离最近表面的距离）
-                sdf_value = self._compute_approximate_sdf(sample_coord, voxel_data, x_coords, y_coords, z_coords)
+                sdf_value = self._compute_approximate_sdf(
+                    sample_coord,
+                    voxel_data,
+                    x_coords,
+                    y_coords,
+                    z_coords,
+                )
                 sdf_values.append(sdf_value)
         
         return {
-            'coordinates': np.array(samples),
-            'sdf': np.array(sdf_values),
-            'tile_index': (tile_x, tile_y)
+            'coordinates': np.array(
+                samples,
+            )
         }
     
     def _detect_surface_voxels(self, voxel_data: np.ndarray, threshold: float) -> np.ndarray:
@@ -305,8 +321,14 @@ class VoxelSampler:
         
         return surface
     
-    def _compute_approximate_sdf(self, point: np.ndarray, voxel_data: np.ndarray, 
-                                x_coords: np.ndarray, y_coords: np.ndarray, z_coords: np.ndarray) -> float:
+    def _compute_approximate_sdf(
+        self,
+        point: np.ndarray,
+        voxel_data: np.ndarray,
+        x_coords: np.ndarray,
+        y_coords: np.ndarray,
+        z_coords: np.ndarray,
+    )
         """计算近似SDF值"""
         # 找到最近的体素
         distances = np.sqrt(
@@ -324,10 +346,12 @@ class VoxelSampler:
         
         return sdf
     
-    def sample_all_tiles(self, 
-                        sampling_method: str = 'uniform',
-                        n_samples_per_tile: int = 10000,
-                        **kwargs) -> List[Dict[str, np.ndarray]]:
+    def sample_all_tiles(
+        self,
+        sampling_method: str = 'uniform',
+        n_samples_per_tile: int = 10000,
+        **kwargs,
+    )
         """
         对所有tiles进行采样
         
@@ -363,9 +387,7 @@ class VoxelSampler:
         logger.info(f"总共采样完成 {len(all_samples)} 个tiles")
         return all_samples
     
-    def save_samples(self, 
-                    samples: List[Dict[str, np.ndarray]], 
-                    output_dir: str = "samples"):
+    def save_samples(self, samples: list[dict[str, np.ndarray]], output_dir: str = "samples"):
         """
         保存采样结果
         
@@ -379,12 +401,14 @@ class VoxelSampler:
             tile_index = sample.get('tile_index', (i, 0))
             
             # 保存为npz格式
-            output_file = os.path.join(output_dir, f"samples_tile_{tile_index[0]}_{tile_index[1]}.npz")
+            output_file = os.path.join(
+                output_dir,
+                f"samples_tile_{tile_index[0]}_{tile_index[1]}.npz",
+            )
             
             # 准备保存数据
             save_data = {
-                'coordinates': sample['coordinates'],
-            }
+                'coordinates': sample['coordinates'], }
             
             if 'labels' in sample:
                 save_data['labels'] = sample['labels']
@@ -394,18 +418,18 @@ class VoxelSampler:
             np.savez_compressed(output_file, **save_data)
             logger.info(f"样本已保存: {output_file}")
     
-    def get_tile_info(self) -> Dict[str, Any]:
+    def get_tile_info(self) -> dict[str, Any]:
         """获取tiles信息"""
         info = {
-            'num_tiles': len(self.tiles_data),
-            'tiles': []
+            'num_tiles': len(self.tiles_data), 'tiles': []
         }
         
         for (tile_x, tile_y), data in self.tiles_data.items():
             tile_info = {
-                'index': (tile_x, tile_y),
-                'shape': data['voxels'].shape,
-                'metadata': data['metadata']
+                'index': (
+                    tile_x,
+                    tile_y,
+                )
             }
             info['tiles'].append(tile_info)
         

@@ -2,15 +2,14 @@
 Block-NeRF Model Implementation
 
 This module contains the core Block-NeRF neural network architecture
-based on mip-NeRF with extensions for appearance embeddings, pose refinement,
-and exposure conditioning.
+based on mip-NeRF with extensions for appearance embeddings, pose refinement, and exposure conditioning.
 """
 
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
 import numpy as np
-from typing import Dict, List, Optional, Tuple, Union
+from typing import List, Optional, Tuple, Union 
 import math
 
 
@@ -32,9 +31,7 @@ def positional_encoding(x: torch.Tensor, L: int) -> torch.Tensor:
     return torch.cat(encoding, dim=-1)
 
 
-def integrated_positional_encoding(means: torch.Tensor, 
-                                 covs: torch.Tensor, 
-                                 L: int) -> torch.Tensor:
+def integrated_positional_encoding(means: torch.Tensor, covs: torch.Tensor, L: int) -> torch.Tensor:
     """
     Integrated positional encoding for mip-NeRF
     
@@ -70,15 +67,17 @@ class BlockNeRFNetwork(nn.Module):
     Block-NeRF Neural Network based on mip-NeRF architecture
     """
     
-    def __init__(self,
-                 pos_encoding_levels: int = 16,
-                 dir_encoding_levels: int = 4,
-                 appearance_dim: int = 32,
-                 exposure_dim: int = 8,
-                 hidden_dim: int = 256,
-                 num_layers: int = 8,
-                 skip_connections: List[int] = [4],
-                 use_integrated_encoding: bool = True):
+    def __init__(
+        self,
+        pos_encoding_levels: int = 16,
+        dir_encoding_levels: int = 4,
+        appearance_dim: int = 32,
+        exposure_dim: int = 8,
+        hidden_dim: int = 256,
+        num_layers: int = 8,
+        skip_connections: list[int] = [4],
+        use_integrated_encoding: bool = True
+        ):
         super().__init__()
         
         self.pos_encoding_levels = pos_encoding_levels
@@ -118,16 +117,17 @@ class BlockNeRFNetwork(nn.Module):
         color_input_dim = hidden_dim + dir_input_dim + appearance_dim + exposure_dim
         
         self.color_layers = nn.ModuleList([
-            nn.Linear(color_input_dim, hidden_dim // 2),
-            nn.Linear(hidden_dim // 2, hidden_dim // 2)
+            nn.Linear(color_input_dim, hidden_dim // 2), nn.Linear(hidden_dim // 2, hidden_dim // 2)
         ])
         
         # RGB output
         self.color_output = nn.Linear(hidden_dim // 2, 3)
         
-    def encode_position(self, 
-                       means: torch.Tensor,
-                       covs: Optional[torch.Tensor] = None) -> torch.Tensor:
+    def encode_position(
+        self,
+        means: torch.Tensor,
+        covs: Optional[torch.Tensor] = None,
+    ):
         """Encode 3D positions"""
         if self.use_integrated_encoding and covs is not None:
             encoded = integrated_positional_encoding(means, covs, self.pos_encoding_levels)
@@ -142,12 +142,14 @@ class BlockNeRFNetwork(nn.Module):
         """Encode viewing directions"""
         return positional_encoding(directions, self.dir_encoding_levels)
     
-    def forward(self,
-                positions: torch.Tensor,
-                directions: torch.Tensor,
-                appearance_embedding: torch.Tensor,
-                exposure: torch.Tensor,
-                position_covs: Optional[torch.Tensor] = None) -> Dict[str, torch.Tensor]:
+    def forward(
+        self,
+        positions: torch.Tensor,
+        directions: torch.Tensor,
+        appearance_embedding: torch.Tensor,
+        exposure: torch.Tensor,
+        position_covs: Optional[torch.Tensor] = None,
+    ):
         """
         Forward pass through Block-NeRF network
         
@@ -180,10 +182,7 @@ class BlockNeRFNetwork(nn.Module):
         
         # Color network input
         color_input = torch.cat([
-            features,
-            encoded_dir,
-            appearance_embedding,
-            exposure
+            features, encoded_dir, appearance_embedding, exposure
         ], dim=-1)
         
         # Color network forward pass
@@ -195,9 +194,7 @@ class BlockNeRFNetwork(nn.Module):
         color = torch.sigmoid(self.color_output(x))
         
         return {
-            'density': density,
-            'color': color,
-            'features': features
+            'density': density, 'color': color, 'features': features
         }
 
 
@@ -206,13 +203,15 @@ class BlockNeRF(nn.Module):
     Complete Block-NeRF model with all components
     """
     
-    def __init__(self,
-                 network_config: Dict,
-                 block_center: torch.Tensor,
-                 block_radius: float,
-                 num_appearance_embeddings: int = 1000,
-                 appearance_dim: int = 32,
-                 exposure_dim: int = 8):
+    def __init__(
+        self,
+        network_config: dict,
+        block_center: torch.Tensor,
+        block_radius: float,
+        num_appearance_embeddings: int = 1000,
+        appearance_dim: int = 32,
+        exposure_dim: int = 8,
+    ):
         super().__init__()
         
         self.block_center = nn.Parameter(block_center, requires_grad=False)
@@ -222,15 +221,12 @@ class BlockNeRF(nn.Module):
         
         # Main NeRF network
         self.network = BlockNeRFNetwork(
-            appearance_dim=appearance_dim,
-            exposure_dim=exposure_dim,
-            **network_config
+            appearance_dim=appearance_dim, exposure_dim=exposure_dim, **network_config
         )
         
         # Appearance embeddings
         self.appearance_embeddings = nn.Embedding(
-            num_appearance_embeddings, 
-            appearance_dim
+            num_appearance_embeddings, appearance_dim
         )
         
         # Exposure encoding
@@ -263,19 +259,21 @@ class BlockNeRF(nn.Module):
         distances = torch.norm(positions - self.block_center, dim=-1)
         return distances <= self.block_radius
     
-    def forward(self,
-                positions: torch.Tensor,
-                directions: torch.Tensor,
-                appearance_ids: torch.Tensor,
-                exposure_values: torch.Tensor,
-                position_covs: Optional[torch.Tensor] = None) -> Dict[str, torch.Tensor]:
+    def forward(
+        self,
+        positions: torch.Tensor,
+        directions: torch.Tensor,
+        appearance_ids: torch.Tensor,
+        exposure_values: torch.Tensor,
+        position_covs: Optional[torch.Tensor] = None,
+    ):
         """
         Forward pass through complete Block-NeRF
         
         Args:
             positions: 3D positions (..., 3)
             directions: Viewing directions (..., 3)
-            appearance_ids: Appearance embedding IDs (...,)
+            appearance_ids: Appearance embedding IDs (..., )
             exposure_values: Exposure values (..., 1)
             position_covs: Position covariances (..., 3, 3)
             
@@ -298,11 +296,7 @@ class BlockNeRF(nn.Module):
         
         # Forward through network
         outputs = self.network(
-            positions=positions,
-            directions=directions,
-            appearance_embedding=appearance_emb,
-            exposure=exposure_emb,
-            position_covs=position_covs
+            positions=positions, directions=directions, appearance_embedding=appearance_emb, exposure=exposure_emb, position_covs=position_covs
         )
         
         # Add block information
@@ -312,11 +306,22 @@ class BlockNeRF(nn.Module):
         
         return outputs
     
-    def get_block_info(self) -> Dict[str, Union[torch.Tensor, float]]:
+    def get_block_info(self) -> dict[str, Union[torch.Tensor, float]]:
         """Get block metadata"""
         return {
-            'center': self.block_center,
-            'radius': self.block_radius,
-            'appearance_dim': self.appearance_dim,
-            'exposure_dim': self.exposure_dim
-        } 
+            'center': self.block_center, 'radius': self.block_radius, 'appearance_dim': self.appearance_dim, 'exposure_dim': self.exposure_dim
+        }
+
+    def render_rays(
+        self, rays_o: torch.Tensor, rays_d: torch.Tensor, near: float, far: float, appearance_embedding: Optional[torch.Tensor] = None, **kwargs
+    ) -> dict[str, torch.Tensor]:
+        """Render rays"""
+        # Implementation of render_rays method
+        pass
+
+    def forward(
+        self, rays_o: torch.Tensor, rays_d: torch.Tensor, appearance_embedding: Optional[torch.Tensor] = None, **kwargs
+    ) -> dict[str, torch.Tensor]:
+        """Forward pass for rays"""
+        # Implementation of forward method for rays
+        pass 

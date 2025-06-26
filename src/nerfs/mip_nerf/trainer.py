@@ -14,7 +14,7 @@ import numpy as np
 import os
 import time
 from pathlib import Path
-from typing import Dict, List, Optional, Any, Tuple
+from typing import Dict, List, Optional, Tuple, Any
 import json
 from tqdm import tqdm
 
@@ -29,10 +29,16 @@ class MipNeRFTrainer:
     Handles training loop, validation, checkpointing, and logging.
     """
     
-    def __init__(self, config: MipNeRFConfig, model: MipNeRF, 
-                 train_dataset: MipNeRFDataset, val_dataset: Optional[MipNeRFDataset] = None,
-                 test_dataset: Optional[MipNeRFDataset] = None,
-                 device: str = 'cuda', log_dir: str = './logs'):
+    def __init__(
+        self,
+        config: MipNeRFConfig,
+        model: MipNeRF,
+        train_dataset: MipNeRFDataset,
+        val_dataset: Optional[MipNeRFDataset] = None,
+        test_dataset: Optional[MipNeRFDataset] = None,
+        device: str = 'cuda',
+        log_dir: str = './logs',
+    ) -> None:
         """
         Args:
             config: Mip-NeRF configuration
@@ -54,7 +60,12 @@ class MipNeRFTrainer:
         
         # Create ray datasets for efficient training
         self.train_ray_dataset = MipNeRFRayDataset(train_dataset, batch_size=4096)
-        self.train_loader = DataLoader(self.train_ray_dataset, batch_size=1, shuffle=True, num_workers=4)
+        self.train_loader = DataLoader(
+            self.train_ray_dataset,
+            batch_size=1,
+            shuffle=True,
+            num_workers=4,
+        )
         
         if val_dataset is not None:
             self.val_image_dataset = MipNeRFImageDataset(val_dataset)
@@ -68,8 +79,9 @@ class MipNeRFTrainer:
         
         # Learning rate scheduler
         self.scheduler = optim.lr_scheduler.ExponentialLR(
-            self.optimizer, 
-            gamma=(config.lr_final / config.lr_init) ** (1 / (config.lr_decay * 1000))
+            self.optimizer, gamma=(
+                config.lr_final / config.lr_init,
+            )
         )
         
         # Logging
@@ -87,7 +99,7 @@ class MipNeRFTrainer:
         self.val_psnrs = []
         self.learning_rates = []
         
-    def train_step(self, batch: Dict[str, torch.Tensor]) -> Dict[str, float]:
+    def train_step(self, batch: dict[str, torch.Tensor]) -> dict[str, float]:
         """
         Single training step
         
@@ -107,10 +119,14 @@ class MipNeRFTrainer:
         target_rgb = batch['rgbs'].to(self.device)
         
         # Forward pass
-        pred = self.model(rays_o, rays_d, rays_d, 
-                         near=self.train_dataset.near, 
-                         far=self.train_dataset.far,
-                         pixel_radius=radii)
+        pred = self.model(
+            rays_o,
+            rays_d,
+            rays_d,
+            near=self.train_dataset.near,
+            far=self.train_dataset.far,
+            pixel_radius=radii,
+        )
         
         # Compute loss
         losses = self.loss_fn(pred, target_rgb)
@@ -132,7 +148,7 @@ class MipNeRFTrainer:
         
         return loss_dict
     
-    def validate(self) -> Dict[str, float]:
+    def validate(self) -> dict[str, float]:
         """
         Validate the model on validation set
         
@@ -169,12 +185,16 @@ class MipNeRFTrainer:
         avg_loss = total_loss / num_images
         
         return {
-            'val_psnr': avg_psnr,
-            'val_loss': avg_loss
+            'val_psnr': avg_psnr, 'val_loss': avg_loss
         }
     
-    def render_image(self, rays_o: torch.Tensor, rays_d: torch.Tensor, 
-                    radii: torch.Tensor, chunk_size: int = 1024) -> torch.Tensor:
+    def render_image(
+        self,
+        rays_o: torch.Tensor,
+        rays_d: torch.Tensor,
+        radii: torch.Tensor,
+        chunk_size: int = 1024,
+    ) -> torch.Tensor:
         """
         Render a full image by processing rays in chunks
         
@@ -203,10 +223,14 @@ class MipNeRFTrainer:
             chunk_radii = radii_flat[i:i+chunk_size]
             
             # Render chunk
-            pred = self.model(chunk_rays_o, chunk_rays_d, chunk_rays_d,
-                             near=self.train_dataset.near,
-                             far=self.train_dataset.far,
-                             pixel_radius=chunk_radii)
+            pred = self.model(
+                chunk_rays_o,
+                chunk_rays_d,
+                chunk_rays_d,
+                near=self.train_dataset.near,
+                far=self.train_dataset.far,
+                pixel_radius=chunk_radii,
+            )
             
             # Extract RGB (prefer fine if available)
             if 'fine' in pred:
@@ -222,8 +246,13 @@ class MipNeRFTrainer:
         
         return rgb_image
     
-    def train(self, num_epochs: int, save_freq: int = 1000, 
-              val_freq: int = 1000, log_freq: int = 100):
+    def train(
+        self,
+        num_epochs: int,
+        save_freq: int = 1000,
+        val_freq: int = 1000,
+        log_freq: int = 100,
+    ) -> None:
         """
         Main training loop
         
@@ -260,9 +289,7 @@ class MipNeRFTrainer:
                     
                     # Update progress bar
                     pbar.set_postfix({
-                        'loss': f"{losses['total_loss']:.4f}",
-                        'psnr': f"{losses['psnr']:.2f}",
-                        'lr': f"{current_lr:.2e}"
+                        'loss': f"{losses['total_loss']:.4f}"
                     })
                 
                 # Validation
@@ -295,14 +322,14 @@ class MipNeRFTrainer:
         self.save_checkpoint('final_model.pth')
         print("Training completed!")
     
-    def log_metrics(self, losses: Dict[str, float], learning_rate: float):
+    def log_metrics(self, losses: dict[str, float], learning_rate: float):
         """Log training metrics"""
         for name, value in losses.items():
             self.writer.add_scalar(f'train/{name}', value, self.global_step)
         
         self.writer.add_scalar('train/learning_rate', learning_rate, self.global_step)
     
-    def log_validation_metrics(self, metrics: Dict[str, float]):
+    def log_validation_metrics(self, metrics: dict[str, float]):
         """Log validation metrics"""
         for name, value in metrics.items():
             self.writer.add_scalar(f'val/{name}', value, self.global_step)
@@ -316,10 +343,9 @@ class MipNeRFTrainer:
             'global_step': self.global_step,
             'epoch': self.epoch,
             'best_psnr': self.best_psnr,
-            'config': self.config,
             'train_losses': self.train_losses,
             'val_psnrs': self.val_psnrs,
-            'learning_rates': self.learning_rates
+            'learning_rates': self.learning_rates,
         }
         
         torch.save(checkpoint, self.log_dir / filename)
@@ -343,7 +369,7 @@ class MipNeRFTrainer:
         print(f"Checkpoint loaded from {checkpoint_path}")
         print(f"Resumed at step {self.global_step}, epoch {self.epoch}")
     
-    def test(self, save_images: bool = True) -> Dict[str, float]:
+    def test(self, save_images: bool = True) -> dict[str, float]:
         """
         Test the model on test set
         
@@ -398,16 +424,13 @@ class MipNeRFTrainer:
                     
                     # Save images
                     import cv2
-                    cv2.imwrite(str(results_dir / f'pred_{i:03d}.png'), 
-                               cv2.cvtColor(pred_uint8, cv2.COLOR_RGB2BGR))
-                    cv2.imwrite(str(results_dir / f'target_{i:03d}.png'), 
-                               cv2.cvtColor(target_uint8, cv2.COLOR_RGB2BGR))
+                    cv2.imwrite(str(results_dir / f'pred_{i:03d}.png'), pred_uint8)
+                    cv2.imwrite(str(results_dir / f'target_{i:03d}.png'), target_uint8)
         
         avg_psnr = total_psnr / num_images
         
         test_metrics = {
-            'test_psnr': avg_psnr,
-            'num_test_images': num_images
+            'test_psnr': avg_psnr, 'num_test_images': num_images
         }
         
         # Save test results
@@ -457,14 +480,12 @@ class MipNeRFTrainer:
         i, j = torch.meshgrid(
             torch.arange(W, dtype=torch.float32, device=self.device),
             torch.arange(H, dtype=torch.float32, device=self.device),
-            indexing='xy'
+            indexing='ij'
         )
         
         # Convert to camera coordinates
         dirs = torch.stack([
-            (i - W * 0.5) / focal,
-            -(j - H * 0.5) / focal,
-            -torch.ones_like(i)
+            (i - W * 0.5) / focal, -(j - H * 0.5) / focal, -torch.ones_like(i)
         ], dim=-1)
         
         # Transform to world coordinates

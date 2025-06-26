@@ -8,16 +8,17 @@ import unittest
 import torch
 import numpy as np
 from typing import Dict, Any
+import sys
+import os
 
-from .core import (
-    PlenoxelConfig,
-    SphericalHarmonics,
-    VoxelGrid,
-    PlenoxelModel,
-    PlenoxelLoss
+# Add src to path for imports
+sys.path.append(os.path.join(os.path.dirname(__file__), '..', '..', 'src'))
+
+from nerfs.plenoxels.core import (
+    PlenoxelConfig, SphericalHarmonics, VoxelGrid, PlenoxelModel, PlenoxelLoss
 )
-from .dataset import PlenoxelDatasetConfig
-from .trainer import PlenoxelTrainerConfig
+from nerfs.plenoxels.dataset import PlenoxelDatasetConfig
+from nerfs.plenoxels.trainer import PlenoxelTrainerConfig
 
 
 class TestSphericalHarmonics(unittest.TestCase):
@@ -36,9 +37,7 @@ class TestSphericalHarmonics(unittest.TestCase):
         
         # Test directions
         dirs = torch.tensor([
-            [1.0, 0.0, 0.0],
-            [0.0, 1.0, 0.0],
-            [0.0, 0.0, 1.0]
+            [1.0, 0.0, 0.0], [0.0, 1.0, 0.0], [0.0, 0.0, 1.0]
         ], device=device)
         
         # Test degree 0
@@ -58,8 +57,7 @@ class TestSphericalHarmonics(unittest.TestCase):
         device = torch.device('cpu')
         
         dirs = torch.tensor([
-            [1.0, 0.0, 0.0],
-            [0.0, 1.0, 0.0]
+            [1.0, 0.0, 0.0], [0.0, 1.0, 0.0]
         ], device=device)
         
         # SH coefficients for RGB
@@ -84,9 +82,7 @@ class TestVoxelGrid(unittest.TestCase):
         self.sh_degree = 1
         
         self.voxel_grid = VoxelGrid(
-            self.resolution,
-            self.scene_bounds,
-            self.sh_degree
+            self.resolution, self.scene_bounds, self.sh_degree
         ).to(self.device)
     
     def test_voxel_grid_creation(self):
@@ -112,7 +108,7 @@ class TestVoxelGrid(unittest.TestCase):
         world_coords = torch.tensor([[0.0, 0.0, 0.0]], device=self.device)
         density, sh_coeffs = self.voxel_grid.trilinear_interpolation(world_coords)
         
-        self.assertEqual(density.shape, (1,))
+        self.assertEqual(density.shape, (1, ))
         self.assertEqual(sh_coeffs.shape, (1, 3, 4))
     
     def test_occupancy_mask(self):
@@ -143,11 +139,11 @@ class TestPlenoxelModel(unittest.TestCase):
         """Set up test fixtures."""
         self.device = torch.device('cpu')
         self.config = PlenoxelConfig(
-            grid_resolution=(32, 32, 32),
-            scene_bounds=(-1.0, -1.0, -1.0, 1.0, 1.0, 1.0),
-            sh_degree=1,
-            near_plane=0.5,
-            far_plane=3.0
+            grid_resolution=(
+                32,
+                32,
+                32,
+            )
         )
         self.model = PlenoxelModel(self.config).to(self.device)
     
@@ -169,7 +165,7 @@ class TestPlenoxelModel(unittest.TestCase):
         
         # Check output shapes
         self.assertEqual(outputs['rgb'].shape, (num_rays, 3))
-        self.assertEqual(outputs['depth'].shape, (num_rays,))
+        self.assertEqual(outputs['depth'].shape, (num_rays, ))
         self.assertEqual(outputs['weights'].shape, (num_rays, 32))
         
         # Check value ranges
@@ -233,9 +229,7 @@ class TestConfigurations(unittest.TestCase):
         
         # Test custom values
         custom_config = PlenoxelConfig(
-            grid_resolution=(128, 128, 128),
-            sh_degree=1,
-            use_coarse_to_fine=False
+            grid_resolution=(128, 128, 128), sh_degree=1, use_coarse_to_fine=False
         )
         
         self.assertEqual(custom_config.grid_resolution, (128, 128, 128))
@@ -270,10 +264,7 @@ class TestIntegration(unittest.TestCase):
         
         # Create small model for testing
         config = PlenoxelConfig(
-            grid_resolution=(16, 16, 16),
-            sh_degree=1,
-            near_plane=0.5,
-            far_plane=2.0
+            grid_resolution=(16, 16, 16), sh_degree=1, near_plane=0.5, far_plane=2.0
         )
         model = PlenoxelModel(config).to(device)
         
@@ -289,7 +280,7 @@ class TestIntegration(unittest.TestCase):
         
         # Verify outputs
         self.assertEqual(outputs['rgb'].shape, (batch_size, 3))
-        self.assertEqual(outputs['depth'].shape, (batch_size,))
+        self.assertEqual(outputs['depth'].shape, (batch_size, ))
         
         # Test loss computation
         loss_fn = PlenoxelLoss(config)
@@ -308,12 +299,7 @@ def run_tests():
     
     # Add test classes
     test_classes = [
-        TestSphericalHarmonics,
-        TestVoxelGrid,
-        TestPlenoxelModel,
-        TestPlenoxelLoss,
-        TestConfigurations,
-        TestIntegration
+        TestSphericalHarmonics, TestVoxelGrid, TestPlenoxelModel, TestPlenoxelLoss, TestConfigurations, TestIntegration
     ]
     
     for test_class in test_classes:

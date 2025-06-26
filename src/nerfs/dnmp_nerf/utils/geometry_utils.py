@@ -1,13 +1,12 @@
 """
 Geometry processing utilities for DNMP.
 
-This module provides functions for geometric computations, transformations,
-and spatial operations.
+This module provides functions for geometric computations, transformations, and spatial operations.
 """
 
 import torch
 import numpy as np
-from typing import Tuple, List, Optional, Dict, Union
+from typing import Dict, List, Optional, Tuple, Union
 
 
 def rodrigues_rotation_matrix(axis: torch.Tensor, angle: torch.Tensor) -> torch.Tensor:
@@ -28,9 +27,7 @@ def rodrigues_rotation_matrix(axis: torch.Tensor, angle: torch.Tensor) -> torch.
     
     # Rodrigues' formula
     K = torch.tensor([
-        [0, -axis[2], axis[1]],
-        [axis[2], 0, -axis[0]],
-        [-axis[1], axis[0], 0]
+        [0, -axis[2], axis[1]], [axis[2], 0, -axis[0]], [-axis[1], axis[0], 0]
     ], device=device)
     
     I = torch.eye(3, device=device)
@@ -64,17 +61,19 @@ def look_at_matrix(eye: torch.Tensor, target: torch.Tensor, up: torch.Tensor) ->
     view_matrix[1, :3] = up_new
     view_matrix[2, :3] = -forward
     view_matrix[:3, 3] = -torch.stack([
-        torch.dot(right, eye),
-        torch.dot(up_new, eye),
-        torch.dot(-forward, eye)
+        torch.dot(right, eye), torch.dot(up_new, eye), torch.dot(-forward, eye)
     ])
     view_matrix[3, 3] = 1.0
     
     return view_matrix
 
 
-def perspective_projection_matrix(fov: float, aspect: float, 
-                                 near: float, far: float) -> torch.Tensor:
+def perspective_projection_matrix(
+    fov: float,
+    aspect: float,
+    near: float,
+    far: float
+):
     """
     Compute perspective projection matrix.
     
@@ -99,8 +98,7 @@ def perspective_projection_matrix(fov: float, aspect: float,
     return proj_matrix
 
 
-def transform_points(points: torch.Tensor, 
-                    transformation: torch.Tensor) -> torch.Tensor:
+def transform_points(points: torch.Tensor, transformation: torch.Tensor) -> torch.Tensor:
     """
     Transform points using 4x4 transformation matrix.
     
@@ -123,7 +121,7 @@ def transform_points(points: torch.Tensor,
     return transformed_points
 
 
-def compute_bounding_box(points: torch.Tensor) -> Tuple[torch.Tensor, torch.Tensor]:
+def compute_bounding_box(points: torch.Tensor) -> tuple[torch.Tensor, torch.Tensor]:
     """
     Compute axis-aligned bounding box.
     
@@ -140,7 +138,7 @@ def compute_bounding_box(points: torch.Tensor) -> Tuple[torch.Tensor, torch.Tens
     return min_bounds, max_bounds
 
 
-def compute_oriented_bounding_box(points: torch.Tensor) -> Dict[str, torch.Tensor]:
+def compute_oriented_bounding_box(points: torch.Tensor) -> dict[str, torch.Tensor]:
     """
     Compute oriented bounding box using PCA.
     
@@ -176,15 +174,11 @@ def compute_oriented_bounding_box(points: torch.Tensor) -> Dict[str, torch.Tenso
     extents = max_proj - min_proj
     
     return {
-        'center': center,
-        'axes': eigenvectors,
-        'extents': extents,
-        'eigenvalues': eigenvalues
+        'center': center, 'axes': eigenvectors, 'extents': extents, 'eigenvalues': eigenvalues
     }
 
 
-def point_in_triangle(point: torch.Tensor, 
-                     triangle: torch.Tensor) -> torch.Tensor:
+def point_in_triangle(point: torch.Tensor, triangle: torch.Tensor) -> torch.Tensor:
     """
     Check if 2D point is inside triangle using barycentric coordinates.
     
@@ -228,10 +222,12 @@ def point_in_triangle(point: torch.Tensor,
         return inside
 
 
-def ray_triangle_intersection(ray_origin: torch.Tensor,
-                             ray_direction: torch.Tensor,
-                             triangle: torch.Tensor,
-                             epsilon: float = 1e-8) -> Dict[str, torch.Tensor]:
+def ray_triangle_intersection(
+    ray_origin: torch.Tensor,
+    ray_direction: torch.Tensor,
+    triangle: torch.Tensor,
+    epsilon: float = 1e-8
+):
     """
     Compute ray-triangle intersection using Möller-Trumbore algorithm.
     
@@ -286,10 +282,12 @@ def ray_triangle_intersection(ray_origin: torch.Tensor,
         return {'intersects': False, 'distance': torch.inf, 'barycentric': torch.zeros(3)}
 
 
-def sphere_ray_intersection(ray_origin: torch.Tensor,
-                           ray_direction: torch.Tensor,
-                           sphere_center: torch.Tensor,
-                           sphere_radius: float) -> Dict[str, torch.Tensor]:
+def sphere_ray_intersection(
+    ray_origin: torch.Tensor,
+    ray_direction: torch.Tensor,
+    sphere_center: torch.Tensor,
+    sphere_radius: float
+):
     """
     Compute ray-sphere intersection.
     

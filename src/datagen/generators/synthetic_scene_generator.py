@@ -5,8 +5,7 @@
 """
 
 import numpy as np
-from typing import List, Tuple, Dict, Optional, Union
-import logging
+from typing import Dict, List, Optional, Tuple, import logging
 from .occupancy_generator import OccupancyGenerator
 from .sdf_generator import SDFGenerator
 
@@ -16,9 +15,16 @@ logger = logging.getLogger(__name__)
 class SyntheticSceneGenerator:
     """合成场景生成器"""
     
-    def __init__(self,
-                 voxel_size: float = 1.0,
-                 scene_bounds: Tuple[float, float, float, float, float, float] = (-100, -100, 0, 100, 100, 50)):
+    def __init__(
+        self,
+        voxel_size: float = 1.0,
+        scene_bounds: tuple[float,
+        float,
+        float,
+        float,
+        float,
+        float] =,
+    )
         """
         初始化合成场景生成器
         
@@ -35,10 +41,12 @@ class SyntheticSceneGenerator:
         
         logger.info(f"合成场景生成器初始化完成")
     
-    def generate_urban_scene(self,
-                           num_buildings: int = 10,
-                           building_height_range: Tuple[float, float] = (10, 50),
-                           building_size_range: Tuple[float, float] = (10, 30)) -> Dict[str, np.ndarray]:
+    def generate_urban_scene(
+        self,
+        num_buildings: int = 10,
+        building_height_range: tuple[float,
+        float] =,
+    )
         """
         生成城市场景
         
@@ -64,11 +72,8 @@ class SyntheticSceneGenerator:
             height = np.random.uniform(building_height_range[0], building_height_range[1])
             
             building_config = {
-                'type': 'box',
-                'params': {
-                    'center': (x, y, z),
-                    'size': (width, depth, height),
-                    'filled': True
+                'type': 'box', 'params': {
+                    'center': (x, y, z), 'size': (width, depth, height), 'filled': True
                 }
             }
             
@@ -80,15 +85,15 @@ class SyntheticSceneGenerator:
         logger.info(f"生成城市场景，建筑数: {num_buildings}")
         
         return {
-            'occupancy': scene_occupancy,
-            'buildings': buildings,
-            'scene_type': 'urban'
+            'occupancy': scene_occupancy, 'buildings': buildings, 'scene_type': 'urban'
         }
     
-    def generate_forest_scene(self,
-                            num_trees: int = 20,
-                            tree_height_range: Tuple[float, float] = (15, 40),
-                            tree_radius_range: Tuple[float, float] = (2, 6)) -> Dict[str, np.ndarray]:
+    def generate_forest_scene(
+        self,
+        num_trees: int = 20,
+        tree_height_range: tuple[float,
+        float] =,
+    )
         """
         生成森林场景
         
@@ -113,13 +118,12 @@ class SyntheticSceneGenerator:
             z = height / 2
             
             tree_config = {
-                'type': 'cylinder',
-                'params': {
-                    'center': (x, y, z),
-                    'radius': radius,
-                    'height': height,
-                    'axis': 2,
-                    'filled': True
+                'type': 'cylinder', 'params': {
+                    'center': (
+                        x,
+                        y,
+                        z,
+                    )
                 }
             }
             
@@ -131,13 +135,10 @@ class SyntheticSceneGenerator:
         logger.info(f"生成森林场景，树木数: {num_trees}")
         
         return {
-            'occupancy': scene_occupancy,
-            'trees': trees,
-            'scene_type': 'forest'
+            'occupancy': scene_occupancy, 'trees': trees, 'scene_type': 'forest'
         }
     
-    def generate_mixed_scene(self,
-                           scene_configs: List[Dict]) -> Dict[str, np.ndarray]:
+    def generate_mixed_scene(self, scene_configs: list[Dict]) -> dict[str, np.ndarray]:
         """
         生成混合场景
         
@@ -168,15 +169,10 @@ class SyntheticSceneGenerator:
         logger.info(f"生成混合场景，场景类型: {scene_types}")
         
         return {
-            'occupancy': scene_occupancy,
-            'objects': all_objects,
-            'scene_types': scene_types,
-            'scene_type': 'mixed'
+            'occupancy': scene_occupancy, 'objects': all_objects, 'scene_types': scene_types, 'scene_type': 'mixed'
         }
     
-    def add_noise_to_scene(self,
-                          occupancy: np.ndarray,
-                          noise_level: float = 0.01) -> np.ndarray:
+    def add_noise_to_scene(self, occupancy: np.ndarray, noise_level: float = 0.01) -> np.ndarray:
         """
         向场景添加噪声
         
@@ -192,9 +188,7 @@ class SyntheticSceneGenerator:
         
         return noisy_occupancy.astype(np.float32)
     
-    def save_scene(self,
-                   scene_data: Dict,
-                   output_path: str):
+    def save_scene(self, scene_data: Dict, output_path: str):
         """
         保存场景数据
         
@@ -204,19 +198,17 @@ class SyntheticSceneGenerator:
         """
         # 保存占用网格
         self.occupancy_gen.save_occupancy_grid(
-            scene_data['occupancy'],
-            output_path,
-            metadata={
-                'scene_type': scene_data.get('scene_type', 'unknown'),
-                'num_objects': len(scene_data.get('objects', [])),
-                'voxel_size': self.voxel_size,
-                'scene_bounds': self.scene_bounds
+            scene_data['occupancy'], output_path, metadata={
+                'scene_type': scene_data.get(
+                    'scene_type',
+                    'unknown',
+                )
             }
         )
         
         logger.info(f"场景已保存: {output_path}")
     
-    def load_scene(self, filepath: str) -> Dict[str, np.ndarray]:
+    def load_scene(self, filepath: str) -> dict[str, np.ndarray]:
         """
         加载场景数据
         
@@ -229,6 +221,5 @@ class SyntheticSceneGenerator:
         occupancy, metadata = self.occupancy_gen.load_occupancy_grid(filepath)
         
         return {
-            'occupancy': occupancy,
-            'metadata': metadata
+            'occupancy': occupancy, 'metadata': metadata
         } 

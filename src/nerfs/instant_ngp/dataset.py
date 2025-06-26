@@ -12,7 +12,7 @@ import numpy as np
 import json
 import os
 from pathlib import Path
-from typing import Dict, List, Optional, Tuple, Union
+from typing import Dict, List, Optional, Tuple, Any, Union
 import cv2
 from PIL import Image
 import math
@@ -22,15 +22,7 @@ class InstantNGPDataset(Dataset):
     """Dataset for Instant NGP training."""
     
     def __init__(
-        self,
-        data_root: str,
-        split: str = 'train',
-        img_wh: Optional[Tuple[int, int]] = None,
-        spherify: bool = False,
-        val_num: int = 1,
-        use_cache: bool = True,
-        contract_coords: bool = True,
-        **kwargs
+        self, data_root: str, split: str = 'train', img_wh: Optional[tuple[int, int]] = None, spherify: bool = False, val_num: int = 1, use_cache: bool = True, contract_coords: bool = True, **kwargs
     ):
         """
         Initialize dataset.
@@ -62,7 +54,7 @@ class InstantNGPDataset(Dataset):
         if split == 'train':
             self.precompute_rays()
     
-    def load_meta(self):
+    def load_meta(self) -> None:
         """Load camera metadata from transforms.json."""
         transforms_file = self.data_root / f"transforms_{self.split}.json"
         
@@ -125,7 +117,7 @@ class InstantNGPDataset(Dataset):
         else:
             self.far = 10.0
     
-    def spherify_poses(self):
+    def spherify_poses(self) -> np.ndarray:
         """Convert poses to spherical coordinate system."""
         poses = self.poses.copy()
         
@@ -142,7 +134,7 @@ class InstantNGPDataset(Dataset):
         
         return poses
     
-    def load_images(self):
+    def load_images(self) -> None:
         """Load and preprocess images."""
         self.images = []
         
@@ -161,22 +153,18 @@ class InstantNGPDataset(Dataset):
         
         self.images = np.array(self.images, dtype=np.float32)
     
-    def precompute_rays(self):
+    def precompute_rays(self) -> None:
         """Precompute ray directions for training."""
         W, H = self.img_wh
         
         # Create pixel coordinates
         i, j = np.meshgrid(
-            np.arange(W, dtype=np.float32),
-            np.arange(H, dtype=np.float32),
-            indexing='xy'
+            np.arange(W, dtype=np.float32), np.arange(H, dtype=np.float32), indexing='xy'
         )
         
         # Camera coordinates
         directions = np.stack([
-            (i - W * 0.5) / self.focal,
-            -(j - H * 0.5) / self.focal,
-            -np.ones_like(i)
+            (i - W * 0.5) / self.focal, -(j - H * 0.5) / self.focal, -np.ones_like(i)
         ], axis=-1)
         
         # Normalize directions
@@ -212,7 +200,7 @@ class InstantNGPDataset(Dataset):
         if self.contract_coords:
             self.all_rays_o = self.contract_to_unisphere(self.all_rays_o)
     
-    def contract_to_unisphere(self, positions):
+    def contract_to_unisphere(self, positions: np.ndarray) -> np.ndarray:
         """Contract infinite coordinates to unit sphere."""
         mag = np.linalg.norm(positions, axis=-1, keepdims=True)
         mask = mag > 1
@@ -222,22 +210,18 @@ class InstantNGPDataset(Dataset):
         
         return contracted
     
-    def get_rays(self, pose_idx: int):
+    def get_rays(self, pose_idx: int) -> tuple[np.ndarray, np.ndarray]:
         """Get rays for a specific pose."""
         W, H = self.img_wh
         
         # Create pixel coordinates  
         i, j = np.meshgrid(
-            np.arange(W, dtype=np.float32),
-            np.arange(H, dtype=np.float32),
-            indexing='xy'
+            np.arange(W, dtype=np.float32), np.arange(H, dtype=np.float32), indexing='xy'
         )
         
         # Camera coordinates
         directions = np.stack([
-            (i - W * 0.5) / self.focal,
-            -(j - H * 0.5) / self.focal,
-            -np.ones_like(i)
+            (i - W * 0.5) / self.focal, -(j - H * 0.5) / self.focal, -np.ones_like(i)
         ], axis=-1)
         
         # Normalize directions
@@ -253,40 +237,39 @@ class InstantNGPDataset(Dataset):
         
         return rays_o, rays_d
     
-    def __len__(self):
+    def __len__(self) -> int:
         if self.split == 'train':
             return len(self.all_rays_o)
         else:
             return len(self.poses)
     
-    def __getitem__(self, idx):
+    def __getitem__(self, idx: int) -> dict[str, torch.Tensor]:
         if self.split == 'train':
             # Return individual ray
             return {
-                'rays_o': torch.FloatTensor(self.all_rays_o[idx]),
-                'rays_d': torch.FloatTensor(self.all_rays_d[idx]),
-                'rgbs': torch.FloatTensor(self.all_rgbs[idx])
+                'rays_o': torch.FloatTensor(
+                    self.all_rays_o[idx],
+                )
             }
         else:
             # Return full image
             rays_o, rays_d = self.get_rays(idx)
             
             return {
-                'rays_o': torch.FloatTensor(rays_o),
-                'rays_d': torch.FloatTensor(rays_d),
-                'rgbs': torch.FloatTensor(self.images[idx]),
-                'pose': torch.FloatTensor(self.poses[idx])
+                'rays_o': torch.FloatTensor(
+                    rays_o,
+                )
             }
 
 
 def create_instant_ngp_dataloader(
-    data_root: str,
-    split: str = 'train',
-    batch_size: int = 8192,
-    img_wh: Optional[Tuple[int, int]] = None,
-    num_workers: int = 4,
-    shuffle: bool = None,
-    **kwargs
+    data_root: str, 
+    split: str = 'train', 
+    batch_size: int = 8192, 
+    img_wh: Optional[tuple[int, int]] = None, 
+    num_workers: int = 4, 
+    shuffle: Optional[bool] = None, 
+    **kwargs: Any
 ) -> DataLoader:
     """
     Create DataLoader for Instant NGP dataset.
@@ -309,26 +292,18 @@ def create_instant_ngp_dataloader(
     
     # Create dataset
     dataset = InstantNGPDataset(
-        data_root=data_root,
-        split=split,
-        img_wh=img_wh,
-        **kwargs
+        data_root=data_root, split=split, img_wh=img_wh, **kwargs
     )
     
     # Create dataloader
     dataloader = DataLoader(
-        dataset,
-        batch_size=batch_size,
-        shuffle=shuffle,
-        num_workers=num_workers,
-        pin_memory=True,
-        persistent_workers=num_workers > 0
+        dataset, batch_size=batch_size, shuffle=shuffle, num_workers=num_workers, pin_memory=True, persistent_workers=num_workers > 0
     )
     
     return dataloader
 
 
-def load_blender_data(basedir: str, half_res: bool = False, testskip: int = 1):
+def load_blender_data(basedir: str, half_res: bool = False, testskip: int = 1) -> tuple[np.ndarray, np.ndarray, np.ndarray, list[int], list[int]]:
     """
     Load Blender synthetic dataset.
     
@@ -396,38 +371,35 @@ def load_blender_data(basedir: str, half_res: bool = False, testskip: int = 1):
     return imgs, poses, render_poses, [H, W, focal], i_split
 
 
-def pose_spherical(theta, phi, radius):
+def pose_spherical(theta: float, phi: float, radius: float) -> torch.Tensor:
     """Generate spherical pose."""
     c2w = trans_t(radius)
     c2w = rot_phi(phi/180.*np.pi) @ c2w
     c2w = rot_theta(theta/180.*np.pi) @ c2w
-    c2w = torch.Tensor(np.array([[-1,0,0,0],[0,0,1,0],[0,1,0,0],[0,0,0,1]])) @ c2w
+    c2w = torch.Tensor(np.array([[-1, 0, 0, 0], [0, 0, 1, 0], [0, 1, 0, 0], [0, 0, 0, 1]])) @ c2w
     return c2w
 
 
-def trans_t(t):
+def trans_t(t: float) -> torch.Tensor:
     return torch.Tensor([
-        [1,0,0,0],
-        [0,1,0,0],
-        [0,0,1,t],
-        [0,0,0,1]
+        [1, 0, 0, 0], [0, 1, 0, 0], [0, 0, 1, t], [0, 0, 0, 1]
     ]).float()
 
 
-def rot_phi(phi):
+def rot_phi(phi: float) -> torch.Tensor:
     return torch.Tensor([
-        [1,0,0,0],
-        [0,np.cos(phi),-np.sin(phi),0],
-        [0,np.sin(phi),np.cos(phi),0],
-        [0,0,0,1]
+        [1, 0, 0, 0], 
+        [0, np.cos(phi), 0, -np.sin(phi)], 
+        [0, np.sin(phi), np.cos(phi), 0], 
+        [0, 0, 0, 1]
     ]).float()
 
 
-def rot_theta(th):
+def rot_theta(th: float) -> torch.Tensor:
     return torch.Tensor([
-        [np.cos(th),0,-np.sin(th),0],
-        [0,1,0,0],
-        [np.sin(th),0,np.cos(th),0],
-        [0,0,0,1]
+        [np.cos(th), 0, np.sin(th), 0], 
+        [0, 1, 0, 0],
+        [-np.sin(th), 0, np.cos(th), 0],
+        [0, 0, 0, 1]
     ]).float()
 

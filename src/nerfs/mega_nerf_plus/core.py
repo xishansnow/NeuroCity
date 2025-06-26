@@ -11,7 +11,7 @@ This module implements the main components of Mega-NeRF++, including:
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-from typing import Dict, List, Tuple, Optional, Any, Union
+from typing import Dict, List, Optional, Tuple, Any, Union
 from dataclasses import dataclass
 import numpy as np
 import math
@@ -207,7 +207,7 @@ class MultiResolutionMLP(nn.Module):
         
         return nn.Sequential(*layers)
     
-    def forward(self, features: torch.Tensor, lod: int = 0) -> Dict[str, torch.Tensor]:
+    def forward(self, features: torch.Tensor, lod: int = 0) -> dict[str, torch.Tensor]:
         """
         Forward pass through MLP at specified LOD
         
@@ -228,8 +228,7 @@ class MultiResolutionMLP(nn.Module):
         color = torch.sigmoid(self.color_heads[lod](x))
         
         return {
-            'density': density,
-            'color': color
+            'density': density, 'color': color
         }
 
 
@@ -244,9 +243,15 @@ class PhotogrammetricRenderer(nn.Module):
         super().__init__()
         self.config = config
     
-    def sample_rays(self, rays_o: torch.Tensor, rays_d: torch.Tensor,
-                   near: float, far: float, num_samples: int,
-                   stratified: bool = True) -> torch.Tensor:
+    def sample_rays(
+        self,
+        rays_o: torch.Tensor,
+        rays_d: torch.Tensor,
+        near: float,
+        far: float,
+        num_samples: int,
+        stratified: bool = True,
+    ) -> torch.Tensor:
         """Sample points along rays with photogrammetric optimizations"""
         
         # Use inverse depth sampling for better near-field resolution
@@ -266,9 +271,14 @@ class PhotogrammetricRenderer(nn.Module):
         
         return z_vals.expand(*rays_o.shape[:-1], num_samples)
     
-    def hierarchical_sample(self, rays_o: torch.Tensor, rays_d: torch.Tensor,
-                           z_vals: torch.Tensor, weights: torch.Tensor,
-                           num_importance: int) -> torch.Tensor:
+    def hierarchical_sample(
+        self,
+        rays_o: torch.Tensor,
+        rays_d: torch.Tensor,
+        z_vals: torch.Tensor,
+        weights: torch.Tensor,
+        num_importance: int,
+    ) -> torch.Tensor:
         """Hierarchical sampling based on coarse weights"""
         
         # Get bin centers
@@ -303,9 +313,14 @@ class PhotogrammetricRenderer(nn.Module):
         
         return samples
     
-    def volume_render(self, densities: torch.Tensor, colors: torch.Tensor,
-                     z_vals: torch.Tensor, rays_d: torch.Tensor,
-                     white_bkgd: bool = False) -> Dict[str, torch.Tensor]:
+    def volume_render(
+        self,
+        densities: torch.Tensor,
+        colors: torch.Tensor,
+        z_vals: torch.Tensor,
+        rays_d: torch.Tensor,
+        white_bkgd: bool = False,
+    ) -> dict[str, torch.Tensor]:
         """Volume rendering with photogrammetric optimizations"""
         
         # Compute distances between samples
@@ -321,8 +336,7 @@ class PhotogrammetricRenderer(nn.Module):
         # Compute transmittance
         transmittance = torch.cumprod(1.0 - alpha + 1e-10, dim=-1)
         transmittance = torch.cat([
-            torch.ones_like(transmittance[..., :1]), 
-            transmittance[..., :-1]
+            torch.ones_like(transmittance[..., :1]), transmittance[..., :-1]
         ], dim=-1)
         
         # Compute weights
@@ -340,18 +354,13 @@ class PhotogrammetricRenderer(nn.Module):
         depth = torch.sum(weights * z_vals, dim=-1)
         
         # Compute disparity
-        disp = 1.0 / torch.max(1e-10 * torch.ones_like(depth), 
-                              depth / torch.sum(weights, dim=-1))
+        disp = 1.0 / torch.max(1e-10 * torch.ones_like(depth), depth / torch.sum(weights, dim=-1))
         
         # Compute accumulated alpha
         acc_alpha = torch.sum(weights, dim=-1)
         
         return {
-            'rgb': rgb,
-            'depth': depth,
-            'disp': disp,
-            'acc_alpha': acc_alpha,
-            'weights': weights
+            'rgb': rgb, 'depth': depth, 'disp': disp, 'acc_alpha': acc_alpha, 'weights': weights
         }
 
 
@@ -386,9 +395,12 @@ class ScalableNeRFModel(nn.Module):
         """Create positional encoder for view directions"""
         return PositionalEncoder(num_freqs)
     
-    def forward(self, positions: torch.Tensor, 
-                view_dirs: Optional[torch.Tensor] = None,
-                lod: int = 0) -> Dict[str, torch.Tensor]:
+    def forward(
+        self,
+        positions: torch.Tensor,
+        view_dirs: Optional[torch.Tensor] = None,
+        lod: int = 0,
+    ) -> dict[str, torch.Tensor]:
         """
         Forward pass through scalable NeRF model
         
@@ -450,9 +462,15 @@ class MegaNeRFPlus(nn.Module):
         # Renderer with photogrammetric optimizations
         self.renderer = PhotogrammetricRenderer(config)
     
-    def render_rays(self, rays_o: torch.Tensor, rays_d: torch.Tensor,
-                   near: float, far: float, lod: int = 0,
-                   white_bkgd: bool = False) -> Dict[str, torch.Tensor]:
+    def render_rays(
+        self,
+        rays_o: torch.Tensor,
+        rays_d: torch.Tensor,
+        near: float,
+        far: float,
+        lod: int = 0,
+        white_bkgd: bool = False,
+    ) -> dict[str, torch.Tensor]:
         """
         Render rays through the scene
         
@@ -483,8 +501,7 @@ class MegaNeRFPlus(nn.Module):
         
         # Volume rendering
         coarse_render = self.renderer.volume_render(
-            coarse_output['density'], coarse_output['color'], 
-            z_vals, rays_d, white_bkgd
+            coarse_output['density'], coarse_output['color'], z_vals, rays_d, white_bkgd
         )
         
         results = {'coarse': coarse_render}
@@ -493,8 +510,7 @@ class MegaNeRFPlus(nn.Module):
         if self.config.num_importance > 0:
             # Hierarchical sampling
             z_vals_fine = self.renderer.hierarchical_sample(
-                rays_o, rays_d, z_vals, coarse_render['weights'],
-                self.config.num_importance
+                rays_o, rays_d, z_vals, coarse_render['weights'], self.config.num_importance
             )
             
             # Combine coarse and fine samples
@@ -508,15 +524,20 @@ class MegaNeRFPlus(nn.Module):
             
             # Volume rendering
             fine_render = self.renderer.volume_render(
-                fine_output['density'], fine_output['color'],
-                z_vals_combined, rays_d, white_bkgd
+                fine_output['density'], fine_output['color'], z_vals_combined, rays_d, white_bkgd
             )
             
             results['fine'] = fine_render
         
         return results
     
-    def forward(self, rays_o: torch.Tensor, rays_d: torch.Tensor,
-                near: float, far: float, **kwargs) -> Dict[str, torch.Tensor]:
+    def forward(
+        self,
+        rays_o: torch.Tensor,
+        rays_d: torch.Tensor,
+        near: float,
+        far: float,
+        **kwargs,
+    ) -> dict[str, torch.Tensor]:
         """Forward pass for training/inference"""
         return self.render_rays(rays_o, rays_d, near, far, **kwargs) 

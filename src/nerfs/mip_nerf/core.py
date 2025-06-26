@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 """
 Core Mip-NeRF implementation
 
@@ -11,11 +13,36 @@ This module implements the core components of Mip-NeRF including:
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-from typing import Dict, List, Tuple, Optional, Any
+from typing import Dict, List, Optional, Tuple, Any, TypeVar, cast, TypedDict
 from dataclasses import dataclass
 import numpy as np
 import math
 
+TensorType = TypeVar('TensorType', bound=torch.Tensor)
+
+class RenderOutput(TypedDict):
+    """Type definition for render output dictionary"""
+    rgb: torch.Tensor
+    depth: torch.Tensor
+    acc_alpha: torch.Tensor
+    weights: torch.Tensor
+
+class NetworkOutput(TypedDict):
+    """Type definition for network output dictionary"""
+    density: torch.Tensor
+    rgb: torch.Tensor
+
+class PredictionOutput(TypedDict):
+    """Type definition for prediction output dictionary"""
+    coarse: RenderOutput
+    fine: Optional[RenderOutput]
+
+class LossOutput(TypedDict):
+    """Type definition for loss output dictionary"""
+    coarse_loss: torch.Tensor
+    fine_loss: Optional[torch.Tensor]
+    total_loss: torch.Tensor
+    psnr: torch.Tensor
 
 @dataclass
 class MipNeRFConfig:
@@ -75,11 +102,11 @@ class IntegratedPositionalEncoder(nn.Module):
         
     def expected_sin(self, means: torch.Tensor, vars: torch.Tensor) -> torch.Tensor:
         """Expected value of sin(x) where x ~ N(means, vars)"""
-        return torch.exp(-0.5 * vars) * torch.sin(means)
+        return cast(torch.Tensor, torch.exp(-0.5 * vars) * torch.sin(means))
     
     def expected_cos(self, means: torch.Tensor, vars: torch.Tensor) -> torch.Tensor:
         """Expected value of cos(x) where x ~ N(means, vars)"""
-        return torch.exp(-0.5 * vars) * torch.cos(means)
+        return cast(torch.Tensor, torch.exp(-0.5 * vars) * torch.cos(means))
     
     def integrated_pos_enc(self, means: torch.Tensor, vars: torch.Tensor) -> torch.Tensor:
         """
@@ -93,8 +120,10 @@ class IntegratedPositionalEncoder(nn.Module):
             [..., 2*3*num_levels] tensor of encoded features
         """
         # Create frequency scales
-        scales = torch.pow(2.0, torch.arange(self.min_deg, self.max_deg, 
-                                           device=means.device, dtype=means.dtype))
+        scales = torch.pow(
+            2.0,
+            torch.arange,
+        )
         
         # Scale means and variances
         scaled_means = means[..., None, :] * scales[None, :, None]  # [..., num_levels, 3]
@@ -106,7 +135,10 @@ class IntegratedPositionalEncoder(nn.Module):
         
         # Concatenate and flatten
         encoding = torch.cat([expected_sin_vals, expected_cos_vals], dim=-1)  # [..., num_levels, 6]
-        return encoding.reshape(*encoding.shape[:-2], -1)  # [..., 2*3*num_levels]
+        return cast(
+            torch.Tensor,
+            encoding.reshape,
+        )
     
     def forward(self, means: torch.Tensor, vars: torch.Tensor) -> torch.Tensor:
         """Forward pass of IPE"""
@@ -131,8 +163,13 @@ class ConicalFrustum:
         self.covs = covs
     
     @classmethod
-    def from_rays(cls, origins: torch.Tensor, directions: torch.Tensor,
-                  t_vals: torch.Tensor, pixel_radius: float = 1.0):
+    def from_rays(
+        cls,
+        origins: torch.Tensor,
+        directions: torch.Tensor,
+        t_vals: torch.Tensor,
+        pixel_radius: float = 1.0,
+    ) -> ConicalFrustum:
         """
         Create conical frustums from rays and t values
         
@@ -189,7 +226,7 @@ class ConicalFrustum:
         
         return cls(means, covs)
     
-    def to_gaussian(self) -> Tuple[torch.Tensor, torch.Tensor]:
+    def to_gaussian(self) -> tuple[torch.Tensor, torch.Tensor]:
         """Convert to Gaussian representation (means and variances)"""
         # Extract diagonal variances from covariance matrices
         vars = torch.diagonal(self.covs, dim1=-2, dim2=-1)
@@ -236,42 +273,48 @@ class MipNeRFMLP(nn.Module):
         else:
             self.rgb_linear = nn.Linear(config.netwidth, 3)
     
-    def forward(self, frustums: ConicalFrustum, viewdirs: Optional[torch.Tensor] = None) -> Dict[str, torch.Tensor]:
+    def forward(
+        self,
+        frustums: ConicalFrustum,
+        viewdirs: Optional[torch.Tensor] = None,
+    ) -> dict[str, torch.Tensor]:
         """
-        Forward pass of Mip-NeRF MLP
+        Forward pass of MLP
         
         Args:
-            frustums: ConicalFrustum object containing means and covariances
-            viewdirs: [..., 3] viewing directions (optional)
+            frustums: Conical frustums for sampling
+            viewdirs: Optional viewing directions for view-dependent effects
             
         Returns:
-            Dictionary containing 'density' and 'rgb' predictions
+            Dictionary containing network outputs
         """
         # Convert frustums to Gaussian representation
         means, vars = frustums.to_gaussian()
         
-        # Encode positions using IPE
+        # Encode position and direction
         pos_enc = self.pos_encoder(means, vars)
+        if viewdirs is not None and self.config.use_viewdirs:
+            # Normalize viewing directions
+            viewdirs = F.normalize(viewdirs, dim=-1)
+            # Encode viewing direction (no uncertainty)
+            view_enc = self.view_encoder(viewdirs, torch.zeros_like(viewdirs))
+            # Concatenate position and direction encodings
+            x = torch.cat([pos_enc, view_enc], dim=-1)
+        else:
+            x = pos_enc
         
-        # Forward through main network
-        h = pos_enc
+        # Forward through MLP
+        h = x
         for i, linear in enumerate(self.pts_linears):
             h = F.relu(linear(h))
             if i == 4:
-                h = torch.cat([h, pos_enc], dim=-1)
+                h = torch.cat([h, x], dim=-1)
         
-        # Predict density
+        # Split output into density and color
         density = self.density_linear(h)
-        
-        # Predict color
         features = self.feature_linear(h)
         
         if self.config.use_viewdirs and viewdirs is not None:
-            # Encode viewing directions
-            view_means = viewdirs
-            view_vars = torch.zeros_like(viewdirs)  # No variance for view directions
-            view_enc = self.view_encoder(view_means, view_vars)
-            
             # Combine features with view encoding
             h = torch.cat([features, view_enc], dim=-1)
             for linear in self.views_linears:
@@ -281,8 +324,7 @@ class MipNeRFMLP(nn.Module):
             rgb = torch.sigmoid(self.rgb_linear(features))
         
         return {
-            'density': density,
-            'rgb': rgb
+            'density': density, 'rgb': rgb
         }
 
 
@@ -295,9 +337,15 @@ class MipNeRFRenderer(nn.Module):
         super().__init__()
         self.config = config
         
-    def sample_along_rays(self, origins: torch.Tensor, directions: torch.Tensor,
-                         near: float, far: float, num_samples: int,
-                         perturb: bool = True) -> torch.Tensor:
+    def sample_along_rays(
+        self,
+        origins: torch.Tensor,
+        directions: torch.Tensor,
+        near: float,
+        far: float,
+        num_samples: int,
+        perturb: bool = True,
+    ) -> torch.Tensor:
         """Sample points along rays"""
         # Linear sampling in disparity space
         t_vals = torch.linspace(0., 1., num_samples, device=origins.device)
@@ -314,9 +362,15 @@ class MipNeRFRenderer(nn.Module):
         
         return t_vals.expand(*origins.shape[:-1], num_samples)
     
-    def hierarchical_sample(self, origins: torch.Tensor, directions: torch.Tensor,
-                          t_vals: torch.Tensor, weights: torch.Tensor,
-                          num_importance: int, perturb: bool = True) -> torch.Tensor:
+    def hierarchical_sample(
+        self,
+        origins: torch.Tensor,
+        directions: torch.Tensor,
+        t_vals: torch.Tensor,
+        weights: torch.Tensor,
+        num_importance: int,
+        perturb: bool = True,
+    ) -> torch.Tensor:
         """Hierarchical sampling based on coarse network weights"""
         # Convert weights to PDF
         weights = weights[..., 1:-1]  # Remove first and last (no contribution)
@@ -348,8 +402,12 @@ class MipNeRFRenderer(nn.Module):
         
         return samples
     
-    def volumetric_rendering(self, densities: torch.Tensor, colors: torch.Tensor,
-                           t_vals: torch.Tensor) -> Dict[str, torch.Tensor]:
+    def volumetric_rendering(
+        self,
+        densities: torch.Tensor,
+        colors: torch.Tensor,
+        t_vals: torch.Tensor,
+    ) -> dict[str, torch.Tensor]:
         """Volumetric rendering equation"""
         # Compute distances between samples
         dists = torch.diff(t_vals, dim=-1)
@@ -360,7 +418,9 @@ class MipNeRFRenderer(nn.Module):
         
         # Compute transmittance
         transmittance = torch.cumprod(1.0 - alpha + 1e-10, dim=-1)
-        transmittance = torch.cat([torch.ones_like(transmittance[..., :1]), transmittance[..., :-1]], dim=-1)
+        transmittance = torch.cat(
+            [torch.ones_like(transmittance[..., :1]), transmittance], dim=-1
+        )
         
         # Compute weights
         weights = alpha * transmittance
@@ -375,10 +435,7 @@ class MipNeRFRenderer(nn.Module):
         acc_alpha = torch.sum(weights, dim=-1)
         
         return {
-            'rgb': rgb,
-            'depth': depth,
-            'acc_alpha': acc_alpha,
-            'weights': weights
+            'rgb': rgb, 'depth': depth, 'acc_alpha': acc_alpha, 'weights': weights
         }
 
 
@@ -396,18 +453,22 @@ class MipNeRF(nn.Module):
         if config.num_importance > 0:
             # Fine network with same architecture but potentially different parameters
             fine_config = MipNeRFConfig(**{
-                **config.__dict__,
-                'netdepth': config.netdepth_fine,
-                'netwidth': config.netwidth_fine
+                **config.__dict__, 'netdepth': config.netdepth_fine, 'netwidth': config.netwidth_fine
             })
             self.fine_mlp = MipNeRFMLP(fine_config)
         
         # Renderer
         self.renderer = MipNeRFRenderer(config)
     
-    def forward(self, origins: torch.Tensor, directions: torch.Tensor,
-                viewdirs: torch.Tensor, near: float, far: float,
-                pixel_radius: float = 1.0) -> Dict[str, torch.Tensor]:
+    def forward(
+        self,
+        origins: torch.Tensor,
+        directions: torch.Tensor,
+        viewdirs: torch.Tensor,
+        near: float,
+        far: float,
+        pixel_radius: float = 1.0,
+    ) -> PredictionOutput:
         """
         Forward pass of Mip-NeRF
         
@@ -422,12 +483,19 @@ class MipNeRF(nn.Module):
         Returns:
             Dictionary containing rendered results
         """
-        results = {}
+        empty_render: RenderOutput = {
+            'rgb': torch.zeros_like(
+                origins,
+            )
+        }
+        
+        results: PredictionOutput = {
+            'coarse': empty_render, 'fine': None
+        }
         
         # Coarse sampling
         t_vals_coarse = self.renderer.sample_along_rays(
-            origins, directions, near, far, self.config.num_samples,
-            perturb=self.config.perturb > 0
+            origins, directions, near, far, self.config.num_samples, perturb=self.config.perturb > 0
         )
         
         # Create conical frustums for coarse samples
@@ -439,18 +507,19 @@ class MipNeRF(nn.Module):
         coarse_pred = self.coarse_mlp(frustums_coarse, viewdirs)
         
         # Coarse rendering
-        coarse_render = self.renderer.volumetric_rendering(
+        coarse_render_dict = self.renderer.volumetric_rendering(
             coarse_pred['density'], coarse_pred['rgb'], t_vals_coarse
         )
-        
+        coarse_render: RenderOutput = {
+            'rgb': coarse_render_dict['rgb'], 'depth': coarse_render_dict['depth'], 'acc_alpha': coarse_render_dict['acc_alpha'], 'weights': coarse_render_dict['weights']
+        }
         results['coarse'] = coarse_render
         
         # Fine sampling and rendering
         if self.config.num_importance > 0:
             # Hierarchical sampling
             t_vals_fine = self.renderer.hierarchical_sample(
-                origins, directions, t_vals_coarse, coarse_render['weights'],
-                self.config.num_importance, perturb=self.config.perturb > 0
+                origins, directions, t_vals_coarse, coarse_render['weights'], self.config.num_importance, perturb=self.config.perturb > 0
             )
             
             # Combine coarse and fine samples
@@ -465,10 +534,12 @@ class MipNeRF(nn.Module):
             fine_pred = self.fine_mlp(frustums_fine, viewdirs)
             
             # Fine rendering
-            fine_render = self.renderer.volumetric_rendering(
+            fine_render_dict = self.renderer.volumetric_rendering(
                 fine_pred['density'], fine_pred['rgb'], t_vals_combined
             )
-            
+            fine_render: RenderOutput = {
+                'rgb': fine_render_dict['rgb'], 'depth': fine_render_dict['depth'], 'acc_alpha': fine_render_dict['acc_alpha'], 'weights': fine_render_dict['weights']
+            }
             results['fine'] = fine_render
         
         return results
@@ -481,7 +552,7 @@ class MipNeRFLoss(nn.Module):
         super().__init__()
         self.config = config
     
-    def forward(self, pred: Dict[str, torch.Tensor], target: torch.Tensor) -> Dict[str, torch.Tensor]:
+    def forward(self, pred: PredictionOutput, target: torch.Tensor) -> dict[str, torch.Tensor]:
         """
         Compute Mip-NeRF loss
         
@@ -492,16 +563,20 @@ class MipNeRFLoss(nn.Module):
         Returns:
             Dictionary containing loss components
         """
-        losses = {}
+        losses: LossOutput = {
+            'coarse_loss': torch.tensor(0.0)
+        }
         
         # Coarse loss
-        coarse_rgb = pred['coarse']['rgb']
+        coarse_render = cast(RenderOutput, pred['coarse'])
+        coarse_rgb = coarse_render['rgb']
         coarse_loss = F.mse_loss(coarse_rgb, target)
         losses['coarse_loss'] = coarse_loss
         
         # Fine loss (if available)
         if 'fine' in pred:
-            fine_rgb = pred['fine']['rgb']
+            fine_render = cast(RenderOutput, pred['fine'])
+            fine_rgb = fine_render['rgb']
             fine_loss = F.mse_loss(fine_rgb, target)
             losses['fine_loss'] = fine_loss
             
@@ -512,8 +587,9 @@ class MipNeRFLoss(nn.Module):
             total_loss = coarse_loss
         
         losses['total_loss'] = total_loss
-        losses['psnr'] = -10.0 * torch.log10(F.mse_loss(
-            pred.get('fine', pred['coarse'])['rgb'], target
-        ))
+        
+        # Compute PSNR using the best available prediction
+        final_render = cast(RenderOutput, pred.get('fine', pred['coarse']))
+        losses['psnr'] = -10.0 * torch.log10(F.mse_loss(final_render['rgb'], target))
         
         return losses 

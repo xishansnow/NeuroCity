@@ -11,7 +11,7 @@ This module provides tools for:
 import torch
 import torch.nn.functional as F
 import numpy as np
-from typing import Dict, List, Optional, Tuple, Any, Union
+from typing import Dict, List, Optional, Tuple, Any
 import math
 
 from ..core import InfNeRFConfig, OctreeNode
@@ -32,7 +32,7 @@ class LoDManager:
         self.config = config
         self.level_thresholds = self._compute_level_thresholds()
     
-    def _compute_level_thresholds(self) -> List[float]:
+    def _compute_level_thresholds(self) -> list[float]:
         """Compute GSD thresholds for each octree level."""
         thresholds = []
         
@@ -44,9 +44,7 @@ class LoDManager:
         
         return thresholds
     
-    def determine_lod_level(self, 
-                           sample_radius: float,
-                           max_level: int) -> int:
+    def determine_lod_level(self, sample_radius: float, max_level: int) -> int:
         """
         Determine appropriate LoD level based on sample radius.
         
@@ -65,9 +63,7 @@ class LoDManager:
         # Return deepest available level if no match
         return min(max_level, len(self.level_thresholds) - 1)
     
-    def get_lod_weights(self, 
-                       distances: torch.Tensor,
-                       focal_length: float) -> torch.Tensor:
+    def get_lod_weights(self, distances: torch.Tensor, focal_length: float) -> torch.Tensor:
         """
         Compute LoD weights based on distance from camera.
         
@@ -93,9 +89,7 @@ class LoDManager:
         
         return lod_weights
     
-    def adaptive_sampling_density(self, 
-                                 node: OctreeNode,
-                                 distance_to_camera: float) -> int:
+    def adaptive_sampling_density(self, node: OctreeNode, distance_to_camera: float) -> int:
         """
         Determine adaptive sampling density based on LoD.
         
@@ -120,9 +114,11 @@ class LoDManager:
         return max(16, min(adaptive_samples, base_samples * 4))
 
 
-def anti_aliasing_sampling(positions: torch.Tensor,
-                          radii: torch.Tensor,
-                          perturbation_strength: float = 0.5) -> Tuple[torch.Tensor, torch.Tensor]:
+def anti_aliasing_sampling(
+    positions: torch.Tensor,
+    radii: torch.Tensor,
+    perturbation_strength: float = 0.5,
+) -> tuple[torch.Tensor, torch.Tensor]:
     """
     Apply anti-aliasing sampling with radius perturbation.
     
@@ -153,9 +149,7 @@ def anti_aliasing_sampling(positions: torch.Tensor,
     return perturbed_positions, perturbed_radii
 
 
-def determine_lod_level(sample_radius: float, 
-                       root_gsd: float,
-                       max_level: int) -> int:
+def determine_lod_level(sample_radius: float, root_gsd: float, max_level: int) -> int:
     """
     Determine LoD level based on sample radius (Equation 5 in paper).
     
@@ -177,9 +171,11 @@ def determine_lod_level(sample_radius: float,
     return max(0, min(level, max_level))
 
 
-def pyramid_supervision(images: List[torch.Tensor],
-                       num_levels: int = 4,
-                       scale_factor: float = 2.0) -> List[List[torch.Tensor]]:
+def pyramid_supervision(
+    images: list[torch.Tensor],
+    num_levels: int = 4,
+    scale_factor: float = 2.0,
+) -> list[list[torch.Tensor]]:
     """
     Create image pyramids for multi-scale supervision.
     
@@ -207,13 +203,17 @@ def pyramid_supervision(images: List[torch.Tensor],
             # Downsample using bilinear interpolation
             if current_img.dim() == 3:  # [H, W, C]
                 current_img = current_img.permute(2, 0, 1).unsqueeze(0)  # [1, C, H, W]
-                current_img = F.interpolate(current_img, size=(new_h, new_w), 
-                                          mode='bilinear', align_corners=False)
+                current_img = F.interpolate(
+                    current_img,
+                    size=(new_h, new_w),
+                )
                 current_img = current_img.squeeze(0).permute(1, 2, 0)  # [H, W, C]
             else:  # Already in [C, H, W] format
                 current_img = current_img.unsqueeze(0)  # [1, C, H, W]
-                current_img = F.interpolate(current_img, size=(new_h, new_w),
-                                          mode='bilinear', align_corners=False)
+                current_img = F.interpolate(
+                    current_img,
+                    size=(new_h, new_w),
+                )
                 current_img = current_img.squeeze(0)  # [C, H, W]
             
             pyramid.append(current_img)
@@ -223,10 +223,12 @@ def pyramid_supervision(images: List[torch.Tensor],
     return pyramids
 
 
-def compute_level_consistency_loss(parent_node: OctreeNode,
-                                 child_nodes: List[OctreeNode],
-                                 sample_positions: torch.Tensor,
-                                 sample_directions: torch.Tensor) -> torch.Tensor:
+def compute_level_consistency_loss(
+    parent_node: OctreeNode,
+    child_nodes: list[OctreeNode],
+    sample_positions: torch.Tensor,
+    sample_directions: torch.Tensor,
+) -> torch.Tensor:
     """
     Compute level consistency regularization loss.
     
@@ -284,8 +286,7 @@ def compute_level_consistency_loss(parent_node: OctreeNode,
             # Color consistency (weighted by density)
             color_weights = torch.sigmoid(child_density.detach())
             color_loss = F.mse_loss(
-                child_color * color_weights, 
-                parent_color_subset.detach() * color_weights
+                child_color * color_weights, parent_color_subset.detach() * color_weights
             )
             consistency_loss += color_loss
     
@@ -296,9 +297,11 @@ def compute_level_consistency_loss(parent_node: OctreeNode,
     return consistency_loss
 
 
-def compute_sample_radius(depth: torch.Tensor,
-                         focal_length: float,
-                         pixel_width: float = 1.0) -> torch.Tensor:
+def compute_sample_radius(
+    depth: torch.Tensor,
+    focal_length: float,
+    pixel_width: float = 1.0,
+) -> torch.Tensor:
     """
     Compute sampling sphere radius based on pixel footprint (Equation 3 in paper).
     
@@ -315,12 +318,14 @@ def compute_sample_radius(depth: torch.Tensor,
     return radii
 
 
-def frustum_culling(octree_nodes: List[OctreeNode],
-                   camera_origin: np.ndarray,
-                   view_direction: np.ndarray,
-                   field_of_view: float,
-                   near_plane: float,
-                   far_plane: float) -> List[OctreeNode]:
+def frustum_culling(
+    octree_nodes: list[OctreeNode],
+    camera_origin: np.ndarray,
+    view_direction: np.ndarray,
+    field_of_view: float,
+    near_plane: float,
+    far_plane: float,
+) -> list[OctreeNode]:
     """
     Perform frustum culling to select visible octree nodes.
     
@@ -371,9 +376,11 @@ def frustum_culling(octree_nodes: List[OctreeNode],
     return visible_nodes
 
 
-def adaptive_lod_selection(visible_nodes: List[OctreeNode],
-                         camera_origin: np.ndarray,
-                         pixel_size_at_distance: callable) -> List[OctreeNode]:
+def adaptive_lod_selection(
+    visible_nodes: list[OctreeNode],
+    camera_origin: np.ndarray,
+    pixel_size_at_distance: callable,
+) -> list[OctreeNode]:
     """
     Select appropriate LoD level for each visible node.
     
@@ -420,13 +427,15 @@ class MultiScaleRenderer:
         self.config = config
         self.lod_manager = LoDManager(config)
     
-    def render_with_lod(self,
-                       nodes: List[OctreeNode],
-                       rays_o: torch.Tensor,
-                       rays_d: torch.Tensor,
-                       near: float,
-                       far: float,
-                       focal_length: float) -> Dict[str, torch.Tensor]:
+    def render_with_lod(
+        self,
+        nodes: list[OctreeNode],
+        rays_o: torch.Tensor,
+        rays_d: torch.Tensor,
+        near: float,
+        far: float,
+        focal_length: float,
+    ) -> dict[str, torch.Tensor]:
         """
         Render rays using adaptive LoD selection.
         
@@ -457,7 +466,7 @@ class MultiScaleRenderer:
         
         # Collect colors and densities
         colors = torch.zeros(*pts.shape, device=device)
-        densities = torch.zeros(pts.shape[:-1] + (1,), device=device)
+        densities = torch.zeros(pts.shape[:-1] + (1, ), device=device)
         
         for i in range(num_rays):
             for j in range(self.config.num_samples):
@@ -472,8 +481,7 @@ class MultiScaleRenderer:
                 if selected_node is not None:
                     # Query NeRF
                     result = selected_node.nerf(
-                        sample_pos.unsqueeze(0),
-                        rays_d[i:i+1]
+                        sample_pos.unsqueeze(0), rays_d[i:i+1]
                     )
                     
                     colors[i, j] = result['color'].squeeze(0)
@@ -493,16 +501,15 @@ class MultiScaleRenderer:
         acc = torch.sum(weights, dim=-1)
         
         return {
-            'rgb': rgb,
-            'depth': depth,
-            'acc': acc,
-            'weights': weights
+            'rgb': rgb, 'depth': depth, 'acc': acc, 'weights': weights
         }
     
-    def _select_node_for_sample(self,
-                               nodes: List[OctreeNode],
-                               position: torch.Tensor,
-                               radius: float) -> Optional[OctreeNode]:
+    def _select_node_for_sample(
+        self,
+        nodes: list[OctreeNode],
+        position: torch.Tensor,
+        radius: float,
+    ) -> OctreeNode:
         """Select appropriate node for a sample."""
         pos_np = position.detach().cpu().numpy()
         

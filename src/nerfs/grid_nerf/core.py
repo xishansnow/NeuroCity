@@ -14,10 +14,14 @@ Key features:
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-from typing import Dict, List, Optional, Tuple, Union
+from typing import List, Optional, Tuple, Any, Union, Dict
 from dataclasses import dataclass
 import numpy as np
 import math
+import logging
+from pathlib import Path
+
+logger = logging.getLogger(__name__)
 
 
 @dataclass
@@ -25,7 +29,7 @@ class GridNeRFConfig:
     """Configuration for Grid-NeRF model."""
     
     # Scene bounds
-    scene_bounds: Tuple[float, float, float, float, float, float] = (-100, -100, -10, 100, 100, 50)
+    scene_bounds: tuple[float, float, float, float, float, float] = (-100, -100, -10, 100, 100, 50)
     
     # Grid configuration
     base_grid_resolution: int = 64  # Base resolution for coarsest level
@@ -103,11 +107,9 @@ class HierarchicalGrid(nn.Module):
         # Trilinear interpolation
         grid_features = self.grids[level]
         features = F.grid_sample(
-            grid_features.permute(3, 0, 1, 2).unsqueeze(0),  # [1, C, D, H, W]
-            grid_coords.unsqueeze(0).unsqueeze(0).unsqueeze(0),  # [1, 1, 1, N, 3]
-            mode='bilinear',
-            padding_mode='border',
-            align_corners=True
+            grid_features.permute(3, 0, 1, 2).unsqueeze(0), # [1, C, D, H, W]
+            grid_coords.unsqueeze(0).unsqueeze(0).unsqueeze(0), # [1, 1, 1, N, 3]
+            mode='bilinear', padding_mode='border', align_corners=True
         )
         
         # Remove extra dimensions and transpose
@@ -174,10 +176,10 @@ class GridGuidedMLP(nn.Module):
             color_input_dim = config.mlp_hidden_dim
         
         self.color_net = nn.Sequential(
-            nn.Linear(color_input_dim, config.mlp_hidden_dim // 2),
-            nn.ReLU(inplace=True),
-            nn.Linear(config.mlp_hidden_dim // 2, 3),
-            nn.Sigmoid()
+            nn.Linear(
+                color_input_dim,
+                config.mlp_hidden_dim // 2,
+            )
         )
         
         # Feature extraction layer for color network
@@ -193,338 +195,449 @@ class GridGuidedMLP(nn.Module):
         
         return torch.cat(encoded, dim=-1)
     
-    def forward(self, grid_features: torch.Tensor, 
-                coords: torch.Tensor,
-                view_dirs: Optional[torch.Tensor] = None) -> Tuple[torch.Tensor, torch.Tensor]:
-        """
-        Forward pass of grid-guided MLP.
+    def forward(
+        self,
+        grid_features: torch.Tensor,
+        view_dirs: Optional[torch.Tensor] = None
+    ) -> tuple[torch.Tensor, torch.Tensor]:
+        """Forward pass through the MLP network.
         
         Args:
-            grid_features: Multi-level grid features [N, F]
-            coords: 3D coordinates [N, 3]
-            view_dirs: View directions [N, 3] (optional)
+            grid_features: Multi-level grid features [N, D]
+            view_dirs: Optional view directions [N, 3]
             
         Returns:
-            density: Volume density [N, 1]
-            color: RGB color [N, 3]
+            tuple[torch.Tensor, torch.Tensor]: (rgb_colors, densities)
+                - rgb_colors: RGB colors [N, 3]
+                - densities: Volume densities [N, 1]
         """
-        # Apply positional encoding to coordinates
-        pos_encoded = self.positional_encoding(coords)
-        
-        # Concatenate grid features and positional encoding
-        x = torch.cat([grid_features, pos_encoded], dim=-1)
-        
-        # Pass through density network
-        density_features = x
-        for layer in self.density_net[:-1]:
-            density_features = layer(density_features)
-        
-        # Extract density
-        density = self.density_net[-1](density_features)
-        density = F.relu(density)
+        # Process through density network
+        density_features = self.density_net(grid_features)
         
         # Extract features for color network
         color_features = self.feature_layer(density_features)
         
-        # Add view direction if view-dependent
         if self.config.view_dependent and view_dirs is not None:
-            view_encoded = self.positional_encoding(view_dirs, num_freqs=4)
-            color_features = torch.cat([color_features, view_encoded], dim=-1)
+            # Encode view directions
+            view_embed = self.positional_encoding(view_dirs, num_freqs=4)
+            color_input = torch.cat([color_features, view_embed], dim=-1)
+        else:
+            color_input = color_features
         
-        # Predict color
-        color = self.color_net(color_features)
+        # Process through color network
+        rgb = torch.sigmoid(self.color_net(color_input))
         
-        return density, color
+        return rgb, density_features
 
 
 class GridNeRFRenderer(nn.Module):
-    """Renderer for Grid-NeRF with hierarchical sampling."""
+    """Neural renderer for Grid-NeRF."""
     
-    def __init__(self, config: GridNeRFConfig):
+    def __init__(self, config: GridNeRFConfig) -> None:
+        """Initialize the renderer.
+        
+        Args:
+            config: Configuration object for Grid-NeRF
+        """
         super().__init__()
         self.config = config
+    
+    def sample_points_along_rays(
+        self,
+        ray_origins: torch.Tensor,
+        ray_directions: torch.Tensor,
+        near: float,
+        far: float,
+        num_samples: int,
+        stratified: bool = True
+    ) -> tuple[torch.Tensor, torch.Tensor]:
+        """Sample points along rays using stratified sampling.
         
-    def sample_points_along_rays(self, ray_origins: torch.Tensor,
-                                ray_directions: torch.Tensor,
-                                near: float, far: float,
-                                num_samples: int,
-                                stratified: bool = True) -> Tuple[torch.Tensor, torch.Tensor]:
-        """Sample points along rays."""
-        device = ray_origins.device
-        batch_size = ray_origins.shape[0]
+        Args:
+            ray_origins: Ray origin points [N, 3]
+            ray_directions: Ray direction vectors [N, 3]
+            near: Near plane distance
+            far: Far plane distance
+            num_samples: Number of samples per ray
+            stratified: Whether to use stratified sampling
+            
+        Returns:
+            tuple[torch.Tensor, torch.Tensor]: (sample_points, t_vals)
+                - sample_points: Sampled 3D points [N, num_samples, 3]
+                - t_vals: Distance values along rays [N, num_samples]
+        """
+        # Generate sampling distances
+        t_vals = torch.linspace(0., 1., num_samples, device=ray_origins.device)
+        t_vals = near + t_vals * (far - near)
         
-        # Create sample distances
-        t_vals = torch.linspace(0.0, 1.0, num_samples, device=device)
-        t_vals = near + (far - near) * t_vals
-        t_vals = t_vals.expand(batch_size, num_samples)
+        if stratified and self.training:
+            # Add random offsets for stratified sampling
+            noise = torch.rand_like(t_vals) * (far - near) / num_samples
+            t_vals = t_vals + noise
         
-        if stratified:
-            # Add noise for stratified sampling
-            mids = 0.5 * (t_vals[..., 1:] + t_vals[..., :-1])
-            upper = torch.cat([mids, t_vals[..., -1:]], dim=-1)
-            lower = torch.cat([t_vals[..., :1], mids], dim=-1)
-            t_rand = torch.rand_like(t_vals)
-            t_vals = lower + (upper - lower) * t_rand
+        # Expand t_vals for batch dimension
+        t_vals = t_vals.expand(ray_origins.shape[0], num_samples)
         
         # Compute sample points
-        sample_points = ray_origins.unsqueeze(-2) + ray_directions.unsqueeze(-2) * t_vals.unsqueeze(-1)
+        sample_points = (
+            ray_origins.unsqueeze(-2) +  # [N, 1, 3]
+            ray_directions.unsqueeze(-2) * t_vals.unsqueeze(-1)  # [N, S, 3]
+        )
         
         return sample_points, t_vals
     
-    def hierarchical_sampling(self, ray_origins: torch.Tensor,
-                            ray_directions: torch.Tensor,
-                            coarse_weights: torch.Tensor,
-                            coarse_t_vals: torch.Tensor,
-                            num_fine_samples: int) -> Tuple[torch.Tensor, torch.Tensor]:
-        """Perform hierarchical sampling based on coarse weights."""
-        device = ray_origins.device
-        batch_size = ray_origins.shape[0]
+    def hierarchical_sampling(
+        self,
+        ray_origins: torch.Tensor,
+        ray_directions: torch.Tensor,
+        coarse_weights: torch.Tensor,
+        coarse_t_vals: torch.Tensor,
+        num_fine_samples: int
+    ) -> tuple[torch.Tensor, torch.Tensor]:
+        """Sample points hierarchically based on coarse network predictions.
         
-        # Get PDF from weights
-        weights = coarse_weights + 1e-5  # Prevent division by zero
+        Args:
+            ray_origins: Ray origin points [N, 3]
+            ray_directions: Ray direction vectors [N, 3]
+            coarse_weights: Weights from coarse network [N, num_coarse_samples]
+            coarse_t_vals: Distance values from coarse sampling [N, num_coarse_samples]
+            num_fine_samples: Number of fine samples to generate
+            
+        Returns:
+            tuple[torch.Tensor, torch.Tensor]: (fine_points, fine_t_vals)
+                - fine_points: Sampled 3D points [N, num_fine_samples, 3]
+                - fine_t_vals: Distance values along rays [N, num_fine_samples]
+        """
+        # Add small epsilon to weights to prevent division by zero
+        weights = coarse_weights + 1e-5
+        
+        # Get PDF and CDF for importance sampling
         pdf = weights / torch.sum(weights, dim=-1, keepdim=True)
         cdf = torch.cumsum(pdf, dim=-1)
-        cdf = torch.cat([torch.zeros_like(cdf[..., :1]), cdf], dim=-1)
+        cdf = torch.cat([torch.zeros_like(cdf[...,:1]), cdf], dim=-1)
         
-        # Sample from CDF
-        u = torch.rand(batch_size, num_fine_samples, device=device)
-        indices = torch.searchsorted(cdf, u, right=True)
-        below = torch.clamp(indices - 1, 0, coarse_t_vals.shape[-1] - 1)
-        above = torch.clamp(indices, 0, coarse_t_vals.shape[-1] - 1)
+        # Draw uniform samples
+        if self.training:
+            u = torch.rand(
+                ray_origins.shape[0], num_fine_samples, device=ray_origins.device
+            )
+        else:
+            u = torch.linspace(0., 1., num_fine_samples, device=ray_origins.device)
+            u = u.expand(ray_origins.shape[0], num_fine_samples)
         
-        # Linear interpolation
-        indices_g = torch.stack([below, above], dim=-1)  # [batch_size, num_fine_samples, 2]
+        # Invert CDF to get samples
+        u = u.contiguous()
+        inds = torch.searchsorted(cdf, u, right=True)
+        below = torch.clamp(inds-1, 0, cdf.shape[-1]-1)
+        above = torch.clamp(inds, 0, cdf.shape[-1]-1)
         
-        # Expand cdf and t_vals to match indices_g shape for gathering
-        cdf_expanded = cdf.unsqueeze(-1).expand(-1, -1, 2)  # [batch_size, num_coarse+1, 2]
-        t_vals_expanded = coarse_t_vals.unsqueeze(-1).expand(-1, -1, 2)  # [batch_size, num_coarse, 2]
+        cdf_below = torch.gather(cdf, -1, below)
+        cdf_above = torch.gather(cdf, -1, above)
+        t_below = torch.gather(coarse_t_vals, -1, below)
+        t_above = torch.gather(coarse_t_vals, -1, above)
         
-        cdf_g = torch.gather(cdf_expanded, 1, indices_g)  # [batch_size, num_fine_samples, 2]
-        t_vals_g = torch.gather(t_vals_expanded, 1, indices_g)  # [batch_size, num_fine_samples, 2]
-        
-        denom = cdf_g[..., 1] - cdf_g[..., 0]
+        denom = cdf_above - cdf_below
         denom = torch.where(denom < 1e-5, torch.ones_like(denom), denom)
-        t = (u - cdf_g[..., 0]) / denom
-        fine_t_vals = t_vals_g[..., 0] + t * (t_vals_g[..., 1] - t_vals_g[..., 0])
-        
-        # Combine coarse and fine samples
-        combined_t_vals, _ = torch.sort(torch.cat([coarse_t_vals, fine_t_vals], dim=-1), dim=-1)
+        t = (u - cdf_below) / denom
+        fine_t_vals = t_below + t * (t_above - t_below)
         
         # Compute fine sample points
-        fine_points = ray_origins.unsqueeze(-2) + ray_directions.unsqueeze(-2) * combined_t_vals.unsqueeze(-1)
+        fine_points = (
+            ray_origins.unsqueeze(-2) +
+            ray_directions.unsqueeze(-2) * fine_t_vals.unsqueeze(-1)
+        )
         
-        return fine_points, combined_t_vals
+        return fine_points, fine_t_vals
     
-    def volume_rendering(self, colors: torch.Tensor,
-                        densities: torch.Tensor,
-                        t_vals: torch.Tensor,
-                        ray_directions: torch.Tensor,
-                        background_color: Optional[torch.Tensor] = None) -> Dict[str, torch.Tensor]:
-        """Perform volume rendering."""
-        # Compute distances between adjacent samples
-        dists = t_vals[..., 1:] - t_vals[..., :-1]
-        dists = torch.cat([dists, torch.full_like(dists[..., :1], 1e10)], dim=-1)
+    def volume_rendering(
+        self,
+        colors: torch.Tensor,
+        densities: torch.Tensor,
+        t_vals: torch.Tensor,
+        ray_directions: torch.Tensor,
+        background_color: Optional[torch.Tensor] = None
+    ) -> Dict[str, torch.Tensor]:
+        """Render colors and depths using volume rendering equation.
         
-        # Apply ray direction norm to distances
-        dists = dists * torch.norm(ray_directions.unsqueeze(-2), dim=-1)
+        Args:
+            colors: RGB colors for each sample [N, num_samples, 3]
+            densities: Volume density values [N, num_samples, 1]
+            t_vals: Distance values along rays [N, num_samples]
+            ray_directions: Ray direction vectors [N, 3]
+            background_color: Optional background color [3]
+            
+        Returns:
+            Dict[str, torch.Tensor]: Rendering outputs containing:
+                - 'color': Rendered RGB colors [N, 3]
+                - 'depth': Rendered depth values [N, 1]
+                - 'weights': Sample weights [N, num_samples]
+                - 'transmittance': Ray transmittance values [N, num_samples]
+        """
+        # Convert densities to alpha values
+        deltas = t_vals[..., 1:] - t_vals[..., :-1]
+        delta_inf = 1e10 * torch.ones_like(deltas[...,:1])
+        deltas = torch.cat([deltas, delta_inf], dim=-1)
+        
+        # Account for viewing direction
+        deltas = deltas * torch.norm(ray_directions.unsqueeze(-1), dim=-1)
         
         # Compute alpha values
-        alpha = 1.0 - torch.exp(-densities.squeeze(-1) * dists)
+        alpha = 1. - torch.exp(-densities * deltas)
         
-        # Compute transmittance
-        transmittance = torch.cumprod(1.0 - alpha + 1e-10, dim=-1)
-        transmittance = torch.roll(transmittance, 1, dims=-1)
-        transmittance[..., 0] = 1.0
-        
-        # Compute weights
+        # Compute weights and transmittance
+        transmittance = torch.cumprod(
+            torch.cat([torch.ones_like(alpha[:,:1]), 1. - alpha + 1e-10], dim=-1),
+            dim=-1
+        )[..., :-1]
         weights = alpha * transmittance
         
-        # Composite colors
-        rgb = torch.sum(weights.unsqueeze(-1) * colors, dim=-2)
+        # Compute color and depth
+        color = torch.sum(weights.unsqueeze(-1) * colors, dim=-2)
+        depth = torch.sum(weights * t_vals, dim=-1, keepdim=True)
         
-        # Add background color
+        # Add background color if provided
         if background_color is not None:
-            accumulated_alpha = torch.sum(weights, dim=-1, keepdim=True)
-            rgb = rgb + (1.0 - accumulated_alpha) * background_color
+            background_color = background_color.to(color.device)
+            color = color + (1. - weights.sum(dim=-1, keepdim=True)) * background_color
         
-        # Compute depth
-        depth = torch.sum(weights * t_vals, dim=-1)
-        
-        # Compute accumulated opacity
-        opacity = torch.sum(weights, dim=-1)
-        
-        return {
-            'rgb': rgb,
+        outputs = {
+            'color': color,
             'depth': depth,
-            'opacity': opacity,
-            'weights': weights
+            'weights': weights,
+            'transmittance': transmittance
         }
+        
+        return outputs
 
 
 class GridNeRF(nn.Module):
-    """Grid-guided Neural Radiance Fields for large urban scenes."""
+    """Grid-guided Neural Radiance Fields model."""
     
-    def __init__(self, config: GridNeRFConfig):
+    def __init__(self, config: GridNeRFConfig) -> None:
+        """Initialize the Grid-NeRF model.
+        
+        Args:
+            config: Configuration object for Grid-NeRF
+        """
         super().__init__()
         self.config = config
         
-        # Hierarchical grid
-        self.hierarchical_grid = HierarchicalGrid(config)
-        
-        # Grid-guided MLP
-        self.grid_mlp = GridGuidedMLP(config)
-        
-        # Renderer
+        # Initialize components
+        self.grid = HierarchicalGrid(config)
+        self.mlp = GridGuidedMLP(config)
         self.renderer = GridNeRFRenderer(config)
+        
+        self._reset_parameters()
     
     def query_grid_features(self, points: torch.Tensor) -> torch.Tensor:
-        """Query grid features at given 3D points."""
-        return self.hierarchical_grid.get_multi_level_features(points)
-    
-    def forward(self, ray_origins: torch.Tensor,
-                ray_directions: torch.Tensor,
-                background_color: Optional[torch.Tensor] = None) -> Dict[str, torch.Tensor]:
-        """
-        Render rays using Grid-NeRF.
+        """Query multi-level grid features at given points.
         
         Args:
-            ray_origins: Ray origins [N, 3]
-            ray_directions: Ray directions [N, 3]
-            background_color: Background color [3] (optional)
+            points: 3D points to query [N, 3]
             
         Returns:
-            Dictionary containing rendered outputs
+            torch.Tensor: Concatenated grid features from all levels [N, D]
         """
-        device = ray_origins.device
+        return self.grid.get_multi_level_features(points)
+    
+    def forward(
+        self,
+        ray_origins: torch.Tensor,
+        ray_directions: torch.Tensor,
+        background_color: Optional[torch.Tensor] = None
+    ) -> Dict[str, torch.Tensor]:
+        """Forward pass of Grid-NeRF model.
         
-        # Coarse sampling
+        Args:
+            ray_origins: Ray origin points [N, 3]
+            ray_directions: Ray direction vectors [N, 3]
+            background_color: Optional background color [3]
+            
+        Returns:
+            Dict[str, torch.Tensor]: Rendering outputs containing:
+                - 'coarse': Coarse rendering outputs
+                - 'fine': Fine rendering outputs (if using hierarchical sampling)
+                - 'combined': Combined rendering outputs
+        """
+        outputs = {}
+        
+        # Sample points along rays
         coarse_points, coarse_t_vals = self.renderer.sample_points_along_rays(
-            ray_origins, ray_directions,
-            self.config.near_plane, self.config.far_plane,
+            ray_origins,
+            ray_directions,
+            self.config.near_plane,
+            self.config.far_plane,
             self.config.num_samples_coarse
         )
         
-        # Query grid features for coarse points
-        coarse_points_flat = coarse_points.view(-1, 3)
-        coarse_grid_features = self.query_grid_features(coarse_points_flat)
-        
-        # Prepare view directions for coarse points
-        view_dirs = ray_directions.unsqueeze(-2).expand(-1, self.config.num_samples_coarse, -1)
-        view_dirs_flat = view_dirs.reshape(-1, 3)
-        
-        # Forward pass through MLP for coarse points
-        coarse_densities, coarse_colors = self.grid_mlp(
-            coarse_grid_features, coarse_points_flat, view_dirs_flat
+        # Query grid features and run through MLP
+        coarse_features = self.query_grid_features(coarse_points)
+        coarse_rgb, coarse_density = self.mlp(
+            coarse_features,
+            ray_directions.unsqueeze(-2).expand_as(coarse_points)
         )
         
-        # Reshape outputs
-        coarse_densities = coarse_densities.view(ray_origins.shape[0], -1, 1)
-        coarse_colors = coarse_colors.view(ray_origins.shape[0], -1, 3)
-        
-        # Volume rendering for coarse samples
+        # Perform coarse rendering
         coarse_outputs = self.renderer.volume_rendering(
-            coarse_colors, coarse_densities, coarse_t_vals, ray_directions, background_color
+            coarse_rgb,
+            coarse_density,
+            coarse_t_vals,
+            ray_directions,
+            background_color
         )
+        outputs['coarse'] = coarse_outputs
         
-        # Fine sampling using hierarchical sampling
-        fine_points, fine_t_vals = self.renderer.hierarchical_sampling(
-            ray_origins, ray_directions,
-            coarse_outputs['weights'], coarse_t_vals,
-            self.config.num_samples_fine
-        )
+        # Perform fine sampling if needed
+        if self.config.num_samples_fine > 0:
+            # Sample points based on coarse weights
+            fine_points, fine_t_vals = self.renderer.hierarchical_sampling(
+                ray_origins,
+                ray_directions,
+                coarse_outputs['weights'],
+                coarse_t_vals,
+                self.config.num_samples_fine
+            )
+            
+            # Query grid features and run through MLP
+            fine_features = self.query_grid_features(fine_points)
+            fine_rgb, fine_density = self.mlp(
+                fine_features,
+                ray_directions.unsqueeze(-2).expand_as(fine_points)
+            )
+            
+            # Perform fine rendering
+            fine_outputs = self.renderer.volume_rendering(
+                fine_rgb,
+                fine_density,
+                fine_t_vals,
+                ray_directions,
+                background_color
+            )
+            outputs['fine'] = fine_outputs
+            
+            # Combine coarse and fine outputs
+            outputs['combined'] = {
+                'color': (coarse_outputs['color'] + fine_outputs['color']) / 2,
+                'depth': (coarse_outputs['depth'] + fine_outputs['depth']) / 2
+            }
+        else:
+            outputs['combined'] = outputs['coarse']
         
-        # Query grid features for fine points
-        fine_points_flat = fine_points.view(-1, 3)
-        fine_grid_features = self.query_grid_features(fine_points_flat)
-        
-        # Prepare view directions for fine points
-        total_samples = self.config.num_samples_coarse + self.config.num_samples_fine
-        view_dirs_fine = ray_directions.unsqueeze(-2).expand(-1, total_samples, -1)
-        view_dirs_fine_flat = view_dirs_fine.reshape(-1, 3)
-        
-        # Forward pass through MLP for fine points
-        fine_densities, fine_colors = self.grid_mlp(
-            fine_grid_features, fine_points_flat, view_dirs_fine_flat
-        )
-        
-        # Reshape outputs
-        fine_densities = fine_densities.view(ray_origins.shape[0], -1, 1)
-        fine_colors = fine_colors.view(ray_origins.shape[0], -1, 3)
-        
-        # Volume rendering for fine samples
-        fine_outputs = self.renderer.volume_rendering(
-            fine_colors, fine_densities, fine_t_vals, ray_directions, background_color
-        )
-        
-        return {
-            'rgb_coarse': coarse_outputs['rgb'],
-            'depth_coarse': coarse_outputs['depth'],
-            'opacity_coarse': coarse_outputs['opacity'],
-            'rgb_fine': fine_outputs['rgb'],
-            'depth_fine': fine_outputs['depth'],
-            'opacity_fine': fine_outputs['opacity'],
-            'weights_coarse': coarse_outputs['weights'],
-            'weights_fine': fine_outputs['weights']
-        }
+        return outputs
     
-    def update_grid_features(self, threshold: float = None):
-        """Update grid features by pruning inactive cells."""
+    def update_grid_features(self, threshold: Optional[float] = None) -> None:
+        """Update grid features based on density threshold.
+        
+        Args:
+            threshold: Optional density threshold value. If None, uses config value.
+        """
         if threshold is None:
             threshold = self.config.density_threshold
         
-        with torch.no_grad():
-            for level in range(self.config.num_grid_levels):
-                occupied_mask = self.hierarchical_grid.get_occupied_cells(level, threshold)
-                
-                # Zero out features for unoccupied cells
-                grid_features = self.hierarchical_grid.grids[level]
-                grid_features.data[~occupied_mask] = 0.0
+        # Update grid features based on density threshold
+        for level in range(self.config.num_grid_levels):
+            occupied = self.grid.get_occupied_cells(level, threshold)
+            self.grid.grids[level].data[~occupied] = 0
+    
+    def get_grid_statistics(self) -> Dict[str, Any]:
+        """Get statistics about the grid representation.
+        
+        Returns:
+            Dict[str, Any]: Dictionary containing grid statistics:
+                - 'num_occupied': Number of occupied cells per level
+                - 'occupancy_ratio': Ratio of occupied cells per level
+                - 'memory_usage': Approximate memory usage in MB
+        """
+        stats = {
+            'num_occupied': [],
+            'occupancy_ratio': [],
+            'memory_usage': 0
+        }
+        
+        for level in range(self.config.num_grid_levels):
+            occupied = self.grid.get_occupied_cells(level)
+            num_occupied = torch.sum(occupied).item()
+            total_cells = occupied.numel()
+            
+            stats['num_occupied'].append(num_occupied)
+            stats['occupancy_ratio'].append(num_occupied / total_cells)
+            stats['memory_usage'] += (
+                num_occupied * self.config.grid_feature_dim * 4 / (1024 * 1024)
+            )  # Approximate memory in MB
+        
+        return stats
+    
+    def _reset_parameters(self) -> None:
+        """Reset model parameters to initial values."""
+        for m in self.modules():
+            if isinstance(m, nn.Linear):
+                nn.init.kaiming_normal_(m.weight)
+                if m.bias is not None:
+                    nn.init.zeros_(m.bias)
 
 
 class GridNeRFLoss(nn.Module):
-    """Loss function for Grid-NeRF training."""
+    """Loss function for Grid-NeRF model."""
     
-    def __init__(self, config: GridNeRFConfig):
+    def __init__(self, config: GridNeRFConfig) -> None:
+        """Initialize the loss function.
+        
+        Args:
+            config: Configuration object for Grid-NeRF
+        """
         super().__init__()
         self.config = config
     
-    def forward(self, predictions: Dict[str, torch.Tensor],
-                targets: Dict[str, torch.Tensor]) -> Dict[str, torch.Tensor]:
-        """
-        Compute Grid-NeRF losses.
+    def forward(
+        self,
+        predictions: Dict[str, torch.Tensor],
+        targets: Dict[str, torch.Tensor]
+    ) -> Dict[str, torch.Tensor]:
+        """Compute the loss for Grid-NeRF predictions.
         
         Args:
-            predictions: Model predictions
-            targets: Ground truth targets
+            predictions: Dictionary containing model predictions:
+                - 'coarse': Coarse rendering outputs
+                - 'fine': Fine rendering outputs (optional)
+                - 'combined': Combined rendering outputs
+            targets: Dictionary containing ground truth values:
+                - 'color': Target RGB colors [N, 3]
+                - 'depth': Target depth values [N, 1] (optional)
             
         Returns:
-            Dictionary containing loss components
+            Dict[str, torch.Tensor]: Dictionary containing loss terms:
+                - 'loss': Total combined loss
+                - 'color_loss': Color reconstruction loss
+                - 'depth_loss': Depth supervision loss (if depth targets provided)
+                - 'grid_loss': Grid regularization loss
         """
         losses = {}
         
-        # Color loss for coarse and fine networks
-        color_loss_coarse = F.mse_loss(predictions['rgb_coarse'], targets['rgb'])
-        color_loss_fine = F.mse_loss(predictions['rgb_fine'], targets['rgb'])
-        color_loss = color_loss_coarse + color_loss_fine
+        # Color loss
+        color_loss = 0.0
+        if 'fine' in predictions:
+            color_loss += F.mse_loss(predictions['fine']['color'], targets['color'])
+        color_loss += F.mse_loss(predictions['coarse']['color'], targets['color'])
+        losses['color_loss'] = self.config.color_loss_weight * color_loss
         
-        losses['color_loss'] = color_loss * self.config.color_loss_weight
-        
-        # Depth loss if available
+        # Depth loss (if provided)
         if 'depth' in targets:
-            depth_loss_coarse = F.mse_loss(predictions['depth_coarse'], targets['depth'])
-            depth_loss_fine = F.mse_loss(predictions['depth_fine'], targets['depth'])
-            depth_loss = depth_loss_coarse + depth_loss_fine
-            losses['depth_loss'] = depth_loss * self.config.depth_loss_weight
+            depth_loss = 0.0
+            if 'fine' in predictions:
+                depth_loss += F.mse_loss(predictions['fine']['depth'], targets['depth'])
+            depth_loss += F.mse_loss(predictions['coarse']['depth'], targets['depth'])
+            losses['depth_loss'] = self.config.depth_loss_weight * depth_loss
         
-        # Grid regularization loss
-        grid_reg_loss = 0.0
-        for level, grid_features in enumerate(predictions.get('grid_features', [])):
-            grid_reg_loss += torch.mean(torch.norm(grid_features, dim=-1))
-        
-        losses['grid_regularization'] = grid_reg_loss * self.config.grid_regularization_weight
+        # Grid regularization
+        grid_loss = 0.0
+        for grid in self.grid.grids:
+            grid_loss += torch.mean(torch.abs(grid))
+        losses['grid_loss'] = self.config.grid_regularization_weight * grid_loss
         
         # Total loss
-        total_loss = sum(losses.values())
-        losses['total_loss'] = total_loss
+        losses['loss'] = sum(
+            loss for loss in losses.values()
+            if isinstance(loss, torch.Tensor)
+        )
         
         return losses 

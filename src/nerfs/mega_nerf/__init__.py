@@ -28,30 +28,10 @@ __version__ = "1.0.0"
 
 __all__ = [
     # Core models
-    'MegaNeRF',
-    'MegaNeRFSubmodule', 
-    'MegaNeRFConfig',
-    
-    # Spatial partitioning
-    'SpatialPartitioner',
-    'GeometryAwarePartitioner',
-    
-    # Training
-    'MegaNeRFTrainer',
-    'ParallelTrainer',
-    
-    # Data handling
-    'MegaNeRFDataset',
-    'CameraDataset',
-    
-    # Rendering
-    'VolumetricRenderer',
-    'BatchRenderer',
-    
-    # Utilities
-    'PositionalEncoding',
-    'create_camera_path',
-    'load_colmap_data',
-    'save_checkpoint',
-    'load_checkpoint'
+    'MegaNeRF', 'MegaNeRFSubmodule', 'MegaNeRFConfig', # Spatial partitioning
+    'SpatialPartitioner', 'GeometryAwarePartitioner', # Training
+    'MegaNeRFTrainer', 'ParallelTrainer', # Data handling
+    'MegaNeRFDataset', 'CameraDataset', # Rendering
+    'VolumetricRenderer', 'BatchRenderer', # Utilities
+    'PositionalEncoding', 'create_camera_path', 'load_colmap_data', 'save_checkpoint', 'load_checkpoint'
 ] 

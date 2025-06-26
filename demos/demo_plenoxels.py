@@ -75,7 +75,11 @@ class MockPlenoxels(torch.nn.Module):
         
         # 转换为体素索引
         grid_coords = normalized * torch.tensor(self.config.grid_resolution, dtype=torch.float32)
-        grid_coords = torch.clamp(grid_coords, 0, torch.tensor(self.config.grid_resolution, dtype=torch.float32) - 1)
+        grid_coords = torch.clamp(
+            grid_coords,
+            0,
+            torch.tensor,
+        )
         
         # 线性索引
         indices = (grid_coords[..., 0] * self.config.grid_resolution[1] * self.config.grid_resolution[2] + 
@@ -110,7 +114,7 @@ class MockPlenoxels(torch.nn.Module):
         
         return torch.stack(sh_coeffs, dim=-1)
     
-    def forward(self, positions: torch.Tensor, directions: torch.Tensor) -> Dict[str, torch.Tensor]:
+    def forward(self, positions: torch.Tensor, directions: torch.Tensor) -> dict[str, torch.Tensor]:
         """前向传播"""
         batch_size = positions.shape[0]
         
@@ -131,9 +135,7 @@ class MockPlenoxels(torch.nn.Module):
         colors = torch.sigmoid(colors)
         
         return {
-            'density': densities,
-            'color': colors,
-            'active_voxels': self.active_mask.sum().item()
+            'density': densities, 'color': colors, 'active_voxels': self.active_mask.sum().item()
         }
     
     def prune_voxels(self, threshold: float = 1e-4):
@@ -148,7 +150,7 @@ class MockPlenoxels(torch.nn.Module):
             self.sh_grid.data[~self.active_mask] = 0
 
 
-def create_voxel_dataset(num_views: int = 80, grid_resolution: int = 64) -> Dict[str, torch.Tensor]:
+def create_voxel_dataset(num_views: int = 80, grid_resolution: int = 64) -> dict[str, torch.Tensor]:
     """创建体素数据集"""
     print(f"📊 创建体素数据集: {num_views}个视角, 网格分辨率{grid_resolution}³")
     
@@ -162,9 +164,7 @@ def create_voxel_dataset(num_views: int = 80, grid_resolution: int = 64) -> Dict
         phi = 0.3 * np.sin(3 * theta)
         
         cam_pos = torch.tensor([
-            2.5 * np.cos(theta),
-            2.5 * np.sin(theta),
-            1.5 + phi
+            2.5 * np.cos(theta), 2.5 * np.sin(theta), 1.5 + phi
         ])
         
         # 生成光线（简化版）
@@ -178,9 +178,9 @@ def create_voxel_dataset(num_views: int = 80, grid_resolution: int = 64) -> Dict
             distance = torch.norm(cam_pos)
             angle_factor = theta / (2 * np.pi)
             color = torch.sigmoid(torch.tensor([
-                0.7 + 0.3 * ray_dir[0] + 0.1 * angle_factor,
-                0.5 + 0.4 * ray_dir[1] + 0.1 * np.sin(distance),
-                0.3 + 0.5 * ray_dir[2] + 0.1 * np.cos(distance)
+                0.7 + 0.3 * ray_dir[0] + 0.1 * angle_factor, 0.5 + 0.4 * ray_dir[1] + 0.1 * np.sin(
+                    distance,
+                )
             ]))
             
             ray_origins.append(cam_pos)
@@ -188,15 +188,18 @@ def create_voxel_dataset(num_views: int = 80, grid_resolution: int = 64) -> Dict
             colors.append(color)
     
     return {
-        'ray_origins': torch.stack(ray_origins),
-        'ray_directions': torch.stack(ray_directions),
-        'colors': torch.stack(colors)
+        'ray_origins': torch.stack(
+            ray_origins,
+        )
     }
 
 
-def train_plenoxels(model: MockPlenoxels,
-                   dataset: Dict[str, torch.Tensor],
-                   num_epochs: int = 200) -> List[Dict]:
+def train_plenoxels(
+    model: MockPlenoxels,
+    dataset: dict[str,
+    torch.Tensor],
+    num_epochs: int = 200,
+)
     """训练Plenoxels模型"""
     print(f"🚀 开始训练Plenoxels模型")
     print(f"📈 训练数据: {len(dataset['ray_origins'])} 条光线")
@@ -251,12 +254,8 @@ def train_plenoxels(model: MockPlenoxels,
                 psnr = -10 * np.log10(mse) if mse > 0 else float('inf')
                 
                 training_history.append({
-                    'epoch': epoch,
-                    'color_loss': color_loss.item(),
-                    'sparsity_loss': sparsity_loss.item(),
-                    'total_loss': total_loss.item(),
-                    'psnr': psnr,
-                    'active_voxels': outputs['active_voxels']
+                    'epoch': epoch, 'color_loss': color_loss.item(
+                    )
                 })
                 
                 print(f"Epoch {epoch:3d}: Color={color_loss.item():.6f}, "
@@ -291,8 +290,8 @@ def demonstrate_plenoxels():
     model = MockPlenoxels(config)
     total_params = sum(p.numel() for p in model.parameters())
     total_voxels = np.prod(config.grid_resolution)
-    print(f"🧠 模型参数数量: {total_params:,}")
-    print(f"🧊 总体素数量: {total_voxels:,}")
+    print(f"🧠 模型参数数量: {total_params:, }")
+    print(f"🧊 总体素数量: {total_voxels:, }")
     
     # 4. 训练模型
     training_history = train_plenoxels(model, dataset, num_epochs=120)
@@ -306,10 +305,10 @@ def demonstrate_plenoxels():
         print(f"   - 最终颜色损失: {final_metrics['color_loss']:.6f}")
         print(f"   - 最终稀疏损失: {final_metrics['sparsity_loss']:.6f}")
         print(f"   - 最终PSNR: {final_metrics['psnr']:.2f} dB")
-        print(f"   - 活跃体素数: {final_metrics['active_voxels']:,}")
+        print(f"   - 活跃体素数: {final_metrics['active_voxels']:, }")
         print(f"   - 体素稀疏率: {(1 - final_metrics['active_voxels'] / total_voxels) * 100:.1f}%")
     
-    print(f"   - 总参数量: {total_params:,}")
+    print(f"   - 总参数量: {total_params:, }")
     print(f"   - 模型大小: {total_params * 4 / 1024 / 1024:.2f} MB")
     print(f"   - 内存效率: {total_params / total_voxels:.2f} 参数/体素")
     

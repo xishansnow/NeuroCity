@@ -1,8 +1,7 @@
 """
 Training Module for NeuralVDB
 
-This module contains training classes for NeuralVDB models,
-including basic and advanced trainers.
+This module contains training classes for NeuralVDB models, including basic and advanced trainers.
 """
 
 import torch
@@ -10,7 +9,7 @@ import torch.nn as nn
 import torch.optim as optim
 from torch.utils.data import DataLoader
 import numpy as np
-from typing import List, Tuple, Dict, Optional, Union, Any
+from typing import Dict, List, Optional, Tuple, Any
 import logging
 from tqdm import tqdm
 import os
@@ -23,10 +22,7 @@ logger = logging.getLogger(__name__)
 class NeuralVDBTrainer:
     """NeuralVDB训练器 - 基础版本"""
     
-    def __init__(self, 
-                 sparse_grid, 
-                 config, 
-                 device: str = 'auto'):
+    def __init__(self, sparse_grid, config, device: str = 'auto'):
         """
         初始化训练器
         
@@ -51,9 +47,9 @@ class NeuralVDBTrainer:
         # 设置优化器
         self.optimizer = optim.Adam(
             list(self.sparse_grid.feature_network.parameters()) + 
-            list(self.sparse_grid.occupancy_network.parameters()),
-            lr=config.learning_rate,
-            weight_decay=config.weight_decay
+            list(
+                self.sparse_grid.occupancy_network.parameters,
+            )
         )
         
         # 设置损失函数
@@ -65,11 +61,13 @@ class NeuralVDBTrainer:
         
         logger.info(f"NeuralVDB训练器初始化完成，设备: {self.device}")
     
-    def train(self, 
-              train_dataloader: DataLoader,
-              val_dataloader: Optional[DataLoader] = None,
-              num_epochs: int = 100,
-              save_path: Optional[str] = None) -> Dict[str, Any]:
+    def train(
+        self,
+        train_dataloader: DataLoader,
+        val_dataloader: Optional[DataLoader] = None,
+        num_epochs: int = 100,
+        save_path: Optional[str] = None,
+    )
         """
         训练模型
         
@@ -111,10 +109,7 @@ class NeuralVDBTrainer:
         
         # 返回训练统计
         stats = {
-            'train_losses': self.train_losses,
-            'val_losses': self.val_losses,
-            'best_val_loss': best_val_loss,
-            'final_train_loss': train_loss
+            'train_losses': self.train_losses, 'val_losses': self.val_losses, 'best_val_loss': best_val_loss, 'final_train_loss': train_loss
         }
         
         if val_loss is not None:
@@ -187,7 +182,7 @@ class NeuralVDBTrainer:
             points: 3D坐标点 (N, 3)
             
         Returns:
-            占用概率 (N,)
+            占用概率 (N, )
         """
         self.sparse_grid.feature_network.eval()
         self.sparse_grid.occupancy_network.eval()
@@ -204,12 +199,8 @@ class NeuralVDBTrainer:
     def save_model(self, path: str):
         """保存模型"""
         checkpoint = {
-            'feature_network_state_dict': self.sparse_grid.feature_network.state_dict(),
-            'occupancy_network_state_dict': self.sparse_grid.occupancy_network.state_dict(),
-            'optimizer_state_dict': self.optimizer.state_dict(),
-            'config': self.config,
-            'train_losses': self.train_losses,
-            'val_losses': self.val_losses
+            'feature_network_state_dict': self.sparse_grid.feature_network.state_dict(
+            )
         }
         
         torch.save(checkpoint, path)
@@ -234,10 +225,7 @@ class NeuralVDBTrainer:
 class AdvancedNeuralVDBTrainer:
     """高级NeuralVDB训练器"""
     
-    def __init__(self, 
-                 sparse_grid, 
-                 config, 
-                 device: str = 'auto'):
+    def __init__(self, sparse_grid, config, device: str = 'auto'):
         """
         初始化高级训练器
         
@@ -262,9 +250,9 @@ class AdvancedNeuralVDBTrainer:
         # 设置优化器
         self.optimizer = optim.AdamW(
             list(self.sparse_grid.feature_network.parameters()) + 
-            list(self.sparse_grid.occupancy_network.parameters()),
-            lr=config.learning_rate,
-            weight_decay=config.weight_decay
+            list(
+                self.sparse_grid.occupancy_network.parameters,
+            )
         )
         
         # 学习率调度器
@@ -282,11 +270,13 @@ class AdvancedNeuralVDBTrainer:
         
         logger.info(f"高级NeuralVDB训练器初始化完成，设备: {self.device}")
     
-    def train(self, 
-              train_dataloader: DataLoader,
-              val_dataloader: Optional[DataLoader] = None,
-              num_epochs: int = 100,
-              save_path: Optional[str] = None) -> Dict[str, Any]:
+    def train(
+        self,
+        train_dataloader: DataLoader,
+        val_dataloader: Optional[DataLoader] = None,
+        num_epochs: int = 100,
+        save_path: Optional[str] = None,
+    )
         """
         训练模型（支持渐进式训练）
         
@@ -335,18 +325,16 @@ class AdvancedNeuralVDBTrainer:
                 
                 # 添加损失分解信息
                 if loss_components:
-                    component_str = ", ".join([f"{k}: {v:.4f}" for k, v in loss_components.items() if k != 'total'])
+                    component_str = ", ".join([f"{
+                        k,
+                    }
                     log_msg += f" ({component_str})"
                 
                 logger.info(log_msg)
         
         # 返回训练统计
         stats = {
-            'train_losses': self.train_losses,
-            'val_losses': self.val_losses,
-            'loss_components': self.loss_components,
-            'best_val_loss': best_val_loss,
-            'final_train_loss': train_loss
+            'train_losses': self.train_losses, 'val_losses': self.val_losses, 'loss_components': self.loss_components, 'best_val_loss': best_val_loss, 'final_train_loss': train_loss
         }
         
         if val_loss is not None:
@@ -369,7 +357,7 @@ class AdvancedNeuralVDBTrainer:
             if progress > 0.5:
                 self.config.sparsity_weight = 0.01 + 0.02 * (progress - 0.5) * 2
     
-    def _train_epoch(self, dataloader: DataLoader) -> Tuple[float, Dict[str, float]]:
+    def _train_epoch(self, dataloader: DataLoader) -> tuple[float, dict[str, float]]:
         """训练一轮（返回损失分解）"""
         self.sparse_grid.feature_network.train()
         self.sparse_grid.occupancy_network.train()
@@ -398,8 +386,7 @@ class AdvancedNeuralVDBTrainer:
             # 梯度裁剪
             torch.nn.utils.clip_grad_norm_(
                 list(self.sparse_grid.feature_network.parameters()) + 
-                list(self.sparse_grid.occupancy_network.parameters()),
-                max_norm=1.0
+                list(self.sparse_grid.occupancy_network.parameters()), max_norm=1.0
             )
             
             self.optimizer.step()
@@ -459,7 +446,7 @@ class AdvancedNeuralVDBTrainer:
             points: 3D坐标点 (N, 3)
             
         Returns:
-            占用概率 (N,) 或包含额外信息的字典
+            占用概率 (N, ) 或包含额外信息的字典
         """
         self.sparse_grid.feature_network.eval()
         self.sparse_grid.occupancy_network.eval()
@@ -483,22 +470,14 @@ class AdvancedNeuralVDBTrainer:
     def save_model(self, path: str):
         """保存模型"""
         checkpoint = {
-            'feature_network_state_dict': self.sparse_grid.feature_network.state_dict(),
-            'occupancy_network_state_dict': self.sparse_grid.occupancy_network.state_dict(),
-            'optimizer_state_dict': self.optimizer.state_dict(),
-            'scheduler_state_dict': self.scheduler.state_dict(),
-            'config': self.config,
-            'train_losses': self.train_losses,
-            'val_losses': self.val_losses,
-            'loss_components': self.loss_components
+            'feature_network_state_dict': self.sparse_grid.feature_network.state_dict(
+            )
         }
         
         # 保存特征压缩器
         if hasattr(self.sparse_grid, 'feature_compressor') and self.sparse_grid.feature_compressor:
             checkpoint['feature_compressor'] = {
-                'codebook': self.sparse_grid.feature_compressor.codebook,
-                'is_trained': self.sparse_grid.feature_compressor.is_trained,
-                'quantization_bits': self.sparse_grid.feature_compressor.quantization_bits
+                'codebook': self.sparse_grid.feature_compressor.codebook, 'is_trained': self.sparse_grid.feature_compressor.is_trained, 'quantization_bits': self.sparse_grid.feature_compressor.quantization_bits
             }
         
         torch.save(checkpoint, path)
@@ -535,11 +514,13 @@ class AdvancedNeuralVDBTrainer:
 class NeuralSDFTrainer:
     """SDF/Occupancy神经网络训练器"""
     
-    def __init__(self, 
-                 model: nn.Module,
-                 device: str = 'auto',
-                 learning_rate: float = 1e-3,
-                 weight_decay: float = 1e-5):
+    def __init__(
+        self,
+        model: nn.Module,
+        device: str = 'auto',
+        learning_rate: float = 1e-3,
+        weight_decay: float = 1e-5,
+    )
         """
         初始化训练器
         
@@ -561,9 +542,7 @@ class NeuralSDFTrainer:
         
         # 设置优化器
         self.optimizer = optim.Adam(
-            self.model.parameters(), 
-            lr=learning_rate, 
-            weight_decay=weight_decay
+            self.model.parameters(), lr=learning_rate, weight_decay=weight_decay
         )
         
         # 设置损失函数
@@ -623,12 +602,14 @@ class NeuralSDFTrainer:
         
         return total_loss / num_batches
     
-    def train(self, 
-              train_dataloader: DataLoader,
-              val_dataloader: Optional[DataLoader] = None,
-              num_epochs: int = 100,
-              save_path: Optional[str] = None,
-              early_stopping_patience: int = 10) -> Dict[str, Any]:
+    def train(
+        self,
+        train_dataloader: DataLoader,
+        val_dataloader: Optional[DataLoader] = None,
+        num_epochs: int = 100,
+        save_path: Optional[str] = None,
+        early_stopping_patience: int = 10,
+    )
         """
         完整训练流程
         
@@ -682,11 +663,7 @@ class NeuralSDFTrainer:
         
         # 返回统计信息
         stats = {
-            'train_losses': self.train_losses,
-            'val_losses': self.val_losses,
-            'best_val_loss': best_val_loss,
-            'final_train_loss': train_loss,
-            'epochs_trained': epoch + 1
+            'train_losses': self.train_losses, 'val_losses': self.val_losses, 'best_val_loss': best_val_loss, 'final_train_loss': train_loss, 'epochs_trained': epoch + 1
         }
         
         if val_loss is not None:
@@ -698,10 +675,8 @@ class NeuralSDFTrainer:
     def save_model(self, path: str):
         """保存模型"""
         checkpoint = {
-            'model_state_dict': self.model.state_dict(),
-            'optimizer_state_dict': self.optimizer.state_dict(),
-            'train_losses': self.train_losses,
-            'val_losses': self.val_losses
+            'model_state_dict': self.model.state_dict(
+            )
         }
         
         torch.save(checkpoint, path)
@@ -729,7 +704,7 @@ class NeuralSDFTrainer:
             coords: 坐标 (N, 3)
             
         Returns:
-            预测值 (N,)
+            预测值 (N, )
         """
         self.model.eval()
         coords_tensor = torch.FloatTensor(coords).to(self.device)

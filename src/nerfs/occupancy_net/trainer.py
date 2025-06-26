@@ -11,7 +11,7 @@ from torch.utils.tensorboard import SummaryWriter
 import numpy as np
 import os
 import time
-from typing import Dict, List, Optional, Tuple, Union
+from typing import Dict, List, Optional, Tuple, Any, Union
 import json
 
 from .core import OccupancyNetwork, ConditionalOccupancyNetwork
@@ -33,15 +33,7 @@ class OccupancyTrainer:
     """
     
     def __init__(
-        self,
-        model: Union[OccupancyNetwork, ConditionalOccupancyNetwork],
-        train_dataloader: DataLoader,
-        val_dataloader: Optional[DataLoader] = None,
-        optimizer: Optional[optim.Optimizer] = None,
-        scheduler: Optional = None,
-        device: str = 'cuda',
-        log_dir: str = 'logs/occupancy_net',
-        checkpoint_dir: str = 'checkpoints/occupancy_net'
+        self, model: OccupancyNetwork | ConditionalOccupancyNetwork, train_dataloader: DataLoader, val_dataloader: Optional[DataLoader] = None, optimizer: Optional[optim.Optimizer] = None, scheduler: Optional = None, device: str = 'cuda', log_dir: str = 'logs/occupancy_net', checkpoint_dir: str = 'checkpoints/occupancy_net'
     ):
         self.model = model
         self.train_dataloader = train_dataloader
@@ -56,9 +48,7 @@ class OccupancyTrainer:
         # 设置优化器
         if optimizer is None:
             self.optimizer = optim.Adam(
-                self.model.parameters(),
-                lr=1e-4,
-                weight_decay=1e-5
+                self.model.parameters(), lr=1e-4, weight_decay=1e-5
             )
         else:
             self.optimizer = optimizer
@@ -81,9 +71,9 @@ class OccupancyTrainer:
         self.val_losses = []
         
         print(f"Trainer initialized with device: {device}")
-        print(f"Model parameters: {sum(p.numel() for p in model.parameters()):,}")
+        print(f"Model parameters: {sum(p.numel() for p in model.parameters()):, }")
     
-    def train_epoch(self) -> Dict[str, float]:
+    def train_epoch(self) -> dict[str, float]:
         """训练一个epoch"""
         self.model.train()
         
@@ -141,11 +131,10 @@ class OccupancyTrainer:
         avg_accuracy = epoch_accuracy / num_batches
         
         return {
-            'loss': avg_loss,
-            'accuracy': avg_accuracy
+            'loss': avg_loss, 'accuracy': avg_accuracy
         }
     
-    def validate(self) -> Dict[str, float]:
+    def validate(self) -> dict[str, float]:
         """验证模型"""
         if self.val_dataloader is None:
             return {}
@@ -184,15 +173,11 @@ class OccupancyTrainer:
         avg_val_accuracy = val_accuracy / num_batches
         
         return {
-            'val_loss': avg_val_loss,
-            'val_accuracy': avg_val_accuracy
+            'val_loss': avg_val_loss, 'val_accuracy': avg_val_accuracy
         }
     
     def train(
-        self,
-        num_epochs: int,
-        save_freq: int = 10,
-        eval_freq: int = 5
+        self, num_epochs: int, save_freq: int = 10, eval_freq: int = 5
     ):
         """训练模型
         
@@ -238,14 +223,17 @@ class OccupancyTrainer:
                 self.writer.add_scalar('val/loss', val_metrics['val_loss'], epoch)
                 self.writer.add_scalar('val/accuracy', val_metrics['val_accuracy'], epoch)
             
-            self.writer.add_scalar('train/learning_rate', 
-                                   self.optimizer.param_groups[0]['lr'], epoch)
+            self.writer.add_scalar(
+                'train/learning_rate',
+                self.optimizer.param_groups[0]['lr'],
+                epoch,
+            )
             
             # 打印进度
             print(f'Epoch {epoch}/{num_epochs} - {epoch_time:.2f}s')
-            print(f'Train Loss: {train_metrics["loss"]:.4f}, Train Acc: {train_metrics["accuracy"]:.4f}')
+            print(f'Train Loss: {train_metrics["loss"]:.4f}')
             if val_metrics:
-                print(f'Val Loss: {val_metrics["val_loss"]:.4f}, Val Acc: {val_metrics["val_accuracy"]:.4f}')
+                print(f'Val Loss: {val_metrics["val_loss"]:.4f}')
             print('-' * 50)
             
             # 保存最佳模型
@@ -264,13 +252,8 @@ class OccupancyTrainer:
     def save_checkpoint(self, filename: str):
         """保存检查点"""
         checkpoint = {
-            'epoch': self.epoch,
-            'global_step': self.global_step,
-            'model_state_dict': self.model.state_dict(),
-            'optimizer_state_dict': self.optimizer.state_dict(),
-            'best_val_loss': self.best_val_loss,
-            'train_losses': self.train_losses,
-            'val_losses': self.val_losses
+            'epoch': self.epoch, 'global_step': self.global_step, 'model_state_dict': self.model.state_dict(
+            )
         }
         
         if self.scheduler is not None:
@@ -300,11 +283,8 @@ class OccupancyTrainer:
         print(f'Resumed from epoch {self.epoch}')
     
     def evaluate_mesh_extraction(
-        self,
-        test_dataloader: DataLoader,
-        resolution: int = 64,
-        num_samples: int = 10
-    ) -> Dict[str, float]:
+        self, test_dataloader: DataLoader, resolution: int = 64, num_samples: int = 10
+    ) -> dict[str, float]:
         """评估网格提取质量"""
         self.model.eval()
         
@@ -327,8 +307,7 @@ class OccupancyTrainer:
                 
                 try:
                     mesh_data = self.model.extract_mesh(
-                        condition=condition,
-                        resolution=resolution
+                        condition=condition, resolution=resolution
                     )
                     
                     if 'vertices' in mesh_data and 'faces' in mesh_data:
@@ -336,9 +315,7 @@ class OccupancyTrainer:
                         num_faces = len(mesh_data['faces'])
                         
                         mesh_metrics.append({
-                            'num_vertices': num_vertices,
-                            'num_faces': num_faces,
-                            'success': True
+                            'num_vertices': num_vertices, 'num_faces': num_faces, 'success': True
                         })
                     else:
                         mesh_metrics.append({'success': False})
@@ -359,20 +336,14 @@ class OccupancyTrainer:
             avg_faces = 0
         
         return {
-            'mesh_extraction_success_rate': success_rate,
-            'avg_vertices': avg_vertices,
-            'avg_faces': avg_faces
+            'mesh_extraction_success_rate': success_rate, 'avg_vertices': avg_vertices, 'avg_faces': avg_faces
         }
     
     def get_training_summary(self) -> Dict:
         """获取训练总结"""
         summary = {
-            'total_epochs': self.epoch,
-            'total_steps': self.global_step,
-            'best_val_loss': self.best_val_loss,
-            'final_train_loss': self.train_losses[-1] if self.train_losses else None,
-            'final_val_loss': self.val_losses[-1] if self.val_losses else None,
-            'model_info': self.model.get_model_size()
+            'total_epochs': self.epoch, 'total_steps': self.global_step, 'best_val_loss': self.best_val_loss, 'final_train_loss': self.train_losses[-1] if self.train_losses else None, 'final_val_loss': self.val_losses[-1] if self.val_losses else None, 'model_info': self.model.get_model_size(
+            )
         }
         
         return summary
@@ -401,12 +372,19 @@ def create_trainer_from_config(config: Dict) -> OccupancyTrainer:
     # 创建数据集
     dataset_config = config.get('dataset', {})
     train_dataset = OccupancyDataset(split='train', **dataset_config)
-    val_dataset = OccupancyDataset(split='val', **dataset_config) if config.get('use_validation', True) else None
+    val_dataset = OccupancyDataset(
+        split='val',
+        **dataset_config,
+    )
     
     # 创建数据加载器
     dataloader_config = config.get('dataloader', {})
     train_dataloader = create_occupancy_dataloader(train_dataset, **dataloader_config)
-    val_dataloader = create_occupancy_dataloader(val_dataset, shuffle=False, **dataloader_config) if val_dataset else None
+    val_dataloader = create_occupancy_dataloader(
+        val_dataset,
+        shuffle=False,
+        **dataloader_config,
+    )
     
     # 创建优化器
     optimizer_config = config.get('optimizer', {})
@@ -435,12 +413,7 @@ def create_trainer_from_config(config: Dict) -> OccupancyTrainer:
     # 创建训练器
     trainer_config = config.get('trainer', {})
     trainer = OccupancyTrainer(
-        model=model,
-        train_dataloader=train_dataloader,
-        val_dataloader=val_dataloader,
-        optimizer=optimizer,
-        scheduler=scheduler,
-        **trainer_config
+        model=model, train_dataloader=train_dataloader, val_dataloader=val_dataloader, optimizer=optimizer, scheduler=scheduler, **trainer_config
     )
     
     return trainer 

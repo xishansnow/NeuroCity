@@ -1,8 +1,7 @@
 """
 PyTorch Lightning trainer for Grid-NeRF.
 
-This module provides a Lightning-based training framework for Grid-NeRF models,
-optimized for large-scale urban scene reconstruction.
+This module provides a Lightning-based training framework for Grid-NeRF models, optimized for large-scale urban scene reconstruction.
 """
 
 import torch
@@ -12,10 +11,10 @@ from pytorch_lightning.callbacks import ModelCheckpoint, LearningRateMonitor, Ea
 from pytorch_lightning.loggers import TensorBoardLogger, WandbLogger
 from pytorch_lightning.strategies import DDPStrategy
 import torchmetrics
-from typing import Dict, List, Optional, Tuple, Any, Union
-from dataclasses import dataclass
+from typing import List, Optional, Tuple, Any, from dataclasses import dataclass
 import numpy as np
 import logging
+import torch.nn as nn
 
 from .core import GridNeRF, GridNeRFConfig, GridNeRFLoss
 from .dataset import GridNeRFDataset, create_dataloader
@@ -39,7 +38,7 @@ class GridNeRFLightningConfig:
     
     # Scheduler settings
     scheduler_type: str = "exponential"  # exponential, cosine, step, none
-    scheduler_params: Dict[str, Any] = None
+    scheduler_params: dict[str, Any] = None
     warmup_steps: int = 500
     max_steps: int = 100000
     
@@ -103,12 +102,16 @@ class GridNeRFLightningModule(pl.LightningModule):
         # Grid statistics tracking
         self.grid_update_count = 0
         
-    def forward(self, ray_origins: torch.Tensor, ray_directions: torch.Tensor,
-                background_color: Optional[torch.Tensor] = None) -> Dict[str, torch.Tensor]:
+    def forward(
+        self,
+        ray_origins: torch.Tensor,
+        ray_directions: torch.Tensor,
+        background_color: Optional[torch.Tensor] = None,
+    )
         """Forward pass through the model."""
         return self.model(ray_origins, ray_directions, background_color)
     
-    def training_step(self, batch: Dict[str, torch.Tensor], batch_idx: int) -> torch.Tensor:
+    def training_step(self, batch: dict[str, torch.Tensor], batch_idx: int) -> torch.Tensor:
         """Training step."""
         # Extract batch data
         images = batch['image']  # [B, H, W, 3]
@@ -173,7 +176,12 @@ class GridNeRFLightningModule(pl.LightningModule):
         
         return losses['total_loss']
     
-    def validation_step(self, batch: Dict[str, torch.Tensor], batch_idx: int) -> Dict[str, torch.Tensor]:
+    def validation_step(
+        self,
+        batch: dict[str,
+        torch.Tensor],
+        batch_idx: int,
+    )
         """Validation step."""
         # Use EMA model if available
         model = self.ema_model if self.ema_model is not None else self.model
@@ -227,16 +235,12 @@ class GridNeRFLightningModule(pl.LightningModule):
         ssim = self.val_ssim(pred_image, target_image)
         
         return {
-            'val_loss': losses['total_loss'],
-            'val_psnr': psnr,
-            'val_ssim': ssim,
-            'pred_rgb': pred_rgb[:100],  # Log first 100 pixels
-            'target_rgb': target_colors[:100],
-            'pred_image': pred_image[0],  # Log first image
+            'val_loss': losses['total_loss'], 'val_psnr': psnr, 'val_ssim': ssim, 'pred_rgb': pred_rgb[:100], # Log first 100 pixels
+            'target_rgb': target_colors[:100], 'pred_image': pred_image[0], # Log first image
             'target_image': target_image[0]
         }
     
-    def validation_epoch_end(self, outputs: List[Dict[str, torch.Tensor]]) -> None:
+    def validation_epoch_end(self, outputs: list[dict[str, torch.Tensor]]) -> None:
         """Aggregate validation results."""
         # Average metrics
         avg_loss = torch.stack([x['val_loss'] for x in outputs]).mean()
@@ -255,7 +259,7 @@ class GridNeRFLightningModule(pl.LightningModule):
         if len(outputs) > 0 and self.current_epoch % 5 == 0:
             self._log_sample_images(outputs[0])
     
-    def configure_optimizers(self) -> Dict[str, Any]:
+    def configure_optimizers(self) -> dict[str, Any]:
         """Configure optimizers and schedulers."""
         # Group parameters for different learning rates
         grid_params = []
@@ -271,22 +275,24 @@ class GridNeRFLightningModule(pl.LightningModule):
                 other_params.append(param)
         
         param_groups = [
-            {'params': grid_params, 'lr': self.config.grid_lr, 'name': 'grid'},
-            {'params': mlp_params, 'lr': self.config.mlp_lr, 'name': 'mlp'},
-            {'params': other_params, 'lr': self.config.learning_rate, 'name': 'other'}
+            {
+                'params': grid_params,
+                'lr': self.config.grid_lr,
+                'name': 'grid',
+            }
         ]
         
         # Create optimizer
         if self.config.optimizer_type == "adam":
-            optimizer = torch.optim.Adam(param_groups,
-                                       weight_decay=self.config.weight_decay)
+            optimizer = torch.optim.Adam(param_groups, weight_decay=self.config.weight_decay)
         elif self.config.optimizer_type == "adamw":
-            optimizer = torch.optim.AdamW(param_groups,
-                                        weight_decay=self.config.weight_decay)
+            optimizer = torch.optim.AdamW(param_groups, weight_decay=self.config.weight_decay)
         elif self.config.optimizer_type == "sgd":
-            optimizer = torch.optim.SGD(param_groups,
-                                      momentum=0.9,
-                                      weight_decay=self.config.weight_decay)
+            optimizer = torch.optim.SGD(
+                param_groups,
+                momentum=0.9,
+                weight_decay=self.config.weight_decay,
+            )
         else:
             raise ValueError(f"Unsupported optimizer: {self.config.optimizer_type}")
         
@@ -358,8 +364,7 @@ class GridNeRFLightningModule(pl.LightningModule):
                 level, self.config.density_threshold)
             occupied_ratio = occupied_cells.float().mean()
             
-            self.log(f'{prefix}grid/level_{level}_occupied_ratio', 
-                    occupied_ratio, on_step=True)
+            self.log(f'{prefix}grid/level_{level}_occupied_ratio', occupied_ratio, on_step=True)
         
         # Log grid feature statistics
         for level, grid in enumerate(self.model.hierarchical_grid.grids):
@@ -369,7 +374,7 @@ class GridNeRFLightningModule(pl.LightningModule):
             self.log(f'{prefix}grid/level_{level}_feature_mean', feature_mean, on_step=True)
             self.log(f'{prefix}grid/level_{level}_feature_std', feature_std, on_step=True)
     
-    def _log_sample_images(self, sample_output: Dict[str, torch.Tensor]):
+    def _log_sample_images(self, sample_output: dict[str, torch.Tensor]):
         """Log sample rendered images to tensorboard."""
         if self.logger is not None and hasattr(self.logger, 'experiment'):
             # Log predicted vs target image
@@ -422,17 +427,8 @@ class GridNeRFLightningModule(pl.LightningModule):
 
 
 def create_grid_nerf_lightning_trainer(
-    config: GridNeRFLightningConfig,
-    train_dataset: GridNeRFDataset,
-    val_dataset: Optional[GridNeRFDataset] = None,
-    max_epochs: int = 100,
-    gpus: Union[int, List[int]] = 1,
-    logger_type: str = "tensorboard",
-    project_name: str = "grid_nerf",
-    experiment_name: str = "default",
-    checkpoint_dir: str = "checkpoints",
-    **trainer_kwargs
-) -> Tuple[GridNeRFLightningModule, pl.Trainer]:
+    config: GridNeRFLightningConfig, train_dataset: GridNeRFDataset, val_dataset: Optional[GridNeRFDataset] = None, max_epochs: int = 100, gpus: int | list[int] = 1, logger_type: str = "tensorboard", project_name: str = "grid_nerf", experiment_name: str = "default", checkpoint_dir: str = "checkpoints", **trainer_kwargs
+) -> tuple[GridNeRFLightningModule, pl.Trainer]:
     """
     Create Grid-NeRF Lightning module and trainer.
     
@@ -457,16 +453,11 @@ def create_grid_nerf_lightning_trainer(
     # Setup logger
     if logger_type == "tensorboard":
         logger = TensorBoardLogger(
-            save_dir="logs",
-            name=project_name,
-            version=experiment_name
+            save_dir="logs", name=project_name, version=experiment_name
         )
     elif logger_type == "wandb":
         logger = WandbLogger(
-            project=project_name,
-            name=experiment_name,
-            save_dir="logs",
-            tags=["grid-nerf", "nerf", "urban-scenes"]
+            project=project_name, name=experiment_name, save_dir="logs", tags=["grid-nerf", "nerf", "urban-scenes"]
         )
     else:
         logger = None
@@ -474,19 +465,11 @@ def create_grid_nerf_lightning_trainer(
     # Setup callbacks
     callbacks = [
         ModelCheckpoint(
-            dirpath=checkpoint_dir,
-            filename=f"{experiment_name}-{{epoch:02d}}-{{val/psnr:.2f}}",
-            monitor="val/psnr",
-            mode="max",
-            save_top_k=3,
-            save_last=True
-        ),
-        LearningRateMonitor(logging_interval="step"),
-        EarlyStopping(
-            monitor="val/psnr",
-            mode="max",
-            patience=30,
-            verbose=True
+            dirpath=checkpoint_dir, filename=f"{
+                experiment_name,
+            }
+        ), LearningRateMonitor(logging_interval="step"), EarlyStopping(
+            monitor="val/psnr", mode="max", patience=30, verbose=True
         )
     ]
     
@@ -499,27 +482,14 @@ def create_grid_nerf_lightning_trainer(
     
     # Create trainer
     trainer = pl.Trainer(
-        max_epochs=max_epochs,
-        devices=gpus,
-        logger=logger,
-        callbacks=callbacks,
-        strategy=strategy,
-        gradient_clip_val=config.gradient_clip_val,
-        precision="16-mixed",
-        log_every_n_steps=50,
-        val_check_interval=0.5,
-        **trainer_kwargs
+        max_epochs=max_epochs, devices=gpus, logger=logger, callbacks=callbacks, strategy=strategy, gradient_clip_val=config.gradient_clip_val, precision="16-mixed", log_every_n_steps=50, val_check_interval=0.5, **trainer_kwargs
     )
     
     return lightning_module, trainer
 
 
 def train_grid_nerf_lightning(
-    model_config: GridNeRFConfig,
-    lightning_config: GridNeRFLightningConfig,
-    train_dataset: GridNeRFDataset,
-    val_dataset: Optional[GridNeRFDataset] = None,
-    **trainer_kwargs
+    model_config: GridNeRFConfig, lightning_config: GridNeRFLightningConfig, train_dataset: GridNeRFDataset, val_dataset: Optional[GridNeRFDataset] = None, **trainer_kwargs
 ) -> GridNeRFLightningModule:
     """
     Simplified training function for Grid-NeRF using Lightning.
@@ -539,29 +509,19 @@ def train_grid_nerf_lightning(
     
     # Create Lightning module and trainer
     lightning_module, trainer = create_grid_nerf_lightning_trainer(
-        lightning_config,
-        train_dataset,
-        val_dataset,
-        **trainer_kwargs
+        lightning_config, train_dataset, val_dataset, **trainer_kwargs
     )
     
     # Create data loaders
     train_loader = create_dataloader(
-        train_dataset,
-        batch_size=1,  # Grid-NeRF typically processes one image at a time
-        shuffle=True,
-        num_workers=4,
-        ray_batch_size=lightning_config.ray_batch_size
+        train_dataset, batch_size=1, # Grid-NeRF typically processes one image at a time
+        shuffle=True, num_workers=4, ray_batch_size=lightning_config.ray_batch_size
     )
     
     val_loader = None
     if val_dataset is not None:
         val_loader = create_dataloader(
-            val_dataset,
-            batch_size=1,
-            shuffle=False,
-            num_workers=2,
-            ray_batch_size=lightning_config.ray_batch_size
+            val_dataset, batch_size=1, shuffle=False, num_workers=2, ray_batch_size=lightning_config.ray_batch_size
         )
     
     # Start training

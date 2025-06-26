@@ -14,7 +14,7 @@ import numpy as np
 import gc
 import psutil
 import time
-from typing import Dict, List, Optional, Any, Tuple
+from typing import Dict, List, Optional, Tuple, Any
 from collections import OrderedDict
 import threading
 import queue
@@ -27,9 +27,12 @@ class MemoryManager:
     Centralized memory management for Mega-NeRF++
     """
     
-    def __init__(self, max_memory_gb: float = 16.0, 
-                 cache_size_gb: float = 4.0,
-                 cleanup_threshold: float = 0.9):
+    def __init__(
+        self,
+        max_memory_gb: float = 16.0,
+        cache_size_gb: float = 4.0,
+        cleanup_threshold: float = 0.9,
+    ) -> None:
         """
         Args:
             max_memory_gb: Maximum GPU memory to use (GB)
@@ -85,13 +88,11 @@ class MemoryManager:
             gpu_memory_cached = torch.cuda.memory_reserved() / (1024**3)  # GB
             
             self.memory_stats.update({
-                'gpu_allocated': gpu_memory,
-                'gpu_cached': gpu_memory_cached,
-                'cpu_percent': psutil.virtual_memory().percent,
-                'cpu_available': psutil.virtual_memory().available / (1024**3)
+                'gpu_allocated': gpu_memory, 'gpu_cached': gpu_memory_cached, 'cpu_percent': psutil.virtual_memory(
+                )
             })
     
-    def get_memory_stats(self) -> Dict[str, float]:
+    def get_memory_stats(self) -> dict[str, float]:
         """Get current memory statistics"""
         self._update_memory_stats()
         return self.memory_stats.copy()
@@ -146,8 +147,7 @@ class MemoryManager:
             return self.tensor_cache[key]
         return None
     
-    def optimize_batch_size(self, base_batch_size: int, 
-                          sample_tensor: torch.Tensor) -> int:
+    def optimize_batch_size(self, base_batch_size: int, sample_tensor: torch.Tensor) -> int:
         """Optimize batch size based on available memory"""
         
         if not torch.cuda.is_available():
@@ -228,7 +228,7 @@ class CacheManager:
                 self.cache_metadata[key] = {
                     'file_size': file_size,
                     'access_time': time.time(),
-                    'access_count': self.cache_metadata.get(key, {}).get('access_count', 0) + 1
+                    'access_count': self.cache_metadata.get(key, {}).get('access_count', 0) + 1,
                 }
                 
                 self._cleanup_disk_cache()
@@ -288,8 +288,7 @@ class CacheManager:
         if total_size > self.max_cache_size_gb * 1024**3:
             # Sort by access time (oldest first)
             sorted_items = sorted(
-                self.cache_metadata.items(),
-                key=lambda x: x[1]['access_time']
+                self.cache_metadata.items(), key=lambda x: x[1]['access_time']
             )
             
             # Remove oldest items
@@ -323,8 +322,7 @@ class StreamingDataLoader:
     Streaming data loader for very large datasets that don't fit in memory
     """
     
-    def __init__(self, dataset, batch_size: int = 1, 
-                 buffer_size: int = 10, num_workers: int = 2):
+    def __init__(self, dataset, batch_size: int = 1, buffer_size: int = 10, num_workers: int = 2):
         """
         Args:
             dataset: Dataset to stream from
@@ -350,9 +348,7 @@ class StreamingDataLoader:
         
         for i in range(self.num_workers):
             worker = threading.Thread(
-                target=self._worker_loop,
-                args=(i,),
-                daemon=True
+                target=self._worker_loop, args=(i, ), daemon=True
             )
             worker.start()
             self.workers.append(worker)
@@ -408,7 +404,7 @@ class StreamingDataLoader:
         except queue.Empty:
             raise StopIteration
     
-    def _collate_batch(self, batch_data: List[Dict]) -> Dict[str, torch.Tensor]:
+    def _collate_batch(self, batch_data: list[Dict]) -> dict[str, torch.Tensor]:
         """Collate batch data"""
         
         if not batch_data:
@@ -453,9 +449,11 @@ class MemoryOptimizer:
     """
     
     @staticmethod
-    def optimize_model_memory(model: nn.Module, 
-                            use_checkpointing: bool = True,
-                            use_mixed_precision: bool = True) -> nn.Module:
+    def optimize_model_memory(
+        model: nn.Module,
+        use_checkpointing: bool = True,
+        use_mixed_precision: bool = True,
+    ) -> nn.Module:
         """Optimize model for memory efficiency"""
         
         if use_checkpointing:
@@ -499,19 +497,19 @@ class MemoryOptimizer:
         return model
     
     @staticmethod
-    def chunk_tensor_processing(tensor: torch.Tensor, 
-                              processing_fn: callable,
-                              chunk_size: int = 1024,
-                              dim: int = 0) -> torch.Tensor:
+    def chunk_tensor_processing(
+        tensor: torch.Tensor,
+        processing_fn: callable,
+        chunk_size: int = 1024,
+        dim: int = 0,
+    ) -> torch.Tensor: 
         """Process large tensors in chunks to save memory"""
         
         if tensor.size(dim) <= chunk_size:
             return processing_fn(tensor)
         
         # Split tensor into chunks
-        chunks = torch.chunk(tensor, 
-                           chunks=max(1, tensor.size(dim) // chunk_size), 
-                           dim=dim)
+        chunks = torch.chunk(tensor, chunks=max(1, tensor.size(dim) // chunk_size), dim=dim)
         
         # Process chunks
         processed_chunks = []
@@ -529,7 +527,7 @@ class MemoryOptimizer:
         return tensor.numel() * tensor.element_size() / (1024**2)
     
     @staticmethod
-    def get_model_memory_usage(model: nn.Module) -> Dict[str, float]:
+    def get_model_memory_usage(model: nn.Module) -> dict[str, float]:
         """Get detailed memory usage of model components"""
         
         memory_usage = {}

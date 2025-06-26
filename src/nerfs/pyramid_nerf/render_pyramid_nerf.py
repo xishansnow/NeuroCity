@@ -18,14 +18,12 @@ from tqdm import tqdm
 sys.path.append(str(Path(__file__).parent.parent))
 
 from . import (
-    PyNeRF, PyNeRFConfig, PyNeRFDataset,
-    load_pyramid_model, compute_psnr, compute_ssim
+    PyNeRF, PyNeRFConfig, PyNeRFDataset, load_pyramid_model, compute_psnr, compute_ssim
 )
 
 # Setup logging
 logging.basicConfig(
-    level=logging.INFO,
-    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+    level=logging.INFO, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
 )
 logger = logging.getLogger(__name__)
 
@@ -35,54 +33,67 @@ def parse_args():
     parser = argparse.ArgumentParser(description="Render PyNeRF model")
     
     # Model arguments
-    parser.add_argument("--checkpoint", type=str, required=True,
-                       help="Path to model checkpoint")
-    parser.add_argument("--config", type=str, default=None,
-                       help="Path to config file (if not in checkpoint)")
+    parser.add_argument("--checkpoint", type=str, required=True, help="Path to model checkpoint")
+    parser.add_argument(
+        "--config",
+        type=str,
+        default=None,
+        help="Path to config file,
+    )
     
     # Data arguments
-    parser.add_argument("--data_dir", type=str, required=True,
-                       help="Path to dataset directory")
-    parser.add_argument("--split", type=str, default="test",
-                       choices=["train", "val", "test"],
-                       help="Dataset split to render")
-    parser.add_argument("--img_downscale", type=int, default=1,
-                       help="Image downscale factor")
-    parser.add_argument("--white_background", action="store_true",
-                       help="Use white background")
+    parser.add_argument("--data_dir", type=str, required=True, help="Path to dataset directory")
+    parser.add_argument(
+        "--split",
+        type=str,
+        default="test",
+        choices=["train",
+        "val",
+        "test"],
+        help="Dataset split to render",
+    )
+    parser.add_argument("--img_downscale", type=int, default=1, help="Image downscale factor")
+    parser.add_argument("--white_background", action="store_true", help="Use white background")
     
     # Rendering arguments
-    parser.add_argument("--render_mode", type=str, default="images",
-                       choices=["images", "video", "spiral", "interpolate"],
-                       help="Rendering mode")
-    parser.add_argument("--output_dir", type=str, default="./renders",
-                       help="Output directory")
-    parser.add_argument("--chunk_size", type=int, default=1024,
-                       help="Chunk size for rendering")
+    parser.add_argument(
+        "--render_mode",
+        type=str,
+        default="images",
+        choices=["images",
+        "video",
+        "spiral",
+        "interpolate"],
+        help="Rendering mode",
+    )
+    parser.add_argument("--output_dir", type=str, default="./renders", help="Output directory")
+    parser.add_argument("--chunk_size", type=int, default=1024, help="Chunk size for rendering")
     
     # Video arguments
-    parser.add_argument("--fps", type=int, default=30,
-                       help="FPS for video rendering")
-    parser.add_argument("--video_format", type=str, default="mp4",
-                       help="Video format")
+    parser.add_argument("--fps", type=int, default=30, help="FPS for video rendering")
+    parser.add_argument("--video_format", type=str, default="mp4", help="Video format")
     
     # Spiral path arguments
-    parser.add_argument("--spiral_radius", type=float, default=3.0,
-                       help="Spiral path radius")
-    parser.add_argument("--spiral_height", type=float, default=0.5,
-                       help="Spiral path height variation")
-    parser.add_argument("--num_spiral_frames", type=int, default=120,
-                       help="Number of frames in spiral path")
+    parser.add_argument("--spiral_radius", type=float, default=3.0, help="Spiral path radius")
+    parser.add_argument(
+        "--spiral_height",
+        type=float,
+        default=0.5,
+        help="Spiral path height variation",
+    )
+    parser.add_argument(
+        "--num_spiral_frames",
+        type=int,
+        default=120,
+        help="Number of frames in spiral path",
+    )
     
     # Evaluation arguments
-    parser.add_argument("--compute_metrics", action="store_true",
-                       help="Compute evaluation metrics")
-    parser.add_argument("--save_depth", action="store_true",
-                       help="Save depth maps")
+    parser.add_argument("--compute_metrics", action="store_true", help="Compute evaluation metrics")
+    parser.add_argument("--save_depth", action="store_true", help="Save depth maps")
     
     # Device arguments
-    parser.add_argument("--device", type=str, default="cuda",
-                       help="Device to use")
+    parser.add_argument("--device", type=str, default="cuda", help="Device to use")
     
     return parser.parse_args()
 
@@ -104,18 +115,13 @@ def load_model_and_config(checkpoint_path, device):
     model.eval()
     
     logger.info(f"Model loaded successfully")
-    logger.info(f"Model parameters: {sum(p.numel() for p in model.parameters()):,}")
+    logger.info(f"Model parameters: {sum(p.numel() for p in model.parameters()):, }")
     
     return model, config
 
 
 def render_image(
-    model: PyNeRF,
-    rays_o: torch.Tensor,
-    rays_d: torch.Tensor,
-    bounds: torch.Tensor,
-    chunk_size: int = 1024,
-    device: str = "cuda"
+    model: PyNeRF, rays_o: torch.Tensor, rays_d: torch.Tensor, bounds: torch.Tensor, chunk_size: int = 1024, device: str = "cuda"
 ) -> dict:
     """
     Render a single image
@@ -169,17 +175,12 @@ def render_image(
     acc_image = acc_map.view(H, W).cpu().numpy()
     
     return {
-        "rgb": rgb_image,
-        "depth": depth_image,
-        "acc": acc_image
+        "rgb": rgb_image, "depth": depth_image, "acc": acc_image
     }
 
 
 def generate_spiral_path(
-    poses: np.ndarray,
-    radius: float = 3.0,
-    height: float = 0.5,
-    num_frames: int = 120
+    poses: np.ndarray, radius: float = 3.0, height: float = 0.5, num_frames: int = 120
 ) -> np.ndarray:
     """
     Generate spiral camera path
@@ -250,9 +251,7 @@ def render_dataset(args, model, config, dataset):
         
         # Render image
         outputs = render_image(
-            model, rays_o, rays_d, bounds,
-            chunk_size=args.chunk_size,
-            device=args.device
+            model, rays_o, rays_d, bounds, chunk_size=args.chunk_size, device=args.device
         )
         
         # Save RGB image
@@ -300,10 +299,7 @@ def render_spiral(args, model, config, dataset):
     # Generate spiral path
     poses = np.stack([dataset.poses[i] for i in range(len(dataset))], axis=0)
     spiral_poses = generate_spiral_path(
-        poses, 
-        radius=args.spiral_radius,
-        height=args.spiral_height,
-        num_frames=args.num_spiral_frames
+        poses, radius=args.spiral_radius, height=args.spiral_height, num_frames=args.num_spiral_frames
     )
     
     # Get camera parameters
@@ -315,15 +311,11 @@ def render_spiral(args, model, config, dataset):
     for idx, pose in enumerate(tqdm(spiral_poses, desc="Rendering spiral")):
         # Generate rays for this pose
         i, j = np.meshgrid(
-            np.arange(W, dtype=np.float32),
-            np.arange(H, dtype=np.float32),
-            indexing='xy'
+            np.arange(W, dtype=np.float32), np.arange(H, dtype=np.float32), indexing='xy'
         )
         
         dirs = np.stack([
-            (i - W * 0.5) / focal,
-            -(j - H * 0.5) / focal,
-            -np.ones_like(i)
+            (i - W * 0.5) / focal, -(j - H * 0.5) / focal, -np.ones_like(i)
         ], axis=-1)
         
         rays_d = np.sum(dirs[..., None, :] * pose[:3, :3], axis=-1)
@@ -339,9 +331,7 @@ def render_spiral(args, model, config, dataset):
         
         # Render frame
         outputs = render_image(
-            model, rays_o, rays_d, bounds,
-            chunk_size=args.chunk_size,
-            device=args.device
+            model, rays_o, rays_d, bounds, chunk_size=args.chunk_size, device=args.device
         )
         
         # Convert to image
@@ -383,10 +373,7 @@ def main():
     # Create dataset
     logger.info("Loading dataset...")
     dataset = PyNeRFDataset(
-        data_dir=args.data_dir,
-        split=args.split,
-        img_downscale=args.img_downscale,
-        white_background=args.white_background
+        data_dir=args.data_dir, split=args.split, img_downscale=args.img_downscale, white_background=args.white_background
     )
     logger.info(f"Dataset: {len(dataset)} images")
     

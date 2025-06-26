@@ -2,8 +2,7 @@
 Nerfacto - Advanced NeRF Implementation
 =====================================
 
-A state-of-the-art NeRF implementation based on nerfstudio's nerfacto model,
-combining the best practices and optimizations from various NeRF variants.
+A state-of-the-art NeRF implementation based on nerfstudio's nerfacto model, combining the best practices and optimizations from various NeRF variants.
 
 Key Features:
 - Hash encoding for efficient scene representation
@@ -15,76 +14,26 @@ Key Features:
 """
 
 from .core import (
-    NerfactoConfig,
-    NerfactoModel,
-    NerfactoFieldConfig,
-    NerfactoField,
-    HashEncoding,
-    ProposalNetwork,
-    AppearanceEmbedding,
-    NerfactoRenderer,
-    NerfactoLoss
+    NerfactoConfig, NerfactoModel, NerfactoFieldConfig, NerfactoField, HashEncoding, ProposalNetwork, AppearanceEmbedding, NerfactoRenderer, NerfactoLoss
 )
 
 from .dataset import (
-    NerfactoDataset,
-    NerfactoDataManager,
-    create_nerfacto_dataloader,
-    create_nerfacto_dataset,
-    parse_transforms_json,
-    NerfactoRayBundle
+    NerfactoDataset, create_nerfacto_dataloader, create_nerfacto_dataset
 )
 
 from .trainer import (
-    NerfactoTrainer,
-    NerfactoConfig as TrainerConfig,
-    NerfactoOptimizer,
-    NerfactoScheduler
+    NerfactoTrainer
 )
 
-from .utils import (
-    NerfactoUtils,
-    camera_utils,
-    geometry_utils,
-    loss_utils,
-    rendering_utils,
-    visualization_utils
-)
+from .utils import camera_utils
 
 __version__ = "1.0.0"
 __author__ = "NeuroCity Development Team"
 
 __all__ = [
     # Core components
-    "NerfactoConfig",
-    "NerfactoModel", 
-    "NerfactoFieldConfig",
-    "NerfactoField",
-    "HashEncoding",
-    "ProposalNetwork",
-    "AppearanceEmbedding",
-    "NerfactoRenderer",
-    "NerfactoLoss",
-    
-    # Dataset components
-    "NerfactoDataset",
-    "NerfactoDataManager",
-    "create_nerfacto_dataloader", 
-    "create_nerfacto_dataset",
-    "parse_transforms_json",
-    "NerfactoRayBundle",
-    
-    # Training components
-    "NerfactoTrainer",
-    "TrainerConfig",
-    "NerfactoOptimizer",
-    "NerfactoScheduler",
-    
-    # Utilities
-    "NerfactoUtils",
-    "camera_utils",
-    "geometry_utils", 
-    "loss_utils",
-    "rendering_utils",
-    "visualization_utils"
+    "NerfactoConfig", "NerfactoModel", "NerfactoFieldConfig", "NerfactoField", "HashEncoding", "ProposalNetwork", "AppearanceEmbedding", "NerfactoRenderer", "NerfactoLoss", # Dataset components
+    "NerfactoDataset", "create_nerfacto_dataloader", "create_nerfacto_dataset", # Training components
+    "NerfactoTrainer", # Utilities
+    "camera_utils"
 ] 

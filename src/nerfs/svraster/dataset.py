@@ -9,7 +9,7 @@ import torch.nn.functional as F
 from torch.utils.data import Dataset, DataLoader
 import numpy as np
 from PIL import Image
-from typing import Dict, List, Optional, Tuple, Union
+from typing import Dict, List, Optional, Tuple, Any, Union
 from dataclasses import dataclass
 import logging
 
@@ -36,7 +36,7 @@ class SVRasterDatasetConfig:
     
     # Camera parameters
     camera_model: str = "pinhole"
-    distortion_params: Optional[List[float]] = None
+    distortion_params: Optional[list[float]] = None
     
     # Data loading
     train_split: float = 0.8
@@ -56,7 +56,7 @@ class SVRasterDatasetConfig:
     # Scene bounds
     auto_scale_poses: bool = True
     scene_scale: float = 1.0
-    scene_center: Optional[Tuple[float, float, float]] = None
+    scene_center: Optional[tuple[float, float, float]] = None
     
     # Background handling
     white_background: bool = False
@@ -114,9 +114,7 @@ class SVRasterDataset(Dataset):
             
             # Camera intrinsics
             K = np.array([
-                [focal, 0, cx],
-                [0, focal, cy],
-                [0, 0, 1]
+                [focal, 0, cx], [0, focal, cy], [0, 0, 1]
             ])
             self.intrinsics.append(K)
         
@@ -140,9 +138,7 @@ class SVRasterDataset(Dataset):
         
         # Camera intrinsics
         K = np.array([
-            [focal, 0, self.config.image_width / 2],
-            [0, focal, self.config.image_height / 2],
-            [0, 0, 1]
+            [focal, 0, self.config.image_width / 2], [0, focal, self.config.image_height / 2], [0, 0, 1]
         ])
         
         for frame in transforms['frames']:
@@ -187,7 +183,12 @@ class SVRasterDataset(Dataset):
             processed_images = []
             for img in self.images:
                 img_tensor = torch.from_numpy(img).permute(2, 0, 1).unsqueeze(0)
-                img_resized = F.interpolate(img_tensor, size=(new_h, new_w), mode='bilinear', align_corners=False)
+                img_resized = F.interpolate(
+                    img_tensor,
+                    size=(new_h, new_w),
+                    mode='bilinear',
+                    align_corners=False,
+                )
                 img_resized = img_resized.squeeze(0).permute(1, 2, 0).numpy()
                 processed_images.append(img_resized)
             
@@ -246,7 +247,7 @@ class SVRasterDataset(Dataset):
         self.all_rays_d = np.concatenate(self.rays_d, axis=0)
         self.all_colors = np.concatenate(self.target_colors, axis=0)
     
-    def _generate_rays(self, pose: np.ndarray, K: np.ndarray) -> Tuple[np.ndarray, np.ndarray]:
+    def _generate_rays(self, pose: np.ndarray, K: np.ndarray) -> tuple[np.ndarray, np.ndarray]:
         """Generate rays for a camera."""
         H, W = self.config.image_height, self.config.image_width
         
@@ -255,9 +256,7 @@ class SVRasterDataset(Dataset):
         
         # Camera coordinates
         dirs = np.stack([
-            (i - K[0, 2]) / K[0, 0],
-            -(j - K[1, 2]) / K[1, 1],
-            -np.ones_like(i)
+            (i - K[0, 2]) / K[0, 0], -(j - K[1, 2]) / K[1, 1], -np.ones_like(i)
         ], axis=-1)
         
         # Transform to world coordinates
@@ -273,8 +272,8 @@ class SVRasterDataset(Dataset):
         else:
             return len(self.images)
     
-    def __getitem__(self, idx):
-        """Get a data sample."""
+    def __getitem__(self, idx: int) -> dict[str, torch.Tensor]:
+        """Get a batch of data."""
         if self.split == "train":
             # Random ray sampling for training
             num_rays = self.config.num_rays_train
@@ -285,9 +284,7 @@ class SVRasterDataset(Dataset):
             colors = torch.from_numpy(self.all_colors[ray_indices]).float()
             
             return {
-                'rays_o': rays_o,
-                'rays_d': rays_d,
-                'colors': colors
+                'rays_o': rays_o, 'rays_d': rays_d, 'colors': colors
             }
         else:
             # Full image for validation/test
@@ -298,30 +295,29 @@ class SVRasterDataset(Dataset):
             colors = torch.from_numpy(self.target_colors[image_idx]).float()
             
             return {
-                'rays_o': rays_o,
-                'rays_d': rays_d,
-                'colors': colors,
-                'image_idx': image_idx,
-                'pose': torch.from_numpy(self.poses[image_idx]).float(),
-                'intrinsics': torch.from_numpy(self.intrinsics[image_idx]).float()
+                'rays_o': rays_o, 'rays_d': rays_d, 'colors': colors, 'image_idx': image_idx, 'pose': torch.from_numpy(
+                    self.poses[image_idx],
+                )
             }
 
+    def get_dataset_info(self) -> dict[str, Any]:
+        """Get dataset information."""
 
-def create_svraster_dataloader(config: SVRasterDatasetConfig, 
-                              split: str = "train",
-                              batch_size: int = 1,
-                              shuffle: bool = True,
-                              num_workers: int = 4) -> DataLoader:
+
+def create_svraster_dataloader(
+    config: SVRasterDatasetConfig,
+    split: str = "train",
+    batch_size: int = 1,
+    shuffle: bool = True,
+    num_workers: int = 4,
+) -> DataLoader:
     """Create a DataLoader for SVRaster dataset."""
     dataset = SVRasterDataset(config, split)
     
     return DataLoader(
-        dataset,
-        batch_size=batch_size,
-        shuffle=shuffle,
-        num_workers=num_workers,
-        pin_memory=True,
-        drop_last=(split == "train")
+        dataset, batch_size=batch_size, shuffle=shuffle, num_workers=num_workers, pin_memory=True, drop_last=(
+            split == "train",
+        )
     )
 
 

@@ -2,7 +2,7 @@
 Occupancy Network Core Implementation
 基于论文: "Occupancy Networks: Learning 3D Reconstruction in Function Space"
 
-占用网络学习一个连续函数 f: R^3 -> [0,1]，
+占用网络学习一个连续函数 f: R^3 -> [0, 1]，
 将3D空间中的点映射为占用概率。
 """
 
@@ -10,7 +10,7 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 import numpy as np
-from typing import Dict, List, Tuple, Optional, Union
+from typing import Dict, List, Optional, Tuple, Any, Union
 
 
 class ResnetBlockFC(nn.Module):
@@ -59,7 +59,7 @@ class ResnetBlockFC(nn.Module):
 class OccupancyNetwork(nn.Module):
     """占用网络模型
     
-    学习一个函数 f: R^3 -> [0,1] 来预测空间占用概率
+    学习一个函数 f: R^3 -> [0, 1] 来预测空间占用概率
     
     Args:
         dim_input: 输入维度（通常为3，表示3D坐标）
@@ -72,15 +72,7 @@ class OccupancyNetwork(nn.Module):
     """
     
     def __init__(
-        self,
-        dim_input: int = 3,
-        dim_hidden: int = 128,
-        num_layers: int = 5,
-        use_batch_norm: bool = True,
-        dropout_prob: float = 0.0,
-        use_conditioning: bool = False,
-        dim_condition: int = 128,
-        **kwargs
+        self, dim_input: int = 3, dim_hidden: int = 128, num_layers: int = 5, use_batch_norm: bool = True, dropout_prob: float = 0.0, use_conditioning: bool = False, dim_condition: int = 128, **kwargs
     ):
         super().__init__()
         
@@ -130,9 +122,7 @@ class OccupancyNetwork(nn.Module):
                     nn.init.zeros_(m.bias)
     
     def forward(
-        self, 
-        points: torch.Tensor,
-        condition: Optional[torch.Tensor] = None
+        self, points: torch.Tensor, condition: Optional[torch.Tensor] = None
     ) -> torch.Tensor:
         """前向传播
         
@@ -182,7 +172,7 @@ class OccupancyNetwork(nn.Module):
         
         # 输出层
         occupancy = self.fc_out(x)
-        occupancy = torch.sigmoid(occupancy)  # 将输出映射到[0,1]
+        occupancy = torch.sigmoid(occupancy)  # 将输出映射到[0, 1]
         
         # 重塑输出
         if reshape_output:
@@ -191,10 +181,7 @@ class OccupancyNetwork(nn.Module):
         return occupancy
     
     def predict_occupancy(
-        self,
-        points: torch.Tensor,
-        condition: Optional[torch.Tensor] = None,
-        chunk_size: int = 100000
+        self, points: torch.Tensor, condition: Optional[torch.Tensor] = None, chunk_size: int = 100000
     ) -> torch.Tensor:
         """预测占用概率（支持大批量推理）
         
@@ -222,8 +209,7 @@ class OccupancyNetwork(nn.Module):
                     condition_chunk = None
                 
                 occupancy_chunk = self.forward(
-                    points_chunk.unsqueeze(0),
-                    condition_chunk
+                    points_chunk.unsqueeze(0), condition_chunk
                 ).squeeze(0)
                 
                 occupancy_list.append(occupancy_chunk)
@@ -231,11 +217,7 @@ class OccupancyNetwork(nn.Module):
         return torch.cat(occupancy_list, dim=0)
     
     def extract_mesh(
-        self,
-        condition: Optional[torch.Tensor] = None,
-        resolution: int = 64,
-        threshold: float = 0.5,
-        bbox: Optional[Tuple[float, float]] = None
+        self, condition: Optional[torch.Tensor] = None, resolution: int = 64, threshold: float = 0.5, bbox: Optional[tuple[float, float]] = None
     ) -> Dict:
         """提取网格表面
         
@@ -273,12 +255,10 @@ class OccupancyNetwork(nn.Module):
             
             occupancy_np = occupancy.cpu().numpy()
             vertices, faces, _, _ = measure.marching_cubes(
-                occupancy_np, 
-                level=threshold,
-                spacing=(
-                    (bbox[1] - bbox[0]) / (resolution - 1),
-                    (bbox[1] - bbox[0]) / (resolution - 1),
-                    (bbox[1] - bbox[0]) / (resolution - 1)
+                occupancy_np, level=threshold, spacing=(
+                    (
+                        bbox[1] - bbox[0],
+                    )
                 )
             )
             
@@ -286,9 +266,7 @@ class OccupancyNetwork(nn.Module):
             vertices = vertices + bbox[0]
             
             return {
-                'vertices': vertices,
-                'faces': faces,
-                'occupancy_grid': occupancy_np
+                'vertices': vertices, 'faces': faces, 'occupancy_grid': occupancy_np
             }
             
         except ImportError:
@@ -298,10 +276,7 @@ class OccupancyNetwork(nn.Module):
             }
     
     def compute_loss(
-        self,
-        pred_occupancy: torch.Tensor,
-        gt_occupancy: torch.Tensor,
-        reduction: str = 'mean'
+        self, pred_occupancy: torch.Tensor, gt_occupancy: torch.Tensor, reduction: str = 'mean'
     ) -> torch.Tensor:
         """计算占用预测损失
         
@@ -317,14 +292,12 @@ class OccupancyNetwork(nn.Module):
         gt_occupancy = gt_occupancy.squeeze(-1).float()
         
         loss = F.binary_cross_entropy(
-            pred_occupancy, 
-            gt_occupancy,
-            reduction=reduction
+            pred_occupancy, gt_occupancy, reduction=reduction
         )
         
         return loss
     
-    def get_model_size(self) -> Dict[str, Union[int, float]]:
+    def get_model_size(self) -> dict[str, int | float]:
         """获取模型大小信息"""
         total_params = sum(p.numel() for p in self.parameters())
         trainable_params = sum(p.numel() for p in self.parameters() if p.requires_grad)
@@ -333,9 +306,7 @@ class OccupancyNetwork(nn.Module):
         model_size_mb = total_params * 4 / (1024 * 1024)  # 假设float32
         
         return {
-            'total_parameters': total_params,
-            'trainable_parameters': trainable_params,
-            'model_size_mb': model_size_mb
+            'total_parameters': total_params, 'trainable_parameters': trainable_params, 'model_size_mb': model_size_mb
         }
 
 
@@ -346,20 +317,10 @@ class ConditionalOccupancyNetwork(OccupancyNetwork):
     """
     
     def __init__(
-        self,
-        dim_input: int = 3,
-        dim_hidden: int = 128,
-        num_layers: int = 5,
-        dim_condition: int = 128,
-        **kwargs
+        self, dim_input: int = 3, dim_hidden: int = 128, num_layers: int = 5, dim_condition: int = 128, **kwargs
     ):
         super().__init__(
-            dim_input=dim_input,
-            dim_hidden=dim_hidden,
-            num_layers=num_layers,
-            use_conditioning=True,
-            dim_condition=dim_condition,
-            **kwargs
+            dim_input=dim_input, dim_hidden=dim_hidden, num_layers=num_layers, use_conditioning=True, dim_condition=dim_condition, **kwargs
         )
     
     def encode_shape(self, points: torch.Tensor, occupancy: torch.Tensor) -> torch.Tensor:

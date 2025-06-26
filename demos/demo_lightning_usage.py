@@ -20,10 +20,7 @@ from pytorch_lightning.profilers import SimpleProfiler
 from src.nerfs.svraster.core import SVRasterConfig
 from src.nerfs.svraster.dataset import SVRasterDataset, SVRasterDatasetConfig
 from src.nerfs.svraster.lightning_trainer import (
-    SVRasterLightningConfig, 
-    SVRasterLightningModule,
-    create_lightning_trainer,
-    train_svraster_lightning
+    SVRasterLightningConfig, SVRasterLightningModule, create_lightning_trainer, train_svraster_lightning
 )
 
 
@@ -33,30 +30,24 @@ def example_basic_training():
     
     # Model configuration
     model_config = SVRasterConfig(
-        max_octree_levels=12,
-        base_resolution=32,
-        scene_bounds=(-2.0, -2.0, -2.0, 2.0, 2.0, 2.0),
-        subdivision_threshold=0.01,
-        pruning_threshold=0.001
+        max_octree_levels=12, base_resolution=32, scene_bounds=(
+            -2.0,
+            -2.0,
+            -2.0,
+            2.0,
+            2.0,
+            2.0,
+        )
     )
     
     # Lightning configuration
     lightning_config = SVRasterLightningConfig(
-        model_config=model_config,
-        learning_rate=1e-3,
-        optimizer_type="adamw",
-        scheduler_type="cosine",
-        enable_subdivision=True,
-        enable_pruning=True,
-        use_ema=True
+        model_config=model_config, learning_rate=1e-3, optimizer_type="adamw", scheduler_type="cosine", enable_subdivision=True, enable_pruning=True, use_ema=True
     )
     
     # Create datasets (mock data for example)
     dataset_config = SVRasterDatasetConfig(
-        data_dir="data/mock_scene",
-        image_height=512,
-        image_width=512,
-        num_rays_train=4096
+        data_dir="data/mock_scene", image_height=512, image_width=512, num_rays_train=4096
     )
     
     # In practice, you would load real datasets
@@ -69,12 +60,7 @@ def example_basic_training():
     
     # Training would be started with:
     # trained_model = train_svraster_lightning(
-    #     model_config=model_config,
-    #     lightning_config=lightning_config,
-    #     train_dataset=train_dataset,
-    #     val_dataset=val_dataset,
-    #     max_epochs=100,
-    #     gpus=1
+    #     model_config=model_config, #     lightning_config=lightning_config, #     train_dataset=train_dataset, #     val_dataset=val_dataset, #     max_epochs=100, #     gpus=1
     # )
 
 
@@ -84,32 +70,22 @@ def example_advanced_training():
     
     # Model configuration
     model_config = SVRasterConfig(
-        max_octree_levels=16,
-        base_resolution=64,
-        scene_bounds=(-5.0, -5.0, -5.0, 5.0, 5.0, 5.0),
-        subdivision_threshold=0.005,
-        pruning_threshold=0.0005,
-        use_view_dependent_color=True,
-        use_opacity_regularization=True
+        max_octree_levels=16, base_resolution=64, scene_bounds=(
+            -5.0,
+            -5.0,
+            -5.0,
+            5.0,
+            5.0,
+            5.0,
+        )
     )
     
     # Lightning configuration with advanced features
     lightning_config = SVRasterLightningConfig(
-        model_config=model_config,
-        learning_rate=5e-4,
-        weight_decay=1e-5,
-        optimizer_type="adamw",
-        scheduler_type="cosine",
-        scheduler_params={"T_max": 200, "eta_min": 1e-6},
-        enable_subdivision=True,
-        subdivision_start_epoch=20,
-        subdivision_interval=10,
-        enable_pruning=True,
-        pruning_start_epoch=50,
-        pruning_interval=20,
-        use_ema=True,
-        ema_decay=0.9999,
-        gradient_clip_val=0.5
+        model_config=model_config, learning_rate=5e-4, weight_decay=1e-5, optimizer_type="adamw", scheduler_type="cosine", scheduler_params={
+            "T_max": 200,
+            "eta_min": 1e-6,
+        }
     )
     
     # Create Lightning module
@@ -119,64 +95,38 @@ def example_advanced_training():
     callbacks = [
         # Model checkpointing
         ModelCheckpoint(
-            dirpath="checkpoints/advanced_svraster",
-            filename="svraster-{epoch:02d}-{val/psnr:.3f}",
-            monitor="val/psnr",
-            mode="max",
-            save_top_k=5,
-            save_last=True,
-            every_n_epochs=5
-        ),
-        
-        # Early stopping
+            dirpath="checkpoints/advanced_svraster", filename="svraster-{
+                epoch:02d,
+            }
+        ), # Early stopping
         EarlyStopping(
-            monitor="val/psnr",
-            mode="max",
-            patience=30,
-            min_delta=0.001,
-            verbose=True
-        ),
-        
-        # Learning rate monitoring
+            monitor="val/psnr", mode="max", patience=30, min_delta=0.001, verbose=True
+        ), # Learning rate monitoring
         LearningRateMonitor(
-            logging_interval="step",
-            log_momentum=True
+            logging_interval="step", log_momentum=True
         )
     ]
     
     # Setup logger (choose one)
     # TensorBoard logger
     tb_logger = TensorBoardLogger(
-        save_dir="logs",
-        name="svraster_advanced",
-        version="v1.0"
+        save_dir="logs", name="svraster_advanced", version="v1.0"
     )
     
     # W&B logger (alternative)
     # wandb_logger = WandbLogger(
-    #     project="neurocity-svraster",
-    #     name="advanced_experiment",
-    #     tags=["svraster", "nerf", "voxels"],
-    #     log_model=True
+    #     project="neurocity-svraster", #     name="advanced_experiment", #     tags=["svraster", "nerf", "voxels"], #     log_model=True
     # )
     
     # Setup trainer with advanced features
     trainer = pl.Trainer(
-        max_epochs=200,
-        devices=1,  # Use 1 GPU (adjust based on available hardware)
-        accelerator="auto",  # Auto-detect available accelerator
-        precision="16-mixed",  # Mixed precision training
-        logger=tb_logger,
-        callbacks=callbacks,
-        gradient_clip_val=lightning_config.gradient_clip_val,
-        gradient_clip_algorithm="norm",
-        log_every_n_steps=25,
-        val_check_interval=0.25,  # Validate 4 times per epoch
-        limit_val_batches=0.5,  # Use 50% of validation data
-        profiler=SimpleProfiler(),
-        enable_checkpointing=True,
-        enable_progress_bar=True,
-        enable_model_summary=True
+        max_epochs=200, devices=1, # Use 1 GPU (adjust based on available hardware)
+        accelerator="auto", # Auto-detect available accelerator
+        precision="16-mixed", # Mixed precision training
+        logger=tb_logger, callbacks=callbacks, gradient_clip_val=lightning_config.gradient_clip_val, gradient_clip_algorithm="norm", log_every_n_steps=25, val_check_interval=0.25, # Validate 4 times per epoch
+        limit_val_batches=0.5, # Use 50% of validation data
+        profiler=SimpleProfiler(
+        )
     )
     
     print("Advanced trainer configured with:")
@@ -278,9 +228,8 @@ def example_custom_callbacks():
     
     # Example usage of custom callbacks
     custom_callbacks = [
-        VoxelStatisticsCallback(),
-        AdaptiveSubdivisionCallback(subdivision_schedule=[50, 100, 150]),
-        RenderingCallback()
+        VoxelStatisticsCallback(
+        )
     ]
     
     print("Custom callbacks created:")
@@ -295,32 +244,16 @@ def example_experiment_management():
     # Define experiment configurations
     experiments = [
         {
-            "name": "baseline",
-            "config": SVRasterLightningConfig(
-                learning_rate=1e-3,
-                optimizer_type="adam",
-                scheduler_type="cosine",
-                subdivision_threshold=0.01
+            "name": "baseline", "config": SVRasterLightningConfig(
+                learning_rate=1e-3, optimizer_type="adam", scheduler_type="cosine", subdivision_threshold=0.01
             )
-        },
-        {
-            "name": "high_lr",
-            "config": SVRasterLightningConfig(
-                learning_rate=5e-3,
-                optimizer_type="adamw",
-                scheduler_type="cosine",
-                subdivision_threshold=0.01
+        }, {
+            "name": "high_lr", "config": SVRasterLightningConfig(
+                learning_rate=5e-3, optimizer_type="adamw", scheduler_type="cosine", subdivision_threshold=0.01
             )
-        },
-        {
-            "name": "aggressive_subdivision",
-            "config": SVRasterLightningConfig(
-                learning_rate=1e-3,
-                optimizer_type="adamw",
-                scheduler_type="cosine",
-                subdivision_threshold=0.005,
-                subdivision_start_epoch=5,
-                subdivision_interval=3
+        }, {
+            "name": "aggressive_subdivision", "config": SVRasterLightningConfig(
+                learning_rate=1e-3, optimizer_type="adamw", scheduler_type="cosine", subdivision_threshold=0.005, subdivision_start_epoch=5, subdivision_interval=3
             )
         }
     ]
@@ -337,11 +270,7 @@ def example_experiment_management():
     #     lightning_config.model_config = SVRasterConfig()
     #     
     #     trainer = create_lightning_trainer(
-    #         lightning_config,
-    #         train_dataset,
-    #         val_dataset,
-    #         experiment_name=exp['name'],
-    #         max_epochs=100
+    #         lightning_config, #         train_dataset, #         val_dataset, #         experiment_name=exp['name'], #         max_epochs=100
     #     )
     #     
     #     trainer.fit(...)

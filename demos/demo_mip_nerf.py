@@ -57,19 +57,20 @@ class MockMipNeRF(torch.nn.Module):
         
         # 密度输出
         self.density_head = torch.nn.Sequential(
-            torch.nn.Linear(config.hidden_dim, 1),
-            torch.nn.ReLU()
+            torch.nn.Linear(config.hidden_dim, 1), torch.nn.ReLU()
         )
         
         # 颜色网络
         self.color_network = torch.nn.Sequential(
-            torch.nn.Linear(config.hidden_dim + 27, config.hidden_dim // 2),  # +27 for direction
-            torch.nn.ReLU(),
-            torch.nn.Linear(config.hidden_dim // 2, 3),
-            torch.nn.Sigmoid()
+            torch.nn.Linear(config.hidden_dim + 27, config.hidden_dim // 2), # +27 for direction
+            torch.nn.ReLU(), torch.nn.Linear(config.hidden_dim // 2, 3), torch.nn.Sigmoid()
         )
     
-    def integrated_positional_encoding(self, means: torch.Tensor, covs: torch.Tensor) -> torch.Tensor:
+    def integrated_positional_encoding(
+        self,
+        means: torch.Tensor,
+        covs: torch.Tensor,
+    )
         """积分位置编码"""
         # 简化的积分编码
         encoded = [means]
@@ -99,7 +100,12 @@ class MockMipNeRF(torch.nn.Module):
         
         return torch.stack(features, dim=-1)
     
-    def forward(self, means: torch.Tensor, covs: torch.Tensor, directions: torch.Tensor) -> Dict[str, torch.Tensor]:
+    def forward(
+        self,
+        means: torch.Tensor,
+        covs: torch.Tensor,
+        directions: torch.Tensor,
+    )
         """前向传播"""
         # 积分位置编码
         encoded_pos = self.integrated_positional_encoding(means, covs)
@@ -122,8 +128,7 @@ class MockMipNeRF(torch.nn.Module):
         color = self.color_network(color_input)
         
         return {
-            'density': density.squeeze(-1),
-            'color': color
+            'density': density.squeeze(-1), 'color': color
         }
 
 def demonstrate_mip_nerf():
@@ -143,7 +148,7 @@ def demonstrate_mip_nerf():
     print(f"   - 采样点数: {config.num_samples}")
     
     total_params = sum(p.numel() for p in model.parameters())
-    print(f"🧠 模型参数数量: {total_params:,}")
+    print(f"🧠 模型参数数量: {total_params:, }")
     
     print("\n🎉 MIP NeRF演示完成!")
     print("\n📋 MIP NeRF特点:")

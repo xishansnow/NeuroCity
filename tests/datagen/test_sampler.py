@@ -81,26 +81,19 @@ def test_neural_network():
         
         # 创建模型
         model = MLP(
-            input_dim=3,
-            hidden_dims=[64, 128, 64],
-            output_dim=1,
-            activation='relu'
+            input_dim=3, hidden_dims=[64, 128, 64], output_dim=1, activation='relu'
         )
         
         # 创建训练器
         trainer = NeuralSDFTrainer(
-            model=model,
-            learning_rate=1e-3,
-            weight_decay=1e-5
+            model=model, learning_rate=1e-3, weight_decay=1e-5
         )
         
         # 训练几个epoch
         print("开始训练测试...")
         trainer.train(
-            train_dataloader=dataloader,
-            val_dataloader=dataloader,  # 用同一个dataloader作为验证
-            num_epochs=5,
-            save_path='test_model.pth'
+            train_dataloader=dataloader, val_dataloader=dataloader, # 用同一个dataloader作为验证
+            num_epochs=5, save_path='test_model.pth'
         )
         
         # 测试预测
@@ -134,26 +127,18 @@ def test_sdf_training():
         
         # 创建SDF模型
         model = MLP(
-            input_dim=3,
-            hidden_dims=[128, 256, 128],
-            output_dim=1,
-            activation='relu'
+            input_dim=3, hidden_dims=[128, 256, 128], output_dim=1, activation='relu'
         )
         
         # 创建训练器
         trainer = NeuralSDFTrainer(
-            model=model,
-            learning_rate=1e-3,
-            weight_decay=1e-5
+            model=model, learning_rate=1e-3, weight_decay=1e-5
         )
         
         # 训练几个epoch
         print("开始SDF训练测试...")
         trainer.train(
-            train_dataloader=dataloader,
-            val_dataloader=dataloader,
-            num_epochs=5,
-            save_path='test_sdf_model.pth'
+            train_dataloader=dataloader, val_dataloader=dataloader, num_epochs=5, save_path='test_sdf_model.pth'
         )
         
         # 测试预测

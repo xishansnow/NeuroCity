@@ -1,0 +1,6 @@
+---
+description: 
+globs: 
+alwaysApply: false
+---
+ 将 python 代码中，不再使用 typing 模块导入类型，全部替换为 python 3.10 中的现代内置类型。

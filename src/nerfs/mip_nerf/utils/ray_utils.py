@@ -1,19 +1,23 @@
 """
 Ray utility functions for Mip-NeRF
 
-This module contains utilities for ray casting, conical frustum operations,
-and volumetric rendering specific to Mip-NeRF.
+This module contains utilities for ray casting, conical frustum operations, and volumetric rendering specific to Mip-NeRF.
 """
 
 import torch
 import torch.nn.functional as F
 import numpy as np
-from typing import Tuple, Dict, Optional, List
+from typing import Dict, List, Optional, Tuple
 import math
 
 
-def cast_rays(origins: torch.Tensor, directions: torch.Tensor, 
-              radii: torch.Tensor, near: float, far: float) -> Dict[str, torch.Tensor]:
+def cast_rays(
+    origins: torch.Tensor,
+    directions: torch.Tensor,
+    radii: torch.Tensor,
+    near: float,
+    far: float,
+) -> dict[str, torch.Tensor]:
     """
     Cast rays and compute pixel radii for Mip-NeRF
     
@@ -31,16 +35,16 @@ def cast_rays(origins: torch.Tensor, directions: torch.Tensor,
     directions = F.normalize(directions, dim=-1)
     
     return {
-        'origins': origins,
-        'directions': directions,
-        'radii': radii,
-        'near': near,
-        'far': far
+        'origins': origins, 'directions': directions, 'radii': radii, 'near': near, 'far': far
     }
 
 
-def conical_frustum_to_gaussian(origins: torch.Tensor, directions: torch.Tensor,
-                               t_vals: torch.Tensor, radii: torch.Tensor) -> Tuple[torch.Tensor, torch.Tensor]:
+def conical_frustum_to_gaussian(
+    origins: torch.Tensor,
+    directions: torch.Tensor,
+    t_vals: torch.Tensor,
+    radii: torch.Tensor,
+) -> tuple[torch.Tensor, torch.Tensor]:
     """
     Convert conical frustums to Gaussian representation
     
@@ -102,9 +106,16 @@ def conical_frustum_to_gaussian(origins: torch.Tensor, directions: torch.Tensor,
     return mu, cov
 
 
-def sample_along_rays(origins: torch.Tensor, directions: torch.Tensor,
-                     radii: torch.Tensor, num_samples: int, near: float, far: float,
-                     randomized: bool = True, lindisp: bool = False) -> Dict[str, torch.Tensor]:
+def sample_along_rays(
+    origins: torch.Tensor,
+    directions: torch.Tensor,
+    radii: torch.Tensor,
+    num_samples: int,
+    near: float,
+    far: float,
+    randomized: bool = True,
+    lindisp: bool = False,
+)
     """
     Sample points along rays for Mip-NeRF
     
@@ -146,15 +157,19 @@ def sample_along_rays(origins: torch.Tensor, directions: torch.Tensor,
     means, covs = conical_frustum_to_gaussian(origins, directions, t_vals, radii)
     
     return {
-        't_vals': t_vals,
-        'means': means,
-        'covs': covs
+        't_vals': t_vals, 'means': means, 'covs': covs
     }
 
 
-def hierarchical_sample(origins: torch.Tensor, directions: torch.Tensor,
-                       radii: torch.Tensor, t_vals: torch.Tensor, weights: torch.Tensor,
-                       num_samples: int, randomized: bool = True) -> Dict[str, torch.Tensor]:
+def hierarchical_sample(
+    origins: torch.Tensor,
+    directions: torch.Tensor,
+    radii: torch.Tensor,
+    t_vals: torch.Tensor,
+    weights: torch.Tensor,
+    num_samples: int,
+    randomized: bool = True,
+)
     """
     Hierarchical sampling based on coarse weights
     
@@ -205,14 +220,16 @@ def hierarchical_sample(origins: torch.Tensor, directions: torch.Tensor,
     means, covs = conical_frustum_to_gaussian(origins, directions, t_fine, radii)
     
     return {
-        't_vals': t_fine,
-        'means': means,
-        'covs': covs
+        't_vals': t_fine, 'means': means, 'covs': covs
     }
 
 
-def volumetric_rendering(densities: torch.Tensor, colors: torch.Tensor,
-                        t_vals: torch.Tensor, white_bkgd: bool = False) -> Dict[str, torch.Tensor]:
+def volumetric_rendering(
+    densities: torch.Tensor,
+    colors: torch.Tensor,
+    t_vals: torch.Tensor,
+    white_bkgd: bool = False,
+)
     """
     Volumetric rendering for Mip-NeRF
     
@@ -235,8 +252,7 @@ def volumetric_rendering(densities: torch.Tensor, colors: torch.Tensor,
     # Compute transmittance
     transmittance = torch.cumprod(1.0 - alpha + 1e-10, dim=-1)
     transmittance = torch.cat([
-        torch.ones_like(transmittance[..., :1]), 
-        transmittance[..., :-1]
+        torch.ones_like(transmittance[..., :1]), transmittance[..., :-1]
     ], dim=-1)
     
     # Compute weights
@@ -260,11 +276,7 @@ def volumetric_rendering(densities: torch.Tensor, colors: torch.Tensor,
     depth_var = torch.sum(weights * t_vals**2, dim=-1) - depth**2
     
     return {
-        'rgb': rgb,
-        'depth': depth,
-        'acc_alpha': acc_alpha,
-        'weights': weights,
-        'depth_var': depth_var
+        'rgb': rgb, 'depth': depth, 'acc_alpha': acc_alpha, 'weights': weights, 'depth_var': depth_var
     }
 
 
@@ -289,8 +301,12 @@ def compute_pixel_radii(focal_length: float, image_width: int, image_height: int
     return torch.tensor(pixel_radius)
 
 
-def generate_rays(camera_matrix: torch.Tensor, image_width: int, image_height: int,
-                 c2w: torch.Tensor) -> Tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
+def generate_rays(
+    camera_matrix: torch.Tensor,
+    image_width: int,
+    image_height: int,
+    c2w: torch.Tensor,
+) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
     """
     Generate rays from camera parameters
     
@@ -311,16 +327,15 @@ def generate_rays(camera_matrix: torch.Tensor, image_width: int, image_height: i
     
     # Create pixel coordinates
     i, j = torch.meshgrid(
-        torch.arange(image_width, dtype=torch.float32),
-        torch.arange(image_height, dtype=torch.float32),
-        indexing='xy'
+        torch.arange(
+            image_width,
+            dtype=torch.float32,
+        )
     )
     
     # Convert to camera coordinates
     dirs = torch.stack([
-        (i - cx) / fx,
-        -(j - cy) / fy,
-        -torch.ones_like(i)
+        (i - cx) / fx, -(j - cy) / fy, -torch.ones_like(i)
     ], dim=-1)
     
     # Transform to world coordinates
@@ -334,8 +349,11 @@ def generate_rays(camera_matrix: torch.Tensor, image_width: int, image_height: i
     return origins, dirs, radii
 
 
-def compute_multiscale_weights(t_vals: torch.Tensor, weights: torch.Tensor,
-                              num_levels: int = 4) -> List[torch.Tensor]:
+def compute_multiscale_weights(
+    t_vals: torch.Tensor,
+    weights: torch.Tensor,
+    num_levels: int = 4,
+)
     """
     Compute multiscale weights for hierarchical sampling
     
@@ -369,10 +387,16 @@ def compute_multiscale_weights(t_vals: torch.Tensor, weights: torch.Tensor,
     return multiscale_weights
 
 
-def resample_along_rays(origins: torch.Tensor, directions: torch.Tensor,
-                       radii: torch.Tensor, t_vals: torch.Tensor, weights: torch.Tensor,
-                       num_samples: int, randomized: bool = True, 
-                       resample_padding: float = 0.01) -> Dict[str, torch.Tensor]:
+def resample_along_rays(
+    origins: torch.Tensor,
+    directions: torch.Tensor,
+    radii: torch.Tensor,
+    t_vals: torch.Tensor,
+    weights: torch.Tensor,
+    num_samples: int,
+    randomized: bool = True,
+    resample_padding: float = 0.01,
+)
     """
     Resample along rays using Dirichlet/alpha padding
     
@@ -425,7 +449,5 @@ def resample_along_rays(origins: torch.Tensor, directions: torch.Tensor,
     means, covs = conical_frustum_to_gaussian(origins, directions, t_new, radii)
     
     return {
-        't_vals': t_new,
-        'means': means,
-        'covs': covs
+        't_vals': t_new, 'means': means, 'covs': covs
     } 

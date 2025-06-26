@@ -13,7 +13,7 @@ import torch.nn as nn
 import torch.nn.functional as F
 import numpy as np
 import math
-from typing import Dict, List, Optional, Tuple, Union, Any
+from typing import Dict, List, Optional, Tuple, Any
 from dataclasses import dataclass
 from abc import ABC, abstractmethod
 
@@ -83,12 +83,14 @@ class OctreeNode:
     Each node represents a cubic space with its own NeRF.
     """
     
-    def __init__(self, 
-                 center: np.ndarray,
-                 size: float,
-                 level: int,
-                 config: InfNeRFConfig,
-                 parent: Optional['OctreeNode'] = None):
+    def __init__(
+        self,
+        center: np.ndarray,
+        size: float,
+        level: int,
+        config: InfNeRFConfig,
+        parent: Optional['OctreeNode'] = None,
+    ) -> None:
         """
         Initialize octree node.
         
@@ -104,7 +106,7 @@ class OctreeNode:
         self.level = level
         self.config = config  
         self.parent = parent
-        self.children: List[Optional['OctreeNode']] = [None] * 8
+        self.children: list[Optional['OctreeNode']] = [None] * 8
         self.is_leaf = True
         
         # Calculate Ground Sampling Distance (GSD)
@@ -119,10 +121,10 @@ class OctreeNode:
         self.bounds_max = center + half_size
         
         # Sparse points for pruning (will be populated during training)
-        self.sparse_points: List[np.ndarray] = []
+        self.sparse_points: list[np.ndarray] = []
         self.is_pruned = False
     
-    def get_aabb(self) -> Tuple[np.ndarray, np.ndarray]:
+    def get_aabb(self) -> tuple[np.ndarray, np.ndarray]:
         """Get axis-aligned bounding box."""
         return self.bounds_min.copy(), self.bounds_max.copy()
     
@@ -130,7 +132,7 @@ class OctreeNode:
         """Check if point is within this node's AABB."""
         return np.all(point >= self.bounds_min) and np.all(point < self.bounds_max)
     
-    def subdivide(self) -> List['OctreeNode']:
+    def subdivide(self) -> list['OctreeNode']:
         """
         Subdivide this node into 8 children.
         
@@ -148,18 +150,14 @@ class OctreeNode:
         for i in range(8):
             # Calculate child center offset
             offset = np.array([
-                (i & 1) * child_size - child_size/2,
-                ((i >> 1) & 1) * child_size - child_size/2, 
-                ((i >> 2) & 1) * child_size - child_size/2
+                (
+                    i & 1,
+                )
             ])
             
             child_center = self.center + offset
             self.children[i] = OctreeNode(
-                center=child_center,
-                size=child_size,
-                level=child_level,
-                config=self.config,
-                parent=self
+                center=child_center, size=child_size, level=child_level, config=self.config, parent=self
             )
         
         return [child for child in self.children if child is not None]
@@ -245,7 +243,7 @@ class LoDAwareNeRF(nn.Module):
             if m.bias is not None:
                 torch.nn.init.zeros_(m.bias)
     
-    def forward(self, positions: torch.Tensor, directions: torch.Tensor) -> Dict[str, torch.Tensor]:
+    def forward(self, positions: torch.Tensor, directions: torch.Tensor) -> dict[str, torch.Tensor]:
         """
         Forward pass through LoD-aware NeRF.
         
@@ -280,8 +278,7 @@ class LoDAwareNeRF(nn.Module):
         color = torch.sigmoid(color)         # RGB activation
         
         return {
-            'density': density,
-            'color': color
+            'density': density, 'color': color
         }
 
 
@@ -352,8 +349,7 @@ class SphericalHarmonicsEncoder(nn.Module):
         # Degree 2
         if self.degree >= 2:
             features.extend([
-                x * y, x * z, y * z,
-                x * x - y * y, 3 * z * z - 1
+                x * y, x * z, y * z, x * x - y * y, 3 * z * z - 1
             ])
         
         # Higher degrees would be added here
@@ -368,12 +364,14 @@ class InfNeRFRenderer(nn.Module):
         super().__init__()
         self.config = config
     
-    def sample_rays_lod(self, 
-                       rays_o: torch.Tensor, 
-                       rays_d: torch.Tensor,
-                       near: float, 
-                       far: float,
-                       num_samples: int) -> Tuple[torch.Tensor, torch.Tensor]:
+    def sample_rays_lod(
+        self,
+        rays_o: torch.Tensor,
+        rays_d: torch.Tensor,
+        near: float,
+        far: float,
+        num_samples: int,
+    ) -> tuple[torch.Tensor, torch.Tensor]:
         """
         Sample points along rays with LoD-aware sampling.
         
@@ -409,10 +407,12 @@ class InfNeRFRenderer(nn.Module):
         
         return z_vals, pts
     
-    def calculate_sample_radius(self, 
-                              z_vals: torch.Tensor,
-                              focal_length: float,
-                              pixel_width: float) -> torch.Tensor:
+    def calculate_sample_radius(
+        self,
+        z_vals: torch.Tensor,
+        focal_length: float,
+        pixel_width: float,
+    ) -> torch.Tensor:
         """
         Calculate sampling sphere radius based on pixel footprint.
         
@@ -435,12 +435,14 @@ class InfNeRFRenderer(nn.Module):
         
         return radii
     
-    def volume_render(self,
-                     colors: torch.Tensor,
-                     densities: torch.Tensor, 
-                     z_vals: torch.Tensor,
-                     rays_d: torch.Tensor,
-                     white_bkgd: bool = False) -> Dict[str, torch.Tensor]:
+    def volume_render(
+        self,
+        colors: torch.Tensor,
+        densities: torch.Tensor,
+        z_vals: torch.Tensor,
+        rays_d: torch.Tensor,
+        white_bkgd: bool = False,
+    ) -> dict[str, torch.Tensor]:
         """
         Volume render colors and densities.
         
@@ -485,10 +487,7 @@ class InfNeRFRenderer(nn.Module):
             rgb = rgb + (1.0 - acc[..., None])
         
         return {
-            'rgb': rgb,
-            'depth': depth, 
-            'acc': acc,
-            'weights': weights
+            'rgb': rgb, 'depth': depth, 'acc': acc, 'weights': weights
         }
 
 
@@ -503,17 +502,15 @@ class InfNeRF(nn.Module):
         
         # Initialize octree structure
         self.root_node = OctreeNode(
-            center=np.zeros(3),
-            size=config.scene_bound * 2,  # Full scene size
-            level=0,
-            config=config
+            center=np.zeros(3), size=config.scene_bound * 2, # Full scene size
+            level=0, config=config
         )
         
         # Renderer
         self.renderer = InfNeRFRenderer(config)
         
         # Keep track of all nodes for training
-        self.all_nodes: List[OctreeNode] = [self.root_node]
+        self.all_nodes: list[OctreeNode] = [self.root_node]
         
         # Level selection threshold
         self.level_threshold = config.max_gsd / config.min_gsd
@@ -535,10 +532,7 @@ class InfNeRF(nn.Module):
         # Update node list
         self._update_node_list()
     
-    def _build_octree_recursive(self, 
-                               node: OctreeNode, 
-                               sparse_points: np.ndarray,
-                               max_depth: int):
+    def _build_octree_recursive(self, node: OctreeNode, sparse_points: np.ndarray, max_depth: int):
         """Recursively build octree based on sparse points."""
         # Add sparse points to current node
         points_in_node = []
@@ -571,9 +565,7 @@ class InfNeRF(nn.Module):
                 if child is not None:
                     self._collect_nodes_recursive(child)
     
-    def find_node_for_sample(self, 
-                           position: torch.Tensor,
-                           radius: float) -> OctreeNode:
+    def find_node_for_sample(self, position: torch.Tensor, radius: float) -> OctreeNode:
         """
         Find appropriate octree node for sampling based on position and radius.
         
@@ -605,14 +597,16 @@ class InfNeRF(nn.Module):
         
         return current_node
     
-    def forward(self,
-               rays_o: torch.Tensor,
-               rays_d: torch.Tensor, 
-               near: float,
-               far: float,
-               focal_length: float,
-               pixel_width: float,
-               **kwargs) -> Dict[str, torch.Tensor]:
+    def forward(
+        self,
+        rays_o: torch.Tensor,
+        rays_d: torch.Tensor,
+        near: float,
+        far: float,
+        focal_length: float,
+        pixel_width: float,
+        **kwargs,
+    ) -> dict[str, torch.Tensor]:
         """
         Forward pass through InfNeRF.
         
@@ -657,7 +651,7 @@ class InfNeRF(nn.Module):
                 # Query NeRF
                 with torch.no_grad() if not self.training else torch.enable_grad():
                     result = node.nerf(
-                        sample_pos.unsqueeze(0),  # [1, 3]
+                        sample_pos.unsqueeze(0), # [1, 3]
                         rays_d[i:i+1]            # [1, 3]
                     )
                 
@@ -672,13 +666,12 @@ class InfNeRF(nn.Module):
         
         # Volume render
         rendered = self.renderer.volume_render(
-            colors, densities, z_vals, rays_d, 
-            white_bkgd=kwargs.get('white_bkgd', False)
+            colors, densities, z_vals, rays_d, white_bkgd=kwargs.get('white_bkgd', False)
         )
         
         return rendered
     
-    def get_memory_usage(self) -> Dict[str, float]:
+    def get_memory_usage(self) -> dict[str, float]:
         """Get memory usage statistics."""
         total_memory = 0
         memory_by_level = {}
@@ -694,7 +687,5 @@ class InfNeRF(nn.Module):
         
         return {
             'total_mb': total_memory / (1024 * 1024),
-            'by_level_mb': {k: v / (1024 * 1024) for k, v in memory_by_level.items()},
-            'num_nodes': len(self.all_nodes),
-            'max_level': max(node.level for node in self.all_nodes)
+            'by_level_mb': {k: v / (1024 * 1024) for k, v in memory_by_level.items()}
         } 

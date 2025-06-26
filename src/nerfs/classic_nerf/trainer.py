@@ -4,6 +4,8 @@ Trainer module for Classic NeRF.
 Handles training loop, validation, and model management.
 """
 
+from __future__ import annotations
+
 import os
 import time
 import numpy as np
@@ -12,9 +14,10 @@ import torch.nn as nn
 import torch.optim as optim
 from torch.utils.data import DataLoader
 from torch.utils.tensorboard import SummaryWriter
-from typing import Dict, Optional, Tuple, Any
+from typing import Dict, Optional, Tuple, Any, Union 
 import imageio
 from tqdm import tqdm
+from torch import device as torch_device
 
 from .core import NeRF, NeRFConfig, NeRFRenderer, NeRFLoss
 from .dataset import create_nerf_dataloader
@@ -24,7 +27,9 @@ from .utils import to8b, img2mse, mse2psnr
 class NeRFTrainer:
     """Trainer class for Classic NeRF."""
     
-    def __init__(self, config: NeRFConfig, device: torch.device = None):
+    def __init__(
+        self, config: NeRFConfig, device: Optional[str | torch_device] = None, **kwargs
+    ) -> None:
         """
         Initialize NeRF trainer.
         
@@ -33,11 +38,13 @@ class NeRFTrainer:
             device: Computing device
         """
         self.config = config
-        self.device = device if device is not None else torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+        self.device = device or torch.device('cuda' if torch.cuda.is_available() else 'cpu')
         
         # Create models
-        self.model_coarse = NeRF(config).to(self.device)
-        self.model_fine = NeRF(config).to(self.device) if config.N_importance > 0 else None
+        self.model, self.model_fine, self.render_kwargs_train = create_nerf(config)
+        self.model = self.model.to(self.device)
+        if self.model_fine is not None:
+            self.model_fine = self.model_fine.to(self.device)
         
         # Create renderer
         self.renderer = NeRFRenderer(config)
@@ -46,13 +53,15 @@ class NeRFTrainer:
         self.criterion = NeRFLoss(config)
         
         # Create optimizer
-        params = list(self.model_coarse.parameters())
+        params = list(self.model.parameters())
         if self.model_fine is not None:
             params += list(self.model_fine.parameters())
         
-        self.optimizer = optim.Adam(params, lr=config.learning_rate, 
-                                   betas=(config.beta1, config.beta2),
-                                   eps=config.epsilon)
+        self.optimizer = optim.Adam(
+            params,
+            lr=config.learning_rate,
+            betas=(0.9, 0.999)
+        )
         
         # Learning rate scheduler
         self.scheduler = optim.lr_scheduler.ExponentialLR(
@@ -70,7 +79,7 @@ class NeRFTrainer:
         """Setup tensorboard logging."""
         self.writer = SummaryWriter(log_dir)
     
-    def train_step(self, batch: Dict[str, torch.Tensor]) -> Dict[str, float]:
+    def train_step(self, batch: dict[str, torch.Tensor]) -> dict[str, float]:
         """
         Single training step.
         
@@ -80,7 +89,7 @@ class NeRFTrainer:
         Returns:
             Dictionary of losses and metrics
         """
-        self.model_coarse.train()
+        self.model.train()
         if self.model_fine is not None:
             self.model_fine.train()
         
@@ -91,10 +100,11 @@ class NeRFTrainer:
         
         # Create ray batch for renderer
         ray_batch = {
-            'rays_o': rays_o,
-            'rays_d': rays_d,
-            'near': torch.full_like(rays_o[..., :1], self.config.near),
-            'far': torch.full_like(rays_o[..., :1], self.config.far)
+            'rays_o': rays_o, 'rays_d': rays_d, 'near': torch.full_like(
+                rays_o[...,
+                :1],
+                self.config.near,
+            )
         }
         
         # Add view directions if using them
@@ -104,9 +114,7 @@ class NeRFTrainer:
         
         # Render rays
         outputs = self.renderer.render_rays(
-            ray_batch, 
-            self.model_coarse,
-            self.model_fine
+            ray_batch, self.model, self.model_fine
         )
         
         # Compute losses
@@ -122,7 +130,7 @@ class NeRFTrainer:
         
         return {k: v.item() if torch.is_tensor(v) else v for k, v in losses.items()}
     
-    def validate(self, val_loader: DataLoader) -> Dict[str, float]:
+    def validate(self, val_loader: DataLoader) -> dict[str, float]:
         """
         Run validation.
         
@@ -132,7 +140,7 @@ class NeRFTrainer:
         Returns:
             Dictionary of validation metrics
         """
-        self.model_coarse.eval()
+        self.model.eval()
         if self.model_fine is not None:
             self.model_fine.eval()
         
@@ -149,10 +157,11 @@ class NeRFTrainer:
                 
                 # Create ray batch
                 ray_batch = {
-                    'rays_o': rays_o,
-                    'rays_d': rays_d,
-                    'near': torch.full_like(rays_o[..., :1], self.config.near),
-                    'far': torch.full_like(rays_o[..., :1], self.config.far)
+                    'rays_o': rays_o, 'rays_d': rays_d, 'near': torch.full_like(
+                        rays_o[...,
+                        :1],
+                        self.config.near,
+                    )
                 }
                 
                 if self.config.use_viewdirs:
@@ -161,9 +170,7 @@ class NeRFTrainer:
                 
                 # Render rays
                 outputs = self.renderer.render_rays(
-                    ray_batch, 
-                    self.model_coarse,
-                    self.model_fine
+                    ray_batch, self.model, self.model_fine
                 )
                 
                 # Compute losses  
@@ -174,12 +181,17 @@ class NeRFTrainer:
                 num_batches += 1
         
         return {
-            'val_loss': total_loss / num_batches,
-            'val_psnr': total_psnr / num_batches
+            'val_loss': total_loss / num_batches, 'val_psnr': total_psnr / num_batches
         }
     
-    def render_test_image(self, H: int, W: int, K: np.ndarray, 
-                         c2w: np.ndarray, chunk: int = 1024*32) -> np.ndarray:
+    def render_test_image(
+        self,
+        H: int,
+        W: int,
+        K: np.ndarray,
+        c2w: np.ndarray,
+        chunk: int = 1024*32
+    ):
         """
         Render a test image.
         
@@ -193,17 +205,19 @@ class NeRFTrainer:
         Returns:
             Rendered RGB image
         """
-        self.model_coarse.eval()
+        self.model.eval()
         if self.model_fine is not None:
             self.model_fine.eval()
         
         with torch.no_grad():
             # Generate rays
-            i, j = np.meshgrid(np.arange(W, dtype=np.float32), 
-                              np.arange(H, dtype=np.float32), indexing='xy')
+            i, j = np.meshgrid(
+                np.arange(W),
+                np.arange(H)
+            )
             dirs = np.stack([(i-K[0][2])/K[0][0], -(j-K[1][2])/K[1][1], -np.ones_like(i)], -1)
-            rays_d = np.sum(dirs[..., np.newaxis, :] * c2w[:3,:3], -1)
-            rays_o = np.broadcast_to(c2w[:3,-1], np.shape(rays_d))
+            rays_d = np.sum(dirs[..., np.newaxis, :] * c2w[:3, :3], -1)
+            rays_o = np.broadcast_to(c2w[:3, -1], np.shape(rays_d))
             
             # Convert to tensors
             rays_o = torch.from_numpy(rays_o).float().to(self.device)
@@ -220,10 +234,11 @@ class NeRFTrainer:
                 rays_d_chunk = rays_d[i:i+chunk]
                 
                 ray_batch = {
-                    'rays_o': rays_o_chunk,
-                    'rays_d': rays_d_chunk,
-                    'near': torch.full_like(rays_o_chunk[..., :1], self.config.near),
-                    'far': torch.full_like(rays_o_chunk[..., :1], self.config.far)
+                    'rays_o': rays_o_chunk, 'rays_d': rays_d_chunk, 'near': torch.full_like(
+                        rays_o_chunk[...,
+                        :1],
+                        self.config.near,
+                    )
                 }
                 
                 if self.config.use_viewdirs:
@@ -231,9 +246,7 @@ class NeRFTrainer:
                     ray_batch['viewdirs'] = viewdirs
                 
                 ret = self.renderer.render_rays(
-                    ray_batch,
-                    self.model_coarse, 
-                    self.model_fine
+                    ray_batch, self.model, self.model_fine
                 )
                 all_ret.append(ret['rgb_map'])
             
@@ -243,10 +256,18 @@ class NeRFTrainer:
             
             return rgb_map.cpu().numpy()
     
-    def train(self, train_loader: DataLoader, val_loader: Optional[DataLoader] = None,
-              num_epochs: int = 100, log_dir: str = None, ckpt_dir: str = None,
-              val_interval: int = 10, save_interval: int = 50,
-              render_test_interval: int = 100, test_render_kwargs: Dict = None):
+    def train(
+        self,
+        train_loader: DataLoader,
+        val_loader: Optional[DataLoader] = None,
+        num_epochs: int = 100,
+        log_dir: str = None,
+        ckpt_dir: str = None,
+        val_interval: int = 10,
+        save_interval: int = 50,
+        render_test_interval: int = 100,
+        test_render_kwargs: Dict = None
+    ):
         """
         Train the NeRF model.
         
@@ -269,7 +290,7 @@ class NeRFTrainer:
         
         print(f"Starting training for {num_epochs} epochs...")
         print(f"Device: {self.device}")
-        print(f"Coarse model parameters: {sum(p.numel() for p in self.model_coarse.parameters()):,}")
+        print(f"Coarse model parameters: {sum(p.numel() for p in self.model.parameters()):, }")
         if self.model_fine is not None:
             print(f"Fine model parameters: {sum(p.numel() for p in self.model_fine.parameters()):,}")
         
@@ -286,16 +307,18 @@ class NeRFTrainer:
                 
                 # Update progress bar
                 train_pbar.set_postfix({
-                    'loss': f"{losses['total_loss']:.4f}",
-                    'psnr': f"{losses['psnr']:.2f}",
-                    'lr': f"{self.optimizer.param_groups[0]['lr']:.2e}"
+                    'loss': f"{losses['total_loss']:.4f}"
                 })
                 
                 # Log to tensorboard
                 if self.writer is not None:
                     for key, value in losses.items():
                         self.writer.add_scalar(f'train/{key}', value, self.global_step)
-                    self.writer.add_scalar('train/lr', self.optimizer.param_groups[0]['lr'], self.global_step)
+                    self.writer.add_scalar(
+                        'train/lr',
+                        self.optimizer.param_groups[0]['lr'],
+                        self.global_step,
+                    )
             
             # Compute epoch averages
             avg_losses = {}
@@ -332,22 +355,28 @@ class NeRFTrainer:
         if ckpt_dir is not None:
             self.save_checkpoint(ckpt_dir, num_epochs - 1, is_final=True)
     
-    def save_checkpoint(self, ckpt_dir: str, epoch: int, is_final: bool = False):
+    def save_checkpoint(
+        self, save_dir: str, epoch: int, is_final: bool = False, extra_state: Optional[dict[str, Any]] = None
+    ) -> None:
         """Save model checkpoint."""
-        ckpt_name = 'final.pth' if is_final else f'epoch_{epoch+1:04d}.pth'
-        ckpt_path = os.path.join(ckpt_dir, ckpt_name)
+        if save_dir is None:
+            save_dir = os.getcwd()
+        
+        ckpt_name = 'final.pth' if is_final else f'epoch_{epoch:04d}.pth'
+        ckpt_path = os.path.join(save_dir, ckpt_name)
         
         checkpoint = {
-            'epoch': epoch,
-            'global_step': self.global_step,
-            'model_coarse_state_dict': self.model_coarse.state_dict(),
-            'optimizer_state_dict': self.optimizer.state_dict(),
-            'scheduler_state_dict': self.scheduler.state_dict(),
-            'config': self.config
+            'epoch': epoch, 
+            'global_step': self.global_step, 
+            'model_coarse_state_dict': self.model.state_dict()
         }
         
         if self.model_fine is not None:
             checkpoint['model_fine_state_dict'] = self.model_fine.state_dict()
+            checkpoint['optimizer_fine_state_dict'] = self.optimizer.state_dict()
+        
+        if extra_state:
+            checkpoint.update(extra_state)
         
         torch.save(checkpoint, ckpt_path)
         print(f"Checkpoint saved: {ckpt_path}")
@@ -356,11 +385,11 @@ class NeRFTrainer:
         """Load model checkpoint."""
         checkpoint = torch.load(ckpt_path, map_location=self.device)
         
-        self.model_coarse.load_state_dict(checkpoint['model_coarse_state_dict'])
+        self.model.load_state_dict(checkpoint['model_coarse_state_dict'])
         if self.model_fine is not None and 'model_fine_state_dict' in checkpoint:
             self.model_fine.load_state_dict(checkpoint['model_fine_state_dict'])
         
-        self.optimizer.load_state_dict(checkpoint['optimizer_state_dict'])
+        self.optimizer.load_state_dict(checkpoint['optimizer_coarse_state_dict'])
         self.scheduler.load_state_dict(checkpoint['scheduler_state_dict'])
         
         self.start_epoch = checkpoint['epoch'] + 1
@@ -368,8 +397,15 @@ class NeRFTrainer:
         
         print(f"Checkpoint loaded: {ckpt_path}")
     
-    def render_and_save_test(self, H: int, W: int, K: np.ndarray, 
-                           pose: np.ndarray, save_path: str, epoch: int):
+    def render_and_save_test(
+        self,
+        H: int,
+        W: int,
+        K: np.ndarray,
+        pose: np.ndarray,
+        save_path: str,
+        epoch: int
+    ):
         """Render and save test image."""
         rgb = self.render_test_image(H, W, K, pose)
         rgb8 = to8b(rgb)

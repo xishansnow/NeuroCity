@@ -9,11 +9,11 @@ import openvdb as vdb
 from scipy.spatial import cKDTree
 import os
 import json
-from typing import List, Tuple, Dict
+from typing import Dict, List, Tuple
 import random
 
 class CityVDBGenerator:
-    def __init__(self, city_size: Tuple[int, int, int] = (1000, 1000, 200)):
+    def __init__(self, city_size: tuple[int, int, int] = (1000, 1000, 200)):
         """
         初始化城市VDB生成器
         
@@ -23,14 +23,20 @@ class CityVDBGenerator:
         self.city_size = city_size
         self.voxel_size = 1.0  # 体素大小：1米
         self.grid_size = (
-            int(city_size[0] / self.voxel_size),
-            int(city_size[1] / self.voxel_size),
-            int(city_size[2] / self.voxel_size)
+            int(
+                city_size[0] / self.voxel_size,
+            )
         )
         
-    def create_building(self, center: Tuple[float, float], 
-                       size: Tuple[float, float, float],
-                       building_type: str = "residential") -> np.ndarray:
+    def create_building(
+        self,
+        center: tuple[float,
+        float],
+        size: tuple[float,
+        float,
+        float],
+        building_type: str = "residential",
+    )
         """
         创建单个建筑
         
@@ -44,13 +50,12 @@ class CityVDBGenerator:
         """
         # 转换为体素坐标
         center_voxel = (
-            int(center[0] / self.voxel_size),
-            int(center[1] / self.voxel_size)
+            int(center[0] / self.voxel_size), int(center[1] / self.voxel_size)
         )
         size_voxel = (
-            int(size[0] / self.voxel_size),
-            int(size[1] / self.voxel_size),
-            int(size[2] / self.voxel_size)
+            int(
+                size[0] / self.voxel_size,
+            )
         )
         
         # 创建建筑体素
@@ -123,9 +128,7 @@ class CityVDBGenerator:
         
         # 创建起伏的地形
         x_coords, y_coords = np.meshgrid(
-            np.arange(self.grid_size[0]),
-            np.arange(self.grid_size[1]),
-            indexing='ij'
+            np.arange(self.grid_size[0]), np.arange(self.grid_size[1]), indexing='ij'
         )
         
         # 添加一些随机起伏
@@ -139,7 +142,7 @@ class CityVDBGenerator:
                 
         return terrain
     
-    def generate_city_layout(self) -> List[Dict]:
+    def generate_city_layout(self) -> list[Dict]:
         """
         生成城市布局
         
@@ -153,14 +156,10 @@ class CityVDBGenerator:
             x = random.uniform(50, 450)
             y = random.uniform(50, 450)
             size = (
-                random.uniform(15, 25),
-                random.uniform(15, 25),
-                random.uniform(20, 40)
+                random.uniform(15, 25), random.uniform(15, 25), random.uniform(20, 40)
             )
             buildings.append({
-                'center': (x, y),
-                'size': size,
-                'type': 'residential'
+                'center': (x, y), 'size': size, 'type': 'residential'
             })
         
         # 商业区
@@ -168,14 +167,10 @@ class CityVDBGenerator:
             x = random.uniform(550, 950)
             y = random.uniform(50, 450)
             size = (
-                random.uniform(30, 50),
-                random.uniform(30, 50),
-                random.uniform(25, 45)
+                random.uniform(30, 50), random.uniform(30, 50), random.uniform(25, 45)
             )
             buildings.append({
-                'center': (x, y),
-                'size': size,
-                'type': 'commercial'
+                'center': (x, y), 'size': size, 'type': 'commercial'
             })
         
         # 工业区
@@ -183,14 +178,10 @@ class CityVDBGenerator:
             x = random.uniform(50, 450)
             y = random.uniform(550, 950)
             size = (
-                random.uniform(40, 80),
-                random.uniform(40, 80),
-                random.uniform(15, 30)
+                random.uniform(40, 80), random.uniform(40, 80), random.uniform(15, 30)
             )
             buildings.append({
-                'center': (x, y),
-                'size': size,
-                'type': 'industrial'
+                'center': (x, y), 'size': size, 'type': 'industrial'
             })
         
         # 摩天大楼
@@ -198,14 +189,10 @@ class CityVDBGenerator:
             x = random.uniform(550, 950)
             y = random.uniform(550, 950)
             size = (
-                random.uniform(20, 30),
-                random.uniform(20, 30),
-                random.uniform(60, 100)
+                random.uniform(20, 30), random.uniform(20, 30), random.uniform(60, 100)
             )
             buildings.append({
-                'center': (x, y),
-                'size': size,
-                'type': 'skyscraper'
+                'center': (x, y), 'size': size, 'type': 'skyscraper'
             })
             
         return buildings
@@ -241,9 +228,7 @@ class CityVDBGenerator:
         for i, building_info in enumerate(buildings):
             print(f"  添加建筑 {i+1}/{len(buildings)}: {building_info['type']}")
             building = self.create_building(
-                building_info['center'],
-                building_info['size'],
-                building_info['type']
+                building_info['center'], building_info['size'], building_info['type']
             )
             city_grid = np.maximum(city_grid, building)
         
@@ -264,11 +249,9 @@ class CityVDBGenerator:
         metadata_path = output_path.replace('.vdb', '_metadata.json')
         with open(metadata_path, 'w') as f:
             json.dump({
-                'city_size': self.city_size,
-                'voxel_size': self.voxel_size,
-                'grid_size': self.grid_size,
-                'buildings': buildings,
-                'building_count': len(buildings)
+                'city_size': self.city_size, 'voxel_size': self.voxel_size, 'grid_size': self.grid_size, 'buildings': buildings, 'building_count': len(
+                    buildings,
+                )
             }, f, indent=2)
         
         print(f"生成完成！")

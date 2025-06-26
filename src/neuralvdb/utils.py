@@ -1,8 +1,7 @@
 """
 Utility Functions for NeuralVDB
 
-This module contains utility functions for data generation,
-loading, saving, and other common operations.
+This module contains utility functions for data generation, loading, saving, and other common operations.
 """
 
 import numpy as np
@@ -10,15 +9,17 @@ import torch
 import json
 import os
 import pickle
-from typing import List, Tuple, Dict, Optional, Union, Any
+from typing import Dict, List, Optional, Tuple, Any
 import logging
 from torch.utils.data import DataLoader
 
 logger = logging.getLogger(__name__)
 
 
-def create_sample_data(n_points: int = 10000, 
-                      scene_type: str = 'mixed') -> Tuple[np.ndarray, np.ndarray]:
+def create_sample_data(
+    n_points: int = 10000,
+    scene_type: str = 'mixed',
+) -> tuple[np.ndarray, np.ndarray]:
     """
     创建示例数据
     
@@ -47,8 +48,7 @@ def create_sample_data(n_points: int = 10000,
         center = np.array([50, 50, 50])
         size = 30
         in_cube = np.all(
-            (points >= center - size/2) & (points < center + size/2), 
-            axis=1
+            (points >= center - size/2) & (points < center + size/2), axis=1
         )
         occupancies = in_cube.astype(np.float32)
         
@@ -64,8 +64,7 @@ def create_sample_data(n_points: int = 10000,
         center2 = np.array([70, 70, 70])
         size2 = 20
         in_cube = np.all(
-            (points >= center2 - size2/2) & (points < center2 + size2/2), 
-            axis=1
+            (points >= center2 - size2/2) & (points < center2 + size2/2), axis=1
         )
         occupancies += in_cube.astype(np.float32)
         
@@ -99,11 +98,14 @@ def _create_urban_scene(points: np.ndarray) -> np.ndarray:
     
     # 建筑物
     buildings = [
-        {'center': [25, 25, 20], 'size': [20, 20, 40]},
-        {'center': [75, 25, 15], 'size': [15, 15, 30]},
-        {'center': [25, 75, 25], 'size': [18, 18, 50]},
-        {'center': [75, 75, 18], 'size': [22, 22, 36]},
-        {'center': [50, 50, 30], 'size': [25, 25, 60]}
+        {
+            'center': [25,
+            25,
+            20],
+            'size': [20,
+            20,
+            40],
+        }
     ]
     
     for building in buildings:
@@ -111,8 +113,7 @@ def _create_urban_scene(points: np.ndarray) -> np.ndarray:
         size = np.array(building['size'])
         
         in_building = np.all(
-            (points >= center - size/2) & (points < center + size/2), 
-            axis=1
+            (points >= center - size/2) & (points < center + size/2), axis=1
         )
         occupancies += in_building.astype(np.float32)
     
@@ -131,9 +132,11 @@ def _create_urban_scene(points: np.ndarray) -> np.ndarray:
     return occupancies
 
 
-def load_training_data(samples_dir: str, 
-                      task_type: str = 'occupancy',
-                      train_ratio: float = 0.8) -> Tuple[DataLoader, DataLoader]:
+def load_training_data(
+    samples_dir: str,
+    task_type: str = 'occupancy',
+    train_ratio: float = 0.8,
+)
     """
     加载训练数据
     
@@ -203,9 +206,7 @@ def load_training_data(samples_dir: str,
     return train_loader, val_loader
 
 
-def save_vdb_data(data: Dict[str, Any], 
-                  filepath: str, 
-                  format: str = 'npz') -> None:
+def save_vdb_data(data: dict[str, Any], filepath: str, format: str = 'npz') -> None:
     """
     保存VDB数据
     
@@ -259,8 +260,7 @@ def save_vdb_data(data: Dict[str, Any],
     logger.info(f"VDB数据保存完成")
 
 
-def load_vdb_data(filepath: str, 
-                  format: str = 'auto') -> Dict[str, Any]:
+def load_vdb_data(filepath: str, format: str = 'auto') -> dict[str, Any]:
     """
     加载VDB数据
     
@@ -321,8 +321,7 @@ def load_vdb_data(filepath: str,
     return data
 
 
-def compute_sdf_from_occupancy(occupancy_grid: np.ndarray, 
-                              voxel_size: float = 1.0) -> np.ndarray:
+def compute_sdf_from_occupancy(occupancy_grid: np.ndarray, voxel_size: float = 1.0) -> np.ndarray:
     """
     从占用网格计算SDF
     
@@ -355,9 +354,11 @@ def compute_sdf_from_occupancy(occupancy_grid: np.ndarray,
     return sdf_grid
 
 
-def extract_surface_points(sdf_grid: np.ndarray, 
-                          threshold: float = 0.1,
-                          voxel_size: float = 1.0) -> Tuple[np.ndarray, np.ndarray]:
+def extract_surface_points(
+    sdf_grid: np.ndarray,
+    threshold: float = 0.1,
+    voxel_size: float = 1.0,
+)
     """
     从SDF网格提取表面点
     
@@ -384,10 +385,12 @@ def extract_surface_points(sdf_grid: np.ndarray,
     return surface_points, surface_sdf_values
 
 
-def visualize_training_data(points: np.ndarray, 
-                           occupancies: np.ndarray, 
-                           save_path: Optional[str] = None,
-                           show_plot: bool = True) -> None:
+def visualize_training_data(
+    points: np.ndarray,
+    occupancies: np.ndarray,
+    save_path: Optional[str] = None,
+    show_plot: bool = True,
+)
     """
     可视化训练数据
     
@@ -416,8 +419,18 @@ def visualize_training_data(points: np.ndarray,
     # 3D散点图
     ax1 = fig.add_subplot(131, projection='3d')
     if len(occupied_points) > 0:
-        ax1.scatter(occupied_points[:, 0], occupied_points[:, 1], occupied_points[:, 2], 
-                   c='red', s=1, alpha=0.6, label='Occupied')
+        ax1.scatter(
+            occupied_points[:,
+            0],
+            occupied_points[:,
+            1],
+            occupied_points[:,
+            2],
+            c='red',
+            s=1,
+            alpha=0.6,
+            label='Occupied',
+        )
     if len(empty_points) > 0:
         # 随机采样空闲点以减少绘制时间
         if len(empty_points) > 5000:
@@ -426,8 +439,18 @@ def visualize_training_data(points: np.ndarray,
         else:
             empty_sample = empty_points
         
-        ax1.scatter(empty_sample[:, 0], empty_sample[:, 1], empty_sample[:, 2], 
-                   c='blue', s=1, alpha=0.1, label='Empty')
+        ax1.scatter(
+            empty_sample[:,
+            0],
+            empty_sample[:,
+            1],
+            empty_sample[:,
+            2],
+            c='blue',
+            s=1,
+            alpha=0.1,
+            label='Empty',
+        )
     
     ax1.set_xlabel('X')
     ax1.set_ylabel('Y')
@@ -438,11 +461,9 @@ def visualize_training_data(points: np.ndarray,
     # XY平面投影
     ax2 = fig.add_subplot(132)
     if len(occupied_points) > 0:
-        ax2.scatter(occupied_points[:, 0], occupied_points[:, 1], 
-                   c='red', s=1, alpha=0.6)
+        ax2.scatter(occupied_points[:, 0], occupied_points[:, 1], c='red', s=1, alpha=0.6)
     if len(empty_points) > 0:
-        ax2.scatter(empty_points[:, 0], empty_points[:, 1], 
-                   c='blue', s=1, alpha=0.1)
+        ax2.scatter(empty_points[:, 0], empty_points[:, 1], c='blue', s=1, alpha=0.1)
     
     ax2.set_xlabel('X')
     ax2.set_ylabel('Y')
@@ -468,11 +489,13 @@ def visualize_training_data(points: np.ndarray,
         plt.close()
 
 
-def visualize_predictions(points: np.ndarray, 
-                         predictions: np.ndarray,
-                         ground_truth: Optional[np.ndarray] = None,
-                         save_path: Optional[str] = None,
-                         show_plot: bool = True) -> None:
+def visualize_predictions(
+    points: np.ndarray,
+    predictions: np.ndarray,
+    ground_truth: Optional[np.ndarray] = None,
+    save_path: Optional[str] = None,
+    show_plot: bool = True,
+)
     """
     可视化预测结果
     
@@ -518,8 +541,18 @@ def visualize_predictions(points: np.ndarray,
         sample_points = points
         sample_predictions = predictions
     
-    scatter = ax2.scatter(sample_points[:, 0], sample_points[:, 1], sample_points[:, 2], 
-                         c=sample_predictions, cmap='viridis', s=10, alpha=0.7)
+    scatter = ax2.scatter(
+        sample_points[:,
+        0],
+        sample_points[:,
+        1],
+        sample_points[:,
+        2],
+        c=sample_predictions,
+        cmap='viridis',
+        s=10,
+        alpha=0.7,
+    )
     
     ax2.set_xlabel('X')
     ax2.set_ylabel('Y')
@@ -528,8 +561,16 @@ def visualize_predictions(points: np.ndarray,
     
     # XY平面热力图
     ax3 = fig.add_subplot(1, n_subplots, 3)
-    scatter_2d = ax3.scatter(sample_points[:, 0], sample_points[:, 1], 
-                            c=sample_predictions, cmap='viridis', s=10, alpha=0.7)
+    scatter_2d = ax3.scatter(
+        sample_points[:,
+        0],
+        sample_points[:,
+        1],
+        c=sample_predictions,
+        cmap='viridis',
+        s=10,
+        alpha=0.7,
+    )
     ax3.set_xlabel('X')
     ax3.set_ylabel('Y')
     ax3.set_title('Prediction Heatmap (XY)')
@@ -558,9 +599,11 @@ def visualize_predictions(points: np.ndarray,
         plt.close()
 
 
-def compute_metrics(predictions: np.ndarray, 
-                   ground_truth: np.ndarray,
-                   threshold: float = 0.5) -> Dict[str, float]:
+def compute_metrics(
+    predictions: np.ndarray,
+    ground_truth: np.ndarray,
+    threshold: float = 0.5,
+)
     """
     计算评估指标
     
@@ -599,16 +642,7 @@ def compute_metrics(predictions: np.ndarray,
     iou = intersection / union if union > 0 else 0
     
     return {
-        'mae': float(mae),
-        'mse': float(mse),
-        'rmse': float(rmse),
-        'accuracy': float(accuracy),
-        'precision': float(precision),
-        'recall': float(recall),
-        'f1_score': float(f1),
-        'iou': float(iou),
-        'true_positives': int(tp),
-        'false_positives': int(fp),
-        'true_negatives': int(tn),
-        'false_negatives': int(fn)
+        'mae': float(
+            mae,
+        )
     } 

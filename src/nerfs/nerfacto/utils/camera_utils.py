@@ -1,24 +1,19 @@
 """
 Camera utilities for Nerfacto.
 
-This module provides utility functions for camera operations, ray generation,
-and camera pose transformations.
+This module provides utility functions for camera operations, ray generation, and camera pose transformations.
 """
 
 import torch
 import torch.nn.functional as F
 import numpy as np
-from typing import Tuple, List, Optional, Dict, Union
+from typing import Dict, List, Optional, Tuple, Any, Union 
 import math
 
 
 def generate_rays(
-    camera_poses: torch.Tensor,
-    camera_intrinsics: torch.Tensor,
-    image_height: int,
-    image_width: int,
-    device: str = 'cuda'
-) -> Tuple[torch.Tensor, torch.Tensor]:
+    camera_poses: torch.Tensor, camera_intrinsics: torch.Tensor, image_height: int, image_width: int, device: str = 'cuda'
+) -> tuple[torch.Tensor, torch.Tensor]:
     """
     Generate rays from camera parameters.
     
@@ -36,9 +31,10 @@ def generate_rays(
     
     # Create pixel coordinates
     i, j = torch.meshgrid(
-        torch.arange(image_width, device=device),
-        torch.arange(image_height, device=device),
-        indexing='ij'
+        torch.arange(
+            image_width,
+            device=device,
+        )
     )
     i = i.t().float()  # [H, W]
     j = j.t().float()  # [H, W]
@@ -82,11 +78,8 @@ def generate_rays(
 
 
 def sample_rays_uniform(
-    ray_origins: torch.Tensor,
-    ray_directions: torch.Tensor,
-    num_rays: int,
-    device: str = 'cuda'
-) -> Tuple[torch.Tensor, torch.Tensor]:
+    ray_origins: torch.Tensor, ray_directions: torch.Tensor, num_rays: int, device: str = 'cuda'
+) -> tuple[torch.Tensor, torch.Tensor]:
     """
     Uniformly sample rays from the given ray batch.
     
@@ -117,11 +110,7 @@ def sample_rays_uniform(
 
 
 def get_camera_frustum(
-    pose: torch.Tensor,
-    intrinsics: torch.Tensor,
-    image_height: int,
-    image_width: int,
-    depth: float = 1.0
+    pose: torch.Tensor, intrinsics: torch.Tensor, image_height: int, image_width: int, depth: float = 1.0
 ) -> torch.Tensor:
     """
     Get camera frustum corners in world coordinates.
@@ -140,10 +129,7 @@ def get_camera_frustum(
     
     # Image corners in pixel coordinates
     corners_2d = torch.tensor([
-        [0, 0],
-        [image_width, 0],
-        [image_width, image_height],
-        [0, image_height]
+        [0, 0], [image_width, 0], [image_width, image_height], [0, image_height]
     ], dtype=torch.float32, device=pose.device)
     
     # Convert to camera coordinates
@@ -188,10 +174,7 @@ def convert_poses_to_nerfstudio(poses: torch.Tensor) -> torch.Tensor:
     
     # Create conversion matrix
     conversion = torch.tensor([
-        [1, 0, 0, 0],
-        [0, -1, 0, 0],
-        [0, 0, -1, 0],
-        [0, 0, 0, 1]
+        [1, 0, 0, 0], [0, -1, 0, 0], [0, 0, -1, 0], [0, 0, 0, 1]
     ], dtype=poses.dtype, device=poses.device)
     
     # Apply conversion
@@ -220,10 +203,8 @@ def compute_camera_distances(poses: torch.Tensor) -> torch.Tensor:
 
 
 def get_nearest_cameras(
-    query_pose: torch.Tensor,
-    reference_poses: torch.Tensor,
-    k: int = 5
-) -> Tuple[torch.Tensor, torch.Tensor]:
+    query_pose: torch.Tensor, reference_poses: torch.Tensor, k: int = 5
+) -> tuple[torch.Tensor, torch.Tensor]:
     """
     Find k nearest cameras to a query camera.
     
@@ -249,9 +230,7 @@ def get_nearest_cameras(
 
 
 def interpolate_poses(
-    pose1: torch.Tensor,
-    pose2: torch.Tensor,
-    t: float
+    pose1: torch.Tensor, pose2: torch.Tensor, t: float
 ) -> torch.Tensor:
     """
     Interpolate between two camera poses.
@@ -290,11 +269,7 @@ def interpolate_poses(
 
 
 def create_spiral_path(
-    center: torch.Tensor,
-    radius: float,
-    height: float,
-    num_views: int,
-    device: str = 'cuda'
+    center: torch.Tensor, radius: float, height: float, num_views: int, device: str = 'cuda'
 ) -> torch.Tensor:
     """
     Create spiral camera path for rendering.
@@ -348,10 +323,7 @@ def create_spiral_path(
 
 
 def compute_camera_rays_directions(
-    camera_intrinsics: torch.Tensor,
-    image_height: int,
-    image_width: int,
-    device: str = 'cuda'
+    camera_intrinsics: torch.Tensor, image_height: int, image_width: int, device: str = 'cuda'
 ) -> torch.Tensor:
     """
     Compute ray directions for all pixels in camera coordinate system.
@@ -369,9 +341,10 @@ def compute_camera_rays_directions(
     
     # Create pixel coordinates
     i, j = torch.meshgrid(
-        torch.arange(image_width, device=device),
-        torch.arange(image_height, device=device),
-        indexing='ij'
+        torch.arange(
+            image_width,
+            device=device,
+        )
     )
     i = i.t().float()
     j = j.t().float()
@@ -391,10 +364,8 @@ def compute_camera_rays_directions(
 
 
 def transform_rays(
-    ray_origins: torch.Tensor,
-    ray_directions: torch.Tensor,
-    transform: torch.Tensor
-) -> Tuple[torch.Tensor, torch.Tensor]:
+    ray_origins: torch.Tensor, ray_directions: torch.Tensor, transform: torch.Tensor
+) -> tuple[torch.Tensor, torch.Tensor]:
     """
     Transform rays by a transformation matrix.
     
@@ -408,8 +379,7 @@ def transform_rays(
     """
     # Transform origins
     origins_homogeneous = torch.cat([
-        ray_origins,
-        torch.ones(*ray_origins.shape[:-1], 1, device=ray_origins.device)
+        ray_origins, torch.ones(*ray_origins.shape[:-1], 1, device=ray_origins.device)
     ], dim=-1)
     
     transformed_origins = torch.matmul(origins_homogeneous, transform.t())

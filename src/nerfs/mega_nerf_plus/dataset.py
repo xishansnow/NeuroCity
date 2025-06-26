@@ -14,7 +14,7 @@ import numpy as np
 import json
 import os
 from pathlib import Path
-from typing import Dict, List, Tuple, Optional, Union, Any
+from typing import Dict, List, Optional, Tuple, Any
 import cv2
 from PIL import Image, ImageFile
 import imageio
@@ -32,12 +32,16 @@ class MegaNeRFPlusDataset(data.Dataset):
     Base dataset class for Mega-NeRF++ with optimizations for large-scale scenes
     """
     
-    def __init__(self, data_dir: str, split: str = 'train', 
-                 max_image_resolution: int = 8192,
-                 downsample_factor: int = 4,
-                 use_cached_rays: bool = True,
-                 cache_dir: Optional[str] = None,
-                 num_workers: int = 8):
+    def __init__(
+        self,
+        data_dir: str,
+        split: str = 'train',
+        max_image_resolution: int = 8192,
+        downsample_factor: int = 4,
+        use_cached_rays: bool = True,
+        cache_dir: Optional[str] = None,
+        num_workers: int = 8,
+    ) -> None:
         """
         Args:
             data_dir: Path to dataset directory
@@ -85,27 +89,23 @@ class MegaNeRFPlusDataset(data.Dataset):
     def __getitem__(self, idx):
         if self.rays:
             return {
-                'rays': self.rays[idx],
-                'rgbs': self.rgbs[idx],
-                'metadata': self._get_metadata(idx)
+                'rays': self.rays[idx], 'rgbs': self.rgbs[idx], 'metadata': self._get_metadata(idx)
             }
         else:
             return self._get_image_data(idx)
     
-    def _get_metadata(self, idx: int) -> Dict[str, Any]:
+    def _get_metadata(self, idx: int) -> dict[str, Any]:
         """Get metadata for a data sample"""
         return {
-            'index': idx,
-            'split': self.split
+            'index': idx, 'split': self.split
         }
     
-    def _get_image_data(self, idx: int) -> Dict[str, Any]:
+    def _get_image_data(self, idx: int) -> dict[str, Any]:
         """Get full image data for validation/testing"""
         return {
-            'image': self.images[idx],
-            'pose': self.poses[idx], 
-            'intrinsics': self.intrinsics[idx],
-            'image_path': str(self.image_paths[idx])
+            'image': self.images[idx], 'pose': self.poses[idx], 'intrinsics': self.intrinsics[idx], 'image_path': str(
+                self.image_paths[idx],
+            )
         }
 
 
@@ -193,9 +193,7 @@ class PhotogrammetricDataset(MegaNeRFPlusDataset):
                 if model == 'PINHOLE':
                     fx, fy, cx, cy = params
                     K = np.array([
-                        [fx, 0, cx],
-                        [0, fy, cy], 
-                        [0, 0, 1]
+                        [fx, 0, cx], [0, fy, cy], [0, 0, 1]
                     ], dtype=np.float32)
                     cameras[camera_id] = K
         
@@ -221,8 +219,16 @@ class PhotogrammetricDataset(MegaNeRFPlusDataset):
                 self.intrinsics.append(torch.from_numpy(cameras[camera_id]))
                 self.image_paths.append(self.data_dir / 'images' / image_name)
     
-    def _quat_trans_to_matrix(self, qw: float, qx: float, qy: float, qz: float,
-                             tx: float, ty: float, tz: float) -> np.ndarray:
+    def _quat_trans_to_matrix(
+        self,
+        qw: float,
+        qx: float,
+        qy: float,
+        qz: float,
+        tx: float,
+        ty: float,
+        tz: float,
+    ) -> np.ndarray:
         """Convert quaternion and translation to 4x4 pose matrix"""
         
         # Normalize quaternion
@@ -230,7 +236,7 @@ class PhotogrammetricDataset(MegaNeRFPlusDataset):
         qw, qx, qy, qz = qw/norm, qx/norm, qy/norm, qz/norm
         
         # Convert to rotation matrix
-        R = np.array([
+        R = np.array([            
             [1-2*(qy*qy+qz*qz), 2*(qx*qy-qw*qz), 2*(qx*qz+qw*qy)],
             [2*(qx*qy+qw*qz), 1-2*(qx*qx+qz*qz), 2*(qy*qz-qw*qx)],
             [2*(qx*qz-qw*qy), 2*(qy*qz+qw*qx), 1-2*(qx*qx+qy*qy)]
@@ -365,12 +371,10 @@ class PhotogrammetricDataset(MegaNeRFPlusDataset):
             fov_y = 2 * np.arctan(img_h / (2 * fy))
             
             self.photogrammetric_metadata[i] = {
-                'camera_position': camera_pos,
-                'viewing_direction': viewing_dir,
-                'fov_x': fov_x,
-                'fov_y': fov_y,
-                'image_resolution': (img_w, img_h),
-                'focal_length': (fx, fy)
+                'camera_position': camera_pos, 'viewing_direction': viewing_dir, 'fov_x': fov_x, 'fov_y': fov_y, 'image_resolution': (
+                    img_w,
+                    img_h,
+                )
             }
         
         # Compute scene bounds
@@ -427,8 +431,7 @@ class PhotogrammetricDataset(MegaNeRFPlusDataset):
             try:
                 with open(cache_file, 'wb') as f:
                     pickle.dump({
-                        'rays': self.rays,
-                        'rgbs': self.rgbs
+                        'rays': self.rays, 'rgbs': self.rgbs
                     }, f)
             except Exception as e:
                 print(f"Failed to cache rays: {e}")
@@ -447,9 +450,10 @@ class PhotogrammetricDataset(MegaNeRFPlusDataset):
             
             # Generate pixel coordinates
             i_coords, j_coords = torch.meshgrid(
-                torch.arange(w, dtype=torch.float32),
-                torch.arange(h, dtype=torch.float32),
-                indexing='xy'
+                torch.arange(
+                    w,
+                    dtype=torch.float32,
+                )
             )
             
             # Convert to camera coordinates
@@ -457,9 +461,7 @@ class PhotogrammetricDataset(MegaNeRFPlusDataset):
             cx, cy = intrinsic[0, 2], intrinsic[1, 2]
             
             dirs = torch.stack([
-                (i_coords - cx) / fx,
-                -(j_coords - cy) / fy,
-                -torch.ones_like(i_coords)
+                (i_coords - cx) / fx, -(j_coords - cy) / fy, -torch.ones_like(i_coords)
             ], dim=-1)
             
             # Transform to world coordinates
@@ -484,10 +486,14 @@ class LargeSceneDataset(PhotogrammetricDataset):
     Dataset optimized for very large scenes with streaming capabilities
     """
     
-    def __init__(self, data_dir: str, split: str = 'train',
-                 partition_config: Optional[Dict] = None,
-                 streaming_mode: bool = True,
-                 **kwargs):
+    def __init__(
+        self,
+        data_dir: str,
+        split: str = 'train',
+        partition_config: Optional[Dict] = None,
+        streaming_mode: bool = True,
+        **kwargs,
+    ) -> None:
         """
         Args:
             partition_config: Configuration for spatial partitioning
@@ -543,8 +549,7 @@ class LargeSceneDataset(PhotogrammetricDataset):
         
         # Create partitions
         self.partitions = partitioner.partition_scene(
-            self.scene_bounds, camera_positions, camera_orientations,
-            image_resolutions, intrinsics_tensor
+            self.scene_bounds, camera_positions, camera_orientations, image_resolutions, intrinsics_tensor
         )
         
         print(f"Created {len(self.partitions)} spatial partitions")
@@ -564,13 +569,10 @@ class LargeSceneDataset(PhotogrammetricDataset):
             partition_images = self._get_partition_images(partition)
             
             self.partition_data[i] = {
-                'image_indices': partition_images,
-                'loaded': False,
-                'rays': None,
-                'rgbs': None
+                'image_indices': partition_images, 'loaded': False, 'rays': None, 'rgbs': None
             }
     
-    def _get_partition_images(self, partition: Dict) -> List[int]:
+    def _get_partition_images(self, partition: Dict) -> list[int]:
         """Get image indices that belong to a partition"""
         
         partition_bounds = partition['bounds']
@@ -582,8 +584,7 @@ class LargeSceneDataset(PhotogrammetricDataset):
             # Check if camera is within partition bounds (with margin)
             margin = 0.1 * torch.norm(partition_bounds[1] - partition_bounds[0])
             expanded_bounds = torch.stack([
-                partition_bounds[0] - margin,
-                partition_bounds[1] + margin
+                partition_bounds[0] - margin, partition_bounds[1] + margin
             ])
             
             if (torch.all(camera_pos >= expanded_bounds[0]) and 
@@ -592,7 +593,7 @@ class LargeSceneDataset(PhotogrammetricDataset):
         
         return partition_images
     
-    def get_partition_data(self, partition_idx: int) -> Dict[str, torch.Tensor]:
+    def get_partition_data(self, partition_idx: int) -> dict[str, torch.Tensor]:
         """Get data for a specific partition"""
         
         if partition_idx not in self.partition_data:
@@ -605,9 +606,7 @@ class LargeSceneDataset(PhotogrammetricDataset):
             self._load_partition_data(partition_idx)
         
         return {
-            'rays': partition_info['rays'],
-            'rgbs': partition_info['rgbs'],
-            'partition': self.partitions[partition_idx]
+            'rays': partition_info['rays'], 'rgbs': partition_info['rgbs'], 'partition': self.partitions[partition_idx]
         }
     
     def _load_partition_data(self, partition_idx: int):
@@ -637,18 +636,17 @@ class LargeSceneDataset(PhotogrammetricDataset):
             
             # Generate rays (same as before)
             i_coords, j_coords = torch.meshgrid(
-                torch.arange(w, dtype=torch.float32),
-                torch.arange(h, dtype=torch.float32),
-                indexing='xy'
+                torch.arange(
+                    w,
+                    dtype=torch.float32,
+                )
             )
             
             fx, fy = intrinsic[0, 0], intrinsic[1, 1]
             cx, cy = intrinsic[0, 2], intrinsic[1, 2]
             
             dirs = torch.stack([
-                (i_coords - cx) / fx,
-                -(j_coords - cy) / fy,
-                -torch.ones_like(i_coords)
+                (i_coords - cx) / fx, -(j_coords - cy) / fy, -torch.ones_like(i_coords)
             ], dim=-1)
             
             dirs = torch.sum(dirs[..., None, :] * pose[:3, :3], dim=-1)
@@ -672,8 +670,12 @@ class LargeSceneDataset(PhotogrammetricDataset):
         partition_info['loaded'] = True
 
 
-def create_meganerf_plus_dataset(data_dir: str, dataset_type: str = 'photogrammetric',
-                                split: str = 'train', **kwargs) -> MegaNeRFPlusDataset:
+def create_meganerf_plus_dataset(
+    data_dir: str,
+    dataset_type: str = 'photogrammetric',
+    split: str = 'train',
+    **kwargs,
+) -> MegaNeRFPlusDataset:
     """
     Factory function to create Mega-NeRF++ datasets
     
@@ -695,11 +697,13 @@ def create_meganerf_plus_dataset(data_dir: str, dataset_type: str = 'photogramme
         raise ValueError(f"Unknown dataset type: {dataset_type}")
 
 
-def create_photogrammetric_dataloader(dataset: MegaNeRFPlusDataset,
-                                    batch_size: int = 4096,
-                                    shuffle: bool = True,
-                                    num_workers: int = 4,
-                                    pin_memory: bool = True) -> data.DataLoader:
+def create_photogrammetric_dataloader(
+    dataset: MegaNeRFPlusDataset,
+    batch_size: int = 4096,
+    shuffle: bool = True,
+    num_workers: int = 4,
+    pin_memory: bool = True,
+) -> data.DataLoader:
     """
     Create optimized DataLoader for photogrammetric data
     
@@ -715,17 +719,11 @@ def create_photogrammetric_dataloader(dataset: MegaNeRFPlusDataset,
     """
     
     return data.DataLoader(
-        dataset,
-        batch_size=batch_size,
-        shuffle=shuffle,
-        num_workers=num_workers,
-        pin_memory=pin_memory,
-        collate_fn=photogrammetric_collate_fn,
-        persistent_workers=True if num_workers > 0 else False
+        dataset, batch_size=batch_size, shuffle=shuffle, num_workers=num_workers, pin_memory=pin_memory, collate_fn=photogrammetric_collate_fn, persistent_workers=True if num_workers > 0 else False
     )
 
 
-def photogrammetric_collate_fn(batch: List[Dict]) -> Dict[str, torch.Tensor]:
+def photogrammetric_collate_fn(batch: list[Dict]) -> dict[str, torch.Tensor]:
     """
     Custom collate function for photogrammetric data
     
@@ -746,9 +744,7 @@ def photogrammetric_collate_fn(batch: List[Dict]) -> Dict[str, torch.Tensor]:
         rgbs = torch.stack([item['rgbs'] for item in batch])
         
         return {
-            'rays': rays,
-            'rgbs': rgbs,
-            'batch_size': len(batch)
+            'rays': rays, 'rgbs': rgbs, 'batch_size': len(batch)
         }
     else:
         # Image-based data
@@ -757,8 +753,5 @@ def photogrammetric_collate_fn(batch: List[Dict]) -> Dict[str, torch.Tensor]:
         intrinsics = torch.stack([item['intrinsics'] for item in batch])
         
         return {
-            'images': images,
-            'poses': poses,
-            'intrinsics': intrinsics,
-            'batch_size': len(batch)
+            'images': images, 'poses': poses, 'intrinsics': intrinsics, 'batch_size': len(batch)
         } 

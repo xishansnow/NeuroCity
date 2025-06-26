@@ -4,12 +4,14 @@ Octree utilities for SVRaster.
 
 import torch
 import numpy as np
-from typing import List, Tuple, Optional
+from typing import List, Optional, Tuple
 
 
-def octree_subdivision(voxel_positions: torch.Tensor,
-                      voxel_sizes: torch.Tensor,
-                      subdivision_mask: torch.Tensor) -> Tuple[torch.Tensor, torch.Tensor]:
+def octree_subdivision(
+    voxel_positions: torch.Tensor,
+    voxel_sizes: torch.Tensor,
+    subdivision_mask: torch.Tensor,
+) -> tuple[torch.Tensor, torch.Tensor]:
     """
     Subdivide voxels into 8 child voxels.
     
@@ -22,7 +24,11 @@ def octree_subdivision(voxel_positions: torch.Tensor,
         Tuple of (child_positions, child_sizes)
     """
     if not subdivision_mask.any():
-        return torch.empty(0, 3, device=voxel_positions.device), torch.empty(0, device=voxel_sizes.device)
+        return torch.empty(
+            0,
+            3,
+            device=voxel_positions.device,
+        )
     
     # Get voxels to subdivide
     parent_positions = voxel_positions[subdivision_mask]
@@ -33,8 +39,7 @@ def octree_subdivision(voxel_positions: torch.Tensor,
     
     # Child offsets (8 corners of cube)
     offsets = torch.tensor([
-        [-1, -1, -1], [1, -1, -1], [-1, 1, -1], [1, 1, -1],
-        [-1, -1, 1], [1, -1, 1], [-1, 1, 1], [1, 1, 1]
+        [-1, -1, -1], [1, -1, -1], [-1, 1, -1], [1, 1, -1], [-1, -1, 1], [1, -1, 1], [-1, 1, 1], [1, 1, 1]
     ], dtype=torch.float32, device=voxel_positions.device) * 0.25
     
     # Generate child positions
@@ -57,8 +62,7 @@ def octree_subdivision(voxel_positions: torch.Tensor,
     return child_positions, child_sizes_tensor
 
 
-def octree_pruning(voxel_densities: torch.Tensor,
-                  threshold: float = 0.001) -> torch.Tensor:
+def octree_pruning(voxel_densities: torch.Tensor, threshold: float = 0.001) -> torch.Tensor:
     """
     Create pruning mask for low-density voxels.
     
@@ -96,10 +100,12 @@ def compute_octree_level(voxel_size: float, base_size: float) -> int:
     return level
 
 
-def get_octree_neighbors(voxel_position: torch.Tensor,
-                        voxel_size: float,
-                        all_positions: torch.Tensor,
-                        all_sizes: torch.Tensor) -> torch.Tensor:
+def get_octree_neighbors(
+    voxel_position: torch.Tensor,
+    voxel_size: float,
+    all_positions: torch.Tensor,
+    all_sizes: torch.Tensor,
+) -> torch.Tensor:
     """
     Find neighboring voxels in the octree.
     

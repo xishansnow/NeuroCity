@@ -1,8 +1,7 @@
 """
 Dataset module for Mip-NeRF
 
-This module implements dataset classes for loading and preprocessing data for Mip-NeRF training,
-including support for Blender synthetic scenes and real image datasets.
+This module implements dataset classes for loading and preprocessing data for Mip-NeRF training, including support for Blender synthetic scenes and real image datasets.
 """
 
 import torch
@@ -11,7 +10,7 @@ import numpy as np
 import json
 import os
 from pathlib import Path
-from typing import Dict, List, Tuple, Optional, Union, Any
+from typing import Dict, List, Optional, Tuple, Any
 import cv2
 from PIL import Image
 import imageio
@@ -24,8 +23,15 @@ class MipNeRFDataset(data.Dataset):
     This class handles the common functionality for loading images, poses, and camera parameters.
     """
     
-    def __init__(self, data_dir: str, split: str = 'train', img_wh: Optional[Tuple[int, int]] = None,
-                 white_bkgd: bool = False, half_res: bool = False, testskip: int = 1):
+    def __init__(
+        self,
+        data_dir: str,
+        split: str = 'train',
+        img_wh: Optional[tuple[int,int]] = None,
+        white_bkgd: bool = False,
+        half_res: bool = False,
+        testskip: int = 1,
+    ) -> None:
         """
         Args:
             data_dir: Path to dataset directory
@@ -62,11 +68,10 @@ class MipNeRFDataset(data.Dataset):
     
     def __getitem__(self, idx):
         return {
-            'rays': self.rays[idx],
-            'rgbs': self.rgbs[idx]
+            'rays': self.rays[idx], 'rgbs': self.rgbs[idx]
         }
     
-    def get_rays(self, pose: torch.Tensor, H: int, W: int, focal: float) -> Dict[str, torch.Tensor]:
+    def get_rays(self, pose: torch.Tensor, H: int, W: int, focal: float) -> dict[str, torch.Tensor]:
         """
         Generate rays from camera pose and intrinsics
         
@@ -83,14 +88,12 @@ class MipNeRFDataset(data.Dataset):
         i, j = torch.meshgrid(
             torch.arange(W, dtype=torch.float32),
             torch.arange(H, dtype=torch.float32),
-            indexing='xy'
+            indexing='ij'
         )
         
         # Convert to camera coordinates
         dirs = torch.stack([
-            (i - W * 0.5) / focal,
-            -(j - H * 0.5) / focal,
-            -torch.ones_like(i)
+            (i - W * 0.5) / focal, -(j - H * 0.5) / focal, -torch.ones_like(i)
         ], dim=-1)
         
         # Transform to world coordinates
@@ -102,9 +105,7 @@ class MipNeRFDataset(data.Dataset):
         radii = torch.full(rays_d.shape[:-1], pixel_radius)
         
         return {
-            'rays_o': rays_o,
-            'rays_d': rays_d,
-            'radii': radii
+            'rays_o': rays_o, 'rays_d': rays_d, 'radii': radii
         }
 
 
@@ -224,7 +225,9 @@ class LLFFMipNeRFDataset(MipNeRFDataset):
         H, W = int(H), int(W)
         
         # Convert poses to 4x4 matrices
-        poses = np.concatenate([poses[:, :, 1:5], np.tile(np.array([[[0, 0, 0, 1]]]), (poses.shape[0], 1, 1))], axis=1)
+        poses = np.concatenate(
+            [poses[:, :, 1:5], np.tile(np.eye(3)[None], [poses.shape[0], 1, 1])], dim=-2
+        )
         
         # Load images
         imgdir = self.data_dir / 'images'
@@ -345,26 +348,31 @@ class MipNeRFRayDataset(data.Dataset):
         radii = batch_rays[:, 6]
         
         return {
-            'rays_o': rays_o,
-            'rays_d': rays_d,
-            'radii': radii,
-            'rgbs': batch_rgbs
+            'rays_o': rays_o, 'rays_d': rays_d, 'radii': radii, 'rgbs': batch_rgbs
         }
 
 
-def create_mip_nerf_dataset(data_dir: str, dataset_type: str = 'blender', 
-                           split: str = 'train', **kwargs) -> MipNeRFDataset:
+def create_mip_nerf_dataset(
+    data_dir: str,
+    dataset_type: str = 'blender',
+    split: str = 'train',
+    **kwargs: Any,
+) -> MipNeRFDataset:
     """
     Factory function to create MipNeRF datasets
     
     Args:
-        data_dir: Path to dataset directory
-        dataset_type: Type of dataset ('blender', 'llff')
-        split: Dataset split
-        **kwargs: Additional arguments for dataset
+        data_dir: Path to dataset director
+        dataset_type: Type of dataset ('blender', 'llff', 'custom')
+        split: Dataset split ('train', 'val', 'test')
+        img_wh: Tuple of (width, height) to resize images
+        white_bkgd: Whether to use white background
+        half_res: Whether to use half resolution
+        testskip: Skip every N frames for test set
+        **kwargs: Additional dataset-specific arguments
         
     Returns:
-        MipNeRF dataset instance
+        MipNeRFDataset instance
     """
     if dataset_type.lower() == 'blender':
         return BlenderMipNeRFDataset(data_dir, split, **kwargs)
@@ -374,10 +382,9 @@ def create_mip_nerf_dataset(data_dir: str, dataset_type: str = 'blender',
         raise ValueError(f"Unknown dataset type: {dataset_type}")
 
 
-def create_mip_nerf_dataloader(dataset: Union[MipNeRFDataset, MipNeRFRayDataset], 
-                              batch_size: Optional[int] = None,
-                              shuffle: bool = True, 
-                              num_workers: int = 0) -> data.DataLoader:
+def create_mip_nerf_dataloader(
+    dataset: MipNeRFDataset | MipNeRFRayDataset, batch_size: int = 4096, shuffle: bool = True, num_workers: int = 4, pin_memory: bool = True
+) -> data.DataLoader:
     """
     Create DataLoader for MipNeRF dataset
     
@@ -393,24 +400,18 @@ def create_mip_nerf_dataloader(dataset: Union[MipNeRFDataset, MipNeRFRayDataset]
     if isinstance(dataset, MipNeRFRayDataset):
         # Ray dataset already handles batching
         return data.DataLoader(
-            dataset, 
-            batch_size=1,  # Each item is already a batch
-            shuffle=shuffle,
-            num_workers=num_workers,
-            collate_fn=lambda x: x[0]  # Remove extra batch dimension
+            dataset, batch_size=1, # Each item is already a batch
+            shuffle=shuffle, num_workers=num_workers, collate_fn=lambda x: x[0]  # Remove extra batch dimension
         )
     else:
         # Regular dataset
         batch_size = batch_size or len(dataset)
         return data.DataLoader(
-            dataset,
-            batch_size=batch_size,
-            shuffle=shuffle,
-            num_workers=num_workers
+            dataset, batch_size=batch_size, shuffle=shuffle, num_workers=num_workers, pin_memory=pin_memory
         )
 
 
-def collate_fn(batch: List[Dict[str, torch.Tensor]]) -> Dict[str, torch.Tensor]:
+def collate_fn(batch: list[dict[str, torch.Tensor]]) -> dict[str, torch.Tensor]:
     """
     Custom collate function for MipNeRF data
     
@@ -461,10 +462,8 @@ class MipNeRFImageDataset(data.Dataset):
         # Generate rays for the entire image
         rays = self.base_dataset.get_rays(pose, self.H, self.W, self.focal)
         
-        return {
-            'image': img,
-            'pose': pose,
-            'rays_o': rays['rays_o'],
-            'rays_d': rays['rays_d'],
-            'radii': rays['radii']
+        return  {
+            'image': img, 'pose': pose, 'rays_o': rays['rays_o'], 'rays_d': rays['rays_d'], 'radii': rays['radii']
         } 
+        
+        

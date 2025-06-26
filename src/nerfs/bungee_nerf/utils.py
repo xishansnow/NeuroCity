@@ -4,7 +4,7 @@ Utility functions for BungeeNeRF
 
 import torch
 import torch.nn.functional as F
-from typing import Dict, List, Optional, Tuple, Union
+from typing import Dict, List, Optional, Tuple, Any, Union
 import numpy as np
 import logging
 import os
@@ -14,8 +14,7 @@ logger = logging.getLogger(__name__)
 
 
 def compute_scale_factor(
-    distances: torch.Tensor,
-    scale_thresholds: List[float]
+    distances: torch.Tensor, scale_thresholds: list[float]
 ) -> torch.Tensor:
     """
     Compute scale factors based on distance
@@ -39,8 +38,7 @@ def compute_scale_factor(
 
 
 def get_level_of_detail(
-    distances: torch.Tensor,
-    lod_thresholds: List[float]
+    distances: torch.Tensor, lod_thresholds: list[float]
 ) -> torch.Tensor:
     """
     Get level of detail based on distance
@@ -66,11 +64,7 @@ def get_level_of_detail(
 
 
 def progressive_positional_encoding(
-    x: torch.Tensor,
-    num_freqs: int,
-    stage: int,
-    max_stages: int,
-    include_input: bool = True
+    x: torch.Tensor, num_freqs: int, stage: int, max_stages: int, include_input: bool = True
 ) -> torch.Tensor:
     """
     Apply progressive positional encoding
@@ -115,13 +109,8 @@ def progressive_positional_encoding(
 
 
 def multiscale_sampling(
-    rays_o: torch.Tensor,
-    rays_d: torch.Tensor,
-    bounds: torch.Tensor,
-    distances: torch.Tensor,
-    num_samples_base: int = 64,
-    scale_factors: List[float] = None
-) -> Tuple[torch.Tensor, torch.Tensor]:
+    rays_o: torch.Tensor, rays_d: torch.Tensor, bounds: torch.Tensor, distances: torch.Tensor, num_samples_base: int = 64, scale_factors: list[float] = None
+) -> tuple[torch.Tensor, torch.Tensor]:
     """
     Multi-scale sampling along rays
     
@@ -146,7 +135,8 @@ def multiscale_sampling(
     lod_levels = get_level_of_detail(distances, [100.0, 50.0, 25.0, 10.0])
     
     # Calculate number of samples for each ray
-    num_samples_per_ray = torch.full((batch_size,), num_samples_base, dtype=torch.long, device=device)
+    num_samples_per_ray = torch.full(
+    )
     
     for level, scale_factor in enumerate(scale_factors):
         mask = lod_levels == level
@@ -182,12 +172,8 @@ def multiscale_sampling(
 
 
 def compute_multiscale_loss(
-    outputs: Dict[str, torch.Tensor],
-    targets: Dict[str, torch.Tensor],
-    distances: torch.Tensor,
-    stage: int,
-    config
-) -> Dict[str, torch.Tensor]:
+    outputs: dict[str, torch.Tensor], targets: dict[str, torch.Tensor], distances: torch.Tensor, stage: int, config
+) -> dict[str, torch.Tensor]:
     """
     Compute multi-scale loss for BungeeNeRF
     
@@ -213,7 +199,9 @@ def compute_multiscale_loss(
     distance_weights = 1.0 / (distances + 1.0)
     distance_weights = distance_weights / distance_weights.mean()
     
-    weighted_color_loss = (distance_weights * F.mse_loss(outputs["rgb"], targets["rgb"], reduction='none').mean(dim=-1)).mean()
+    weighted_color_loss = (
+        distance_weights * F.mse_loss,
+    )
     losses["weighted_color_loss"] = weighted_color_loss
     
     # Progressive loss (encourage smooth transitions between stages)
@@ -252,12 +240,7 @@ def compute_multiscale_loss(
 
 
 def save_bungee_model(
-    model: torch.nn.Module,
-    config: dict,
-    save_path: str,
-    stage: Optional[int] = None,
-    epoch: Optional[int] = None,
-    optimizer_state: Optional[dict] = None
+    model: torch.nn.Module, config: dict, save_path: str, stage: Optional[int] = None, epoch: Optional[int] = None, optimizer_state: Optional[dict] = None
 ) -> None:
     """
     Save BungeeNeRF model and configuration
@@ -273,9 +256,8 @@ def save_bungee_model(
     os.makedirs(os.path.dirname(save_path), exist_ok=True)
     
     checkpoint = {
-        'model_state_dict': model.state_dict(),
-        'config': config,
-        'progressive_info': model.get_progressive_info() if hasattr(model, 'get_progressive_info') else None
+        'model_state_dict': model.state_dict(
+        )
     }
     
     if stage is not None:
@@ -292,10 +274,8 @@ def save_bungee_model(
 
 
 def load_bungee_model(
-    model: torch.nn.Module,
-    load_path: str,
-    device: str = "cuda"
-) -> Tuple[torch.nn.Module, dict]:
+    model: torch.nn.Module, load_path: str, device: str = "cuda"
+) -> tuple[torch.nn.Module, dict]:
     """
     Load BungeeNeRF model and configuration
     
@@ -322,9 +302,7 @@ def load_bungee_model(
 
 
 def compute_psnr(
-    img_pred: torch.Tensor,
-    img_gt: torch.Tensor,
-    mask: Optional[torch.Tensor] = None
+    img_pred: torch.Tensor, img_gt: torch.Tensor, mask: Optional[torch.Tensor] = None
 ) -> float:
     """
     Compute Peak Signal-to-Noise Ratio (PSNR)
@@ -351,10 +329,7 @@ def compute_psnr(
 
 
 def compute_ssim(
-    img_pred: torch.Tensor,
-    img_gt: torch.Tensor,
-    window_size: int = 11,
-    sigma: float = 1.5
+    img_pred: torch.Tensor, img_gt: torch.Tensor, window_size: int = 11, sigma: float = 1.5
 ) -> float:
     """
     Compute Structural Similarity Index (SSIM)
@@ -410,10 +385,8 @@ def compute_ssim(
 
 
 def create_progressive_schedule(
-    num_stages: int = 4,
-    steps_per_stage: int = 50000,
-    warmup_steps: int = 1000
-) -> Dict[str, any]:
+    num_stages: int = 4, steps_per_stage: int = 50000, warmup_steps: int = 1000
+) -> dict[str, any]:
     """
     Create progressive training schedule
     
@@ -437,8 +410,7 @@ def create_progressive_schedule(
 
 
 def apply_progressive_schedule(
-    step: int,
-    schedule: Dict[str, any]
+    step: int, schedule: dict[str, any]
 ) -> int:
     """
     Get current stage based on training step
@@ -461,9 +433,7 @@ def apply_progressive_schedule(
 
 
 def convert_ges_to_nerf_poses(
-    ges_file: str,
-    output_file: str,
-    coordinate_system: str = "ENU"
+    ges_file: str, output_file: str, coordinate_system: str = "ENU"
 ) -> None:
     """
     Convert Google Earth Studio poses to NeRF format
@@ -489,9 +459,7 @@ def convert_ges_to_nerf_poses(
         
         # Convert rotation (apply coordinate system conversion)
         euler_angles = np.array([
-            -rotation["x"],
-            180 - rotation["y"],
-            180 + rotation["z"]
+            -rotation["x"], 180 - rotation["y"], 180 + rotation["z"]
         ], dtype=np.float32)
         
         # Convert to radians and create rotation matrix
@@ -507,7 +475,11 @@ def convert_ges_to_nerf_poses(
     # Save poses
     output_data = {
         "camera_angle_x": np.radians(ges_data.get("fovVertical", 30.0)),
-        "frames": [{"transform_matrix": pose} for pose in poses]
+        "frames": [
+            {
+                "transform_matrix": pose,
+            }
+        ]
     }
     
     with open(output_file, 'w') as f:
@@ -517,9 +489,8 @@ def convert_ges_to_nerf_poses(
 
 
 def compute_scene_bounds(
-    poses: np.ndarray,
-    percentile: float = 95.0
-) -> Tuple[float, float]:
+    poses: np.ndarray, percentile: float = 95.0
+) -> tuple[float, float]:
     """
     Compute scene bounds from camera poses
     
@@ -549,9 +520,7 @@ def compute_scene_bounds(
 
 
 def visualize_multiscale_data(
-    dataset,
-    save_path: str,
-    num_samples: int = 100
+    dataset, save_path: str, num_samples: int = 100
 ) -> None:
     """
     Visualize multi-scale data distribution
@@ -578,8 +547,13 @@ def visualize_multiscale_data(
     # Add scale threshold lines
     if hasattr(dataset, 'scale_thresholds'):
         for i, threshold in enumerate(dataset.scale_thresholds):
-            plt.axvline(threshold, color='red', linestyle='--', alpha=0.7, 
-                       label=f'Scale {i} threshold')
+            plt.axvline(
+                threshold,
+                color='red',
+                linestyle='--',
+                alpha=0.7,
+                label=f'Scale {i} threshold',
+            )
     
     plt.legend()
     plt.tight_layout()

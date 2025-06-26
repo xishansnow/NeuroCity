@@ -8,7 +8,9 @@ whether a specific region of space was visible during training.
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-from typing import Dict, Optional, Tuple
+import numpy as np
+from pathlib import Path
+from typing import Optional, Tuple
 from .block_nerf_model import positional_encoding
 
 
@@ -20,11 +22,13 @@ class VisibilityNetwork(nn.Module):
     Used for efficient block selection and appearance matching.
     """
     
-    def __init__(self,
-                 pos_encoding_levels: int = 10,
-                 dir_encoding_levels: int = 4,
-                 hidden_dim: int = 128,
-                 num_layers: int = 4):
+    def __init__(
+        self,
+        pos_encoding_levels: int = 10,
+        dir_encoding_levels: int = 4,
+        hidden_dim: int = 128,
+        num_layers: int = 4
+    ):
         super().__init__()
         
         self.pos_encoding_levels = pos_encoding_levels
@@ -48,9 +52,7 @@ class VisibilityNetwork(nn.Module):
         # Output layer - predicts transmittance [0, 1]
         self.output = nn.Linear(hidden_dim, 1)
         
-    def forward(self,
-                positions: torch.Tensor,
-                directions: torch.Tensor) -> torch.Tensor:
+    def forward(self, positions: torch.Tensor, directions: torch.Tensor) -> torch.Tensor:
         """
         Predict visibility/transmittance for given positions and directions
         
@@ -77,10 +79,12 @@ class VisibilityNetwork(nn.Module):
         
         return transmittance
     
-    def compute_visibility_loss(self,
-                               positions: torch.Tensor,
-                               directions: torch.Tensor,
-                               target_transmittance: torch.Tensor) -> torch.Tensor:
+    def compute_visibility_loss(
+        self,
+        positions: torch.Tensor,
+        directions: torch.Tensor,
+        target_transmittance: torch.Tensor
+    ):
         """
         Compute visibility prediction loss
         
@@ -96,17 +100,19 @@ class VisibilityNetwork(nn.Module):
         loss = F.mse_loss(predicted_transmittance, target_transmittance)
         return loss
     
-    def evaluate_block_visibility(self,
-                                 camera_position: torch.Tensor,
-                                 block_center: torch.Tensor,
-                                 block_radius: float,
-                                 num_samples: int = 64) -> float:
+    def evaluate_block_visibility(
+        self,
+        camera_position: torch.Tensor,
+        block_center: torch.Tensor,
+        block_radius: float,
+        num_samples: int = 64   
+    ):
         """
         Evaluate overall visibility of a block from a camera position
         
         Args:
-            camera_position: Camera position (3,)
-            block_center: Block center position (3,)
+            camera_position: Camera position (3, )
+            block_center: Block center position (3, )
             block_radius: Block radius
             num_samples: Number of sample points to evaluate
             
@@ -132,24 +138,26 @@ class VisibilityNetwork(nn.Module):
         
         return visibility.mean().item()
     
-    def filter_blocks_by_visibility(self,
-                                   camera_position: torch.Tensor,
-                                   block_centers: torch.Tensor,
-                                   block_radii: torch.Tensor,
-                                   visibility_threshold: float = 0.1,
-                                   max_distance: float = 100.0) -> torch.Tensor:
+    def filter_blocks_by_visibility(
+        self,
+        camera_position: torch.Tensor,
+        block_centers: torch.Tensor,
+        block_radii: torch.Tensor,
+        visibility_threshold: float = 0.1,
+        max_distance: float = 100.0
+    ):
         """
         Filter blocks based on visibility and distance criteria
         
         Args:
-            camera_position: Camera position (3,)
+            camera_position: Camera position (3, )
             block_centers: Block center positions (N, 3)
-            block_radii: Block radii (N,)
+            block_radii: Block radii (N, )
             visibility_threshold: Minimum visibility threshold
             max_distance: Maximum distance threshold
             
         Returns:
-            Boolean mask indicating which blocks to keep (N,)
+            Boolean mask indicating which blocks to keep (N, )
         """
         num_blocks = block_centers.shape[0]
         device = camera_position.device
@@ -164,9 +172,7 @@ class VisibilityNetwork(nn.Module):
         for i in range(num_blocks):
             if distance_mask[i]:
                 visibility_score = self.evaluate_block_visibility(
-                    camera_position, 
-                    block_centers[i], 
-                    block_radii[i].item()
+                    camera_position, block_centers[i], block_radii[i].item()
                 )
                 visibility_mask[i] = visibility_score >= visibility_threshold
         
@@ -181,11 +187,13 @@ class VisibilityGuidedSampler:
     def __init__(self, visibility_network: VisibilityNetwork):
         self.visibility_network = visibility_network
     
-    def sample_important_rays(self,
-                            ray_origins: torch.Tensor,
-                            ray_directions: torch.Tensor,
-                            num_samples: int,
-                            visibility_weight: float = 0.5) -> Tuple[torch.Tensor, torch.Tensor]:
+    def sample_important_rays(
+        self,
+        ray_origins: torch.Tensor,
+        ray_directions: torch.Tensor,
+        num_samples: int,
+        visibility_weight: float = 0.5  
+    ):
         """
         Sample rays based on visibility importance
         
@@ -226,24 +234,26 @@ class VisibilityGuidedSampler:
         
         return ray_origins[sampled_indices], ray_directions[sampled_indices]
     
-    def find_appearance_matching_points(self,
-                                      block1_center: torch.Tensor,
-                                      block2_center: torch.Tensor,
-                                      block_radius: float,
-                                      min_visibility: float = 0.5,
-                                      num_candidates: int = 1000) -> Optional[torch.Tensor]:
+    def find_appearance_matching_points(
+        self,
+        block1_center: torch.Tensor,
+        block2_center: torch.Tensor,
+        block_radius: float,
+        min_visibility: float = 0.5,
+        num_candidates: int = 1000
+    ):
         """
         Find good points for appearance matching between two blocks
         
         Args:
-            block1_center: Center of first block (3,)
-            block2_center: Center of second block (3,)
+            block1_center: Center of first block (3, )
+            block2_center: Center of second block (3, )
             block_radius: Radius of blocks
             min_visibility: Minimum visibility threshold
             num_candidates: Number of candidate points to evaluate
             
         Returns:
-            Best matching point position (3,) or None if no good point found
+            Best matching point position (3, ) or None if no good point found
         """
         device = block1_center.device
         
@@ -278,3 +288,12 @@ class VisibilityGuidedSampler:
         best_idx = good_visibility.nonzero()[valid_scores.argmax()]
         
         return candidate_points[best_idx].squeeze() 
+
+    def forward(
+        self, rays_o: torch.Tensor, rays_d: torch.Tensor, **kwargs
+    ) -> dict[str, torch.Tensor]:
+        # Implementation of the forward method
+        pass
+
+        # Return the result as a dictionary
+        return {} 

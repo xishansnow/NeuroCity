@@ -14,12 +14,17 @@ import shutil
 from pathlib import Path
 import time
 import json
+import sys
+import os
 
-from .core import MegaNeRFPlus, MegaNeRFPlusConfig, HierarchicalSpatialEncoder
-from .spatial_partitioner import AdaptiveOctree, PhotogrammetricPartitioner, PartitionConfig
-from .multires_renderer import MultiResolutionRenderer, AdaptiveLODRenderer
-from .memory_manager import MemoryManager, CacheManager, MemoryOptimizer
-from .dataset import PhotogrammetricDataset, create_meganerf_plus_dataset
+# Add src to path for imports
+sys.path.append(os.path.join(os.path.dirname(__file__), '..', '..', 'src'))
+
+from nerfs.mega_nerf_plus.core import MegaNeRFPlus, MegaNeRFPlusConfig, HierarchicalSpatialEncoder
+from nerfs.mega_nerf_plus.spatial_partitioner import AdaptiveOctree, PhotogrammetricPartitioner, PartitionConfig
+from nerfs.mega_nerf_plus.multires_renderer import MultiResolutionRenderer, AdaptiveLODRenderer
+from nerfs.mega_nerf_plus.memory_manager import MemoryManager, CacheManager, MemoryOptimizer
+from nerfs.mega_nerf_plus.dataset import PhotogrammetricDataset, create_meganerf_plus_dataset
 
 
 class TestMegaNeRFPlusCore:
@@ -29,14 +34,8 @@ class TestMegaNeRFPlusCore:
         """Setup test environment"""
         self.device = 'cuda' if torch.cuda.is_available() else 'cpu'
         self.config = MegaNeRFPlusConfig(
-            num_levels=4,  # Smaller for testing
-            base_resolution=16,
-            max_resolution=128,
-            netdepth=4,
-            netwidth=64,
-            batch_size=256,
-            num_samples=32,
-            num_importance=64
+            num_levels=4, # Smaller for testing
+            base_resolution=16, max_resolution=128, netdepth=4, netwidth=64, batch_size=256, num_samples=32, num_importance=64
         )
     
     def test_config_creation(self):
@@ -130,9 +129,7 @@ class TestSpatialPartitioning:
     def setup_method(self):
         """Setup test environment"""
         self.config = PartitionConfig(
-            max_partition_size=64,
-            min_partition_size=16,
-            max_depth=3
+            max_partition_size=64, min_partition_size=16, max_depth=3
         )
     
     def test_adaptive_octree(self):
@@ -174,8 +171,7 @@ class TestSpatialPartitioning:
         intrinsics[:, 1, 2] = 512  # cy
         
         partitions = partitioner.partition_scene(
-            scene_bounds, camera_positions, camera_orientations,
-            image_resolutions, intrinsics
+            scene_bounds, camera_positions, camera_orientations, image_resolutions, intrinsics
         )
         
         assert len(partitions) > 0
@@ -191,9 +187,7 @@ class TestMultiResolutionRenderer:
     def setup_method(self):
         """Setup test environment"""
         self.config = MegaNeRFPlusConfig(
-            num_lods=3,
-            num_samples=16,
-            num_importance=32
+            num_lods=3, num_samples=16, num_importance=32
         )
         self.device = 'cuda' if torch.cuda.is_available() else 'cpu'
     
@@ -217,7 +211,7 @@ class TestMultiResolutionRenderer:
         
         rays_o = torch.randn(8, 3)
         rays_d = torch.nn.functional.normalize(torch.randn(8, 3), dim=-1)
-        lod_levels = torch.randint(0, self.config.num_lods, (8,))
+        lod_levels = torch.randint(0, self.config.num_lods, (8, ))
         
         sampling_results = renderer.adaptive_sampling(
             rays_o, rays_d, near=0.1, far=10.0, lod_levels=lod_levels
@@ -292,9 +286,7 @@ class TestMemoryManager:
         
         # Test model memory analysis
         model = nn.Sequential(
-            nn.Linear(100, 256),
-            nn.ReLU(),
-            nn.Linear(256, 10)
+            nn.Linear(100, 256), nn.ReLU(), nn.Linear(256, 10)
         )
         
         memory_usage = MemoryOptimizer.get_model_memory_usage(model)
@@ -344,10 +336,9 @@ class TestDataset:
         
         try:
             dataset = create_meganerf_plus_dataset(
-                str(self.temp_path),
-                dataset_type='photogrammetric',
-                split='train',
-                use_cached_rays=False
+                str(
+                    self.temp_path,
+                )
             )
             
             # Basic checks
@@ -369,15 +360,7 @@ class TestIntegration:
         self.device = 'cuda' if torch.cuda.is_available() else 'cpu'
         self.config = MegaNeRFPlusConfig(
             # Small configuration for testing
-            num_levels=2,
-            base_resolution=8,
-            max_resolution=32,
-            netdepth=2,
-            netwidth=32,
-            batch_size=64,
-            num_samples=8,
-            num_importance=16,
-            lr_decay_steps=100
+            num_levels=2, base_resolution=8, max_resolution=32, netdepth=2, netwidth=32, batch_size=64, num_samples=8, num_importance=16, lr_decay_steps=100
         )
     
     def test_end_to_end_forward_pass(self):
@@ -419,8 +402,7 @@ class TestIntegration:
         
         # Apply memory optimizations
         optimized_model = MemoryOptimizer.optimize_model_memory(
-            model,
-            use_checkpointing=False,  # Skip checkpointing for simplicity
+            model, use_checkpointing=False, # Skip checkpointing for simplicity
             use_mixed_precision=False
         )
         
@@ -442,14 +424,7 @@ class TestPerformance:
         """Setup test environment"""
         self.device = 'cuda' if torch.cuda.is_available() else 'cpu'
         self.config = MegaNeRFPlusConfig(
-            num_levels=4,
-            base_resolution=32,
-            max_resolution=256,
-            netdepth=6,
-            netwidth=128,
-            batch_size=1024,
-            num_samples=64,
-            num_importance=128
+            num_levels=4, base_resolution=32, max_resolution=256, netdepth=6, netwidth=128, batch_size=1024, num_samples=64, num_importance=128
         )
     
     @pytest.mark.skipif(not torch.cuda.is_available(), reason="CUDA not available")
@@ -536,13 +511,7 @@ def run_all_tests():
     
     # Run tests
     test_classes = [
-        TestMegaNeRFPlusCore,
-        TestSpatialPartitioning,
-        TestMultiResolutionRenderer,
-        TestMemoryManager,
-        TestDataset,
-        TestIntegration,
-        TestPerformance
+        TestMegaNeRFPlusCore, TestSpatialPartitioning, TestMultiResolutionRenderer, TestMemoryManager, TestDataset, TestIntegration, TestPerformance
     ]
     
     passed_tests = 0

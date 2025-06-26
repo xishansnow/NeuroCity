@@ -24,16 +24,7 @@ Author: NeuroCity Team
 
 # Available NeRF tests
 NERF_TESTS = [
-    'test_classic_nerf',
-    'test_instant_ngp',
-    'test_mip_nerf', 
-    'test_grid_nerf',
-    'test_svraster',
-    'test_plenoxels',
-    'test_bungee_nerf',
-    'test_pyramid_nerf',
-    'test_nerfacto',
-    'test_mega_nerf_plus'
+    'test_classic_nerf', 'test_instant_ngp', 'test_mip_nerf', 'test_grid_nerf', 'test_svraster', 'test_plenoxels', 'test_bungee_nerf', 'test_pyramid_nerf', 'test_nerfacto', 'test_mega_nerf_plus'
 ]
 
 def list_nerf_tests():
