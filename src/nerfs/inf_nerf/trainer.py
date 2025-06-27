@@ -1,3 +1,4 @@
+from typing import Any, Optional
 """
 InfNeRF Trainer Module
 
@@ -19,7 +20,6 @@ from torch.utils.data import DataLoader
 from torch.utils.tensorboard import SummaryWriter
 from torch.nn.parallel import DistributedDataParallel as DDP
 import torch.distributed as dist
-from typing import Dict, List, Optional, Tuple, Any
 from dataclasses import dataclass
 from tqdm import tqdm
 import numpy as np
@@ -35,7 +35,6 @@ import math
 
 from .core import InfNeRF, InfNeRFConfig, InfNeRFRenderer
 from .dataset import InfNeRFDataset, InfNeRFDatasetConfig
-
 
 @dataclass
 class InfNeRFTrainerConfig:
@@ -94,7 +93,6 @@ class InfNeRFTrainerConfig:
     mixed_precision: bool = True
     memory_threshold_gb: float = 16.0
     chunk_size: int = 8192
-
 
 class InfNeRFTrainer:
     """
@@ -604,7 +602,6 @@ class InfNeRFTrainer:
                 log_dict = {f'{prefix}_{k}' if prefix else k: v for k, v in metrics.items()}
                 log_dict['step'] = self.global_step
                 wandb.log(log_dict)
-
 
 def create_inf_nerf_trainer(
     model_config: InfNeRFConfig, dataset_config: InfNeRFDatasetConfig, trainer_config: InfNeRFTrainerConfig, device: Optional[torch.device] = None

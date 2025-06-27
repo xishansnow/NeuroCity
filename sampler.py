@@ -1,3 +1,4 @@
+from typing import Optional
 #!/usr/bin/env python3
 """
 体素采样器模块
@@ -7,7 +8,7 @@
 import numpy as np
 import json
 import os
-from typing import Dict, List, Optional, Tuple, import random
+import random
 from scipy.spatial import cKDTree
 import logging
 
@@ -20,7 +21,7 @@ class VoxelSampler:
         tiles_dir: str = "tiles",
         voxel_size: float = 1.0,
         sample_ratio: float = 0.1,
-    )
+    ):
         """
         初始化体素采样器
         
@@ -80,7 +81,7 @@ class VoxelSampler:
         self,
         tile_x: int,
         tile_y: int,
-    )
+    ):
         """
         获取tile的坐标网格
         
@@ -113,7 +114,7 @@ class VoxelSampler:
         n_samples: int = 10000,
         include_occupied: bool = True,
         include_free: bool = True,
-    )
+    ):
         """
         均匀采样
         
@@ -175,7 +176,7 @@ class VoxelSampler:
         tile_y: int,
         n_samples: int = 10000,
         occupied_ratio: float = 0.3,
-    )
+    ):
         """
         分层采样（确保占用和自由体素的平衡）
         
@@ -240,7 +241,7 @@ class VoxelSampler:
         n_samples: int = 10000,
         surface_threshold: float = 0.5,
         noise_std: float = 2.0,
-    )
+    ):
         """
         表面附近采样（用于SDF训练）
         
@@ -322,7 +323,7 @@ class VoxelSampler:
         sampling_method: str = 'stratified',
         n_samples_per_tile: int = 10000,
         **kwargs,
-    )
+    ):
         """
         对所有tile进行采样
         

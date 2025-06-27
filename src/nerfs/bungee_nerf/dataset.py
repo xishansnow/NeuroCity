@@ -1,3 +1,4 @@
+from typing import Any, Optional, Union
 """
 Dataset module for BungeeNeRF
 Handles multi-scale data loading and Google Earth Studio data
@@ -11,12 +12,10 @@ import os
 import json
 from PIL import Image
 import cv2
-from typing import Dict, List, Optional, Tuple, Any, Union 
 import logging
 from scipy.spatial.transform import Rotation
 
 logger = logging.getLogger(__name__)
-
 
 class BungeeNeRFDataset(data.Dataset):
     """
@@ -329,7 +328,7 @@ class BungeeNeRFDataset(data.Dataset):
             idx: Image index
             
         Returns:
-            Tuple of (ray_origins, ray_directions)
+            tuple of (ray_origins, ray_directions)
         """
         pose = self.poses[idx]
         
@@ -387,7 +386,6 @@ class BungeeNeRFDataset(data.Dataset):
             "image": image, "rays_o": rays_o, "rays_d": rays_d, "pose": pose, "bounds": bounds, "distance": distance, "idx": idx
         }
 
-
 class MultiScaleDataset(BungeeNeRFDataset):
     """
     Multi-scale dataset for progressive training
@@ -439,7 +437,6 @@ class MultiScaleDataset(BungeeNeRFDataset):
             indices.extend(self.get_scale_data(scale))
         return indices
 
-
 class GoogleEarthDataset(BungeeNeRFDataset):
     """
     Specialized dataset for Google Earth Studio data
@@ -480,7 +477,6 @@ class GoogleEarthDataset(BungeeNeRFDataset):
             self.near_far = (near * scale_factor, far * scale_factor)
         
         logger.info(f"Scaled scene by factor {scale_factor:.6f}")
-
 
 def create_bungee_dataloader(
     dataset: BungeeNeRFDataset, batch_size: int = 1, shuffle: bool = True, num_workers: int = 4, **kwargs

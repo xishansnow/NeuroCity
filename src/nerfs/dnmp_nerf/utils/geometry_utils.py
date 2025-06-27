@@ -1,3 +1,4 @@
+from typing import Optional, Union
 """
 Geometry processing utilities for DNMP.
 
@@ -6,8 +7,6 @@ This module provides functions for geometric computations, transformations, and 
 
 import torch
 import numpy as np
-from typing import Dict, List, Optional, Tuple, Union
-
 
 def rodrigues_rotation_matrix(axis: torch.Tensor, angle: torch.Tensor) -> torch.Tensor:
     """
@@ -34,7 +33,6 @@ def rodrigues_rotation_matrix(axis: torch.Tensor, angle: torch.Tensor) -> torch.
     R = I + torch.sin(angle) * K + (1 - torch.cos(angle)) * torch.mm(K, K)
     
     return R
-
 
 def look_at_matrix(eye: torch.Tensor, target: torch.Tensor, up: torch.Tensor) -> torch.Tensor:
     """
@@ -67,7 +65,6 @@ def look_at_matrix(eye: torch.Tensor, target: torch.Tensor, up: torch.Tensor) ->
     
     return view_matrix
 
-
 def perspective_projection_matrix(
     fov: float,
     aspect: float,
@@ -97,7 +94,6 @@ def perspective_projection_matrix(
     
     return proj_matrix
 
-
 def transform_points(points: torch.Tensor, transformation: torch.Tensor) -> torch.Tensor:
     """
     Transform points using 4x4 transformation matrix.
@@ -120,7 +116,6 @@ def transform_points(points: torch.Tensor, transformation: torch.Tensor) -> torc
     
     return transformed_points
 
-
 def compute_bounding_box(points: torch.Tensor) -> tuple[torch.Tensor, torch.Tensor]:
     """
     Compute axis-aligned bounding box.
@@ -136,7 +131,6 @@ def compute_bounding_box(points: torch.Tensor) -> tuple[torch.Tensor, torch.Tens
     max_bounds = points.max(dim=0)[0]
     
     return min_bounds, max_bounds
-
 
 def compute_oriented_bounding_box(points: torch.Tensor) -> dict[str, torch.Tensor]:
     """
@@ -176,7 +170,6 @@ def compute_oriented_bounding_box(points: torch.Tensor) -> dict[str, torch.Tenso
     return {
         'center': center, 'axes': eigenvectors, 'extents': extents, 'eigenvalues': eigenvalues
     }
-
 
 def point_in_triangle(point: torch.Tensor, triangle: torch.Tensor) -> torch.Tensor:
     """
@@ -220,7 +213,6 @@ def point_in_triangle(point: torch.Tensor, triangle: torch.Tensor) -> torch.Tens
         return inside.squeeze(0)
     else:
         return inside
-
 
 def ray_triangle_intersection(
     ray_origin: torch.Tensor,
@@ -281,7 +273,6 @@ def ray_triangle_intersection(
         # Intersection is behind ray origin
         return {'intersects': False, 'distance': torch.inf, 'barycentric': torch.zeros(3)}
 
-
 def sphere_ray_intersection(
     ray_origin: torch.Tensor,
     ray_direction: torch.Tensor,
@@ -324,7 +315,6 @@ def sphere_ray_intersection(
     
     return {'intersects': True, 'distances': torch.tensor([t1, t2])}
 
-
 def compute_face_normals(vertices: torch.Tensor, faces: torch.Tensor) -> torch.Tensor:
     """
     Compute face normals for triangular mesh.
@@ -347,7 +337,6 @@ def compute_face_normals(vertices: torch.Tensor, faces: torch.Tensor) -> torch.T
     normals = normals / (torch.norm(normals, dim=1, keepdim=True) + 1e-8)
     
     return normals
-
 
 def chamfer_distance(points1: torch.Tensor, points2: torch.Tensor) -> torch.Tensor:
     """

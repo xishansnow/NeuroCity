@@ -1,3 +1,4 @@
+from typing import Any, Optional, Union
 """
 Nerfacto Core Implementation
 ===========================
@@ -15,12 +16,10 @@ import math
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-from typing import Dict, List, Optional, Tuple, Any, Union
 from dataclasses import dataclass, field
 from jaxtyping import Float, Int, Shaped
 from torch import Tensor
 import numpy as np
-
 
 class SHEncoding(nn.Module):
     """Spherical harmonics encoding for directions."""
@@ -56,7 +55,6 @@ class SHEncoding(nn.Module):
             0.5900435899266435 * x * (x * x - 3 * y * y)
         ]
         return torch.stack(sh_bands[:self.num_features], dim=-1)
-
 
 @dataclass
 class NerfactoConfig:
@@ -188,7 +186,6 @@ class HashEncoding(nn.Module):
         # In practice, you'd implement proper trilinear interpolation
         return hash_table(hash_coords)
 
-
 @dataclass
 class NerfactoFieldConfig:
     """Configuration for NerfactoField."""
@@ -200,7 +197,6 @@ class NerfactoFieldConfig:
     appearance_embed_dim: int = 32
     use_appearance_embedding: bool = True
     spatial_distortion: Optional[str] = None
-
 
 class NerfactoField(nn.Module):
     """Neural field for Nerfacto."""
@@ -254,7 +250,7 @@ class NerfactoField(nn.Module):
         if config.use_appearance_embedding:
             self.appearance_embedding = nn.Embedding(1000, config.appearance_embed_dim)
             
-    def _check_shapes(self, **tensors: Dict[str, torch.Tensor]) -> None:
+    def _check_shapes(self, **tensors: dict[str, torch.Tensor]) -> None:
         """Check if tensor shapes are compatible.
         
         Args:
@@ -329,7 +325,6 @@ class NerfactoField(nn.Module):
             "geo_features": geo_features
         }
 
-
 class ProposalNetwork(nn.Module):
     """Proposal network for hierarchical sampling."""
     
@@ -361,7 +356,6 @@ class ProposalNetwork(nn.Module):
         density = density.mean(dim=-1, keepdim=True)
         return F.relu(density)
 
-
 class AppearanceEmbedding(nn.Module):
     """Appearance embedding for varying lighting conditions."""
     
@@ -378,7 +372,6 @@ class AppearanceEmbedding(nn.Module):
         """Get appearance embedding for given camera indices."""
         return self.embedding(camera_indices)
 
-
 class NerfactoRenderer(nn.Module):
     """Volumetric renderer for nerfacto."""
     
@@ -394,7 +387,7 @@ class NerfactoRenderer(nn.Module):
         else:
             self.background_color = None
     
-    def _check_shapes(self, **tensors: Dict[str, torch.Tensor]) -> None:
+    def _check_shapes(self, **tensors: dict[str, torch.Tensor]) -> None:
         """Check if tensor shapes are compatible.
         
         Args:
@@ -507,7 +500,6 @@ class NerfactoRenderer(nn.Module):
             "weights": weights
         }
 
-
 class NerfactoLoss(nn.Module):
     """Loss function for nerfacto."""
     
@@ -580,7 +572,6 @@ class NerfactoLoss(nn.Module):
                 loss += self.mse_loss(weights_coarse, weights_fine)
         
         return loss / (len(weights_list) - 1)
-
 
 class NerfactoModel(nn.Module):
     """Complete Nerfacto model."""

@@ -1,3 +1,4 @@
+from typing import Optional
 #!/usr/bin/env python3
 """
 Block NeRF 演示脚本
@@ -14,7 +15,6 @@ import os
 import torch
 import numpy as np
 import matplotlib.pyplot as plt
-from typing import Dict, List, Optional, Tuple
 
 # 添加项目根目录到Python路径
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
@@ -28,7 +28,6 @@ except ImportError as e:
     print(f"⚠️ Block NeRF模块导入失败: {e}")
     BLOCK_NERF_AVAILABLE = False
 
-
 class MockBlockNeRFConfig:
     """模拟Block NeRF配置"""
     def __init__(self):
@@ -40,7 +39,6 @@ class MockBlockNeRFConfig:
         self.num_layers = 8
         self.use_visibility_network = True
         self.visibility_threshold = 0.5
-
 
 class MockVisibilityNetwork(torch.nn.Module):
     """模拟可见性网络"""
@@ -57,7 +55,6 @@ class MockVisibilityNetwork(torch.nn.Module):
         """计算可见性概率"""
         input_tensor = torch.cat([positions, directions], dim=-1)
         return self.network(input_tensor).squeeze(-1)
-
 
 class MockBlockManager:
     """模拟块管理器"""
@@ -112,7 +109,6 @@ class MockBlockManager:
             relevant_blocks = [distances[0][1]]
         
         return relevant_blocks
-
 
 class MockBlockNeRF(torch.nn.Module):
     """模拟Block NeRF模型"""
@@ -207,7 +203,6 @@ class MockBlockNeRF(torch.nn.Module):
             )
         }
 
-
 def create_urban_dataset(num_views: int = 100, scene_size: float = 80.0) -> dict[str, torch.Tensor]:
     """创建城市场景数据集"""
     print(f"📊 创建城市场景数据集: {num_views}个视角, 场景大小{scene_size}x{scene_size}")
@@ -254,7 +249,6 @@ def create_urban_dataset(num_views: int = 100, scene_size: float = 80.0) -> dict
             ray_origins,
         )
     }
-
 
 def train_block_nerf(
     model: MockBlockNeRF,
@@ -317,7 +311,6 @@ def train_block_nerf(
     print("✅ 训练完成!")
     return training_history
 
-
 def demonstrate_block_nerf():
     """演示Block NeRF的完整流程"""
     print("🌟 Block NeRF 演示")
@@ -371,7 +364,6 @@ def demonstrate_block_nerf():
     print("   ✅ 可扩展架构")
     
     return model, training_history
-
 
 if __name__ == '__main__':
     print("启动Block NeRF演示...")

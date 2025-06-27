@@ -1,3 +1,4 @@
+from typing import Optional
 """
 Mesh processing utilities for DNMP.
 
@@ -6,9 +7,7 @@ This module provides functions for mesh manipulation, topology operations, and m
 
 import torch
 import numpy as np
-from typing import Dict, List, Optional, Tuple
 import open3d as o3d
-
 
 def compute_vertex_normals(vertices: torch.Tensor, faces: torch.Tensor) -> torch.Tensor:
     """
@@ -45,7 +44,6 @@ def compute_vertex_normals(vertices: torch.Tensor, faces: torch.Tensor) -> torch
     
     return vertex_normals
 
-
 def compute_face_areas(vertices: torch.Tensor, faces: torch.Tensor) -> torch.Tensor:
     """
     Compute face areas.
@@ -65,7 +63,6 @@ def compute_face_areas(vertices: torch.Tensor, faces: torch.Tensor) -> torch.Ten
     face_areas = 0.5 * torch.norm(cross_product, dim=1)
     
     return face_areas
-
 
 def compute_edge_lengths(vertices: torch.Tensor, faces: torch.Tensor) -> torch.Tensor:
     """
@@ -89,7 +86,6 @@ def compute_edge_lengths(vertices: torch.Tensor, faces: torch.Tensor) -> torch.T
     edge_lengths = torch.stack([edge_01, edge_12, edge_20], dim=1)
     
     return edge_lengths
-
 
 def laplacian_smoothing(
     vertices: torch.Tensor,
@@ -130,7 +126,6 @@ def laplacian_smoothing(
     smoothed_vertices = vertices + lambda_smooth * (laplacian - vertices)
     
     return smoothed_vertices
-
 
 def subdivide_mesh(
     vertices: torch.Tensor,
@@ -192,7 +187,6 @@ def subdivide_mesh(
     
     return new_vertices, new_faces
 
-
 def mesh_decimation(
     vertices: torch.Tensor,
     faces: torch.Tensor,
@@ -226,7 +220,6 @@ def mesh_decimation(
     decimated_faces = torch.from_numpy(np.asarray(decimated_mesh.triangles)).long()
     
     return decimated_vertices, decimated_faces
-
 
 def compute_mesh_quality_metrics(vertices: torch.Tensor, faces: torch.Tensor) -> dict[str, float]:
     """
@@ -273,7 +266,6 @@ def compute_mesh_quality_metrics(vertices: torch.Tensor, faces: torch.Tensor) ->
     
     return metrics
 
-
 def remove_duplicate_vertices(
     vertices: torch.Tensor,
     faces: torch.Tensor,
@@ -309,7 +301,6 @@ def remove_duplicate_vertices(
     
     return clean_vertices, clean_faces
 
-
 def compute_mesh_volume(vertices: torch.Tensor, faces: torch.Tensor) -> float:
     """
     Compute mesh volume using divergence theorem.
@@ -331,7 +322,6 @@ def compute_mesh_volume(vertices: torch.Tensor, faces: torch.Tensor) -> float:
     
     return abs(volume.item())
 
-
 def mesh_to_open3d(vertices: torch.Tensor, faces: torch.Tensor) -> o3d.geometry.TriangleMesh:
     """
     Convert PyTorch mesh to Open3D mesh.
@@ -349,7 +339,6 @@ def mesh_to_open3d(vertices: torch.Tensor, faces: torch.Tensor) -> o3d.geometry.
     
     return mesh
 
-
 def open3d_to_mesh(mesh: o3d.geometry.TriangleMesh) -> tuple[torch.Tensor, torch.Tensor]:
     """
     Convert Open3D mesh to PyTorch tensors.
@@ -365,7 +354,6 @@ def open3d_to_mesh(mesh: o3d.geometry.TriangleMesh) -> tuple[torch.Tensor, torch
     faces = torch.from_numpy(np.asarray(mesh.triangles)).long()
     
     return vertices, faces
-
 
 def save_mesh(
     vertices: torch.Tensor,
@@ -388,7 +376,6 @@ def save_mesh(
         mesh.vertex_colors = o3d.utility.Vector3dVector(vertex_colors.cpu().numpy())
     
     o3d.io.write_triangle_mesh(filename, mesh)
-
 
 def load_mesh(filename: str) -> tuple[torch.Tensor, torch.Tensor]:
     """

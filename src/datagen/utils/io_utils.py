@@ -1,3 +1,4 @@
+from typing import Any, Optional
 """
 IO工具函数
 
@@ -7,11 +8,9 @@ IO工具函数
 import numpy as np
 import json
 import os
-from typing import Dict, Optional, Any
 import logging
 
 logger = logging.getLogger(__name__)
-
 
 def save_numpy_data(data: np.ndarray, filepath: str, compressed: bool = True):
     """
@@ -31,7 +30,6 @@ def save_numpy_data(data: np.ndarray, filepath: str, compressed: bool = True):
     
     logger.info(f"数据已保存: {filepath}")
 
-
 def load_numpy_data(filepath: str) -> np.ndarray:
     """
     加载numpy数据
@@ -48,7 +46,6 @@ def load_numpy_data(filepath: str) -> np.ndarray:
     else:
         return np.load(filepath)
 
-
 def save_json_metadata(metadata: dict[str, Any], filepath: str):
     """
     保存JSON元数据
@@ -64,7 +61,6 @@ def save_json_metadata(metadata: dict[str, Any], filepath: str):
     
     logger.info(f"元数据已保存: {filepath}")
 
-
 def load_json_metadata(filepath: str) -> dict[str, Any]:
     """
     加载JSON元数据
@@ -79,7 +75,6 @@ def load_json_metadata(filepath: str) -> dict[str, Any]:
         metadata = json.load(f)
     
     return metadata
-
 
 def create_output_directory(base_dir: str, experiment_name: str) -> str:
     """
@@ -97,7 +92,6 @@ def create_output_directory(base_dir: str, experiment_name: str) -> str:
     
     logger.info(f"输出目录已创建: {output_dir}")
     return output_dir
-
 
 # 简化的几何工具函数
 def compute_sdf_sphere(points, center=[0, 0, 0], radius=1.0):

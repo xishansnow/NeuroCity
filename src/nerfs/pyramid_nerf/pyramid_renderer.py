@@ -1,3 +1,4 @@
+from typing import Optional
 """
 Pyramid Renderer Module
 Implements volume rendering for PyNeRF with multi-scale sampling
@@ -6,12 +7,10 @@ Implements volume rendering for PyNeRF with multi-scale sampling
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-from typing import Dict, List, Optional, Tuple
 import numpy as np
 import logging
 
 logger = logging.getLogger(__name__)
-
 
 class PyramidRenderer(nn.Module):
     """
@@ -101,7 +100,7 @@ class PyramidRenderer(nn.Module):
             chunk: Chunk size for rendering
             
         Returns:
-            List of rendered images
+            list of rendered images
         """
         H, W, focal = hwf
         results = []
@@ -160,7 +159,7 @@ class PyramidRenderer(nn.Module):
             c2w: Camera-to-world transformation [4, 4]
             
         Returns:
-            Tuple of (ray_origins, ray_directions)
+            tuple of (ray_origins, ray_directions)
         """
         device = c2w.device
         
@@ -190,7 +189,6 @@ class PyramidRenderer(nn.Module):
         rays_o = c2w[:3, -1].expand(rays_d.shape)
         
         return rays_o, rays_d
-
 
 class VolumetricRenderer(nn.Module):
     """
@@ -222,7 +220,7 @@ class VolumetricRenderer(nn.Module):
             perturb: Whether to add noise to samples
             
         Returns:
-            Tuple of (sample_points, z_values)
+            tuple of (sample_points, z_values)
         """
         N_rays = rays_o.shape[0]
         device = rays_o.device
@@ -360,7 +358,6 @@ class VolumetricRenderer(nn.Module):
             })
         
         return results
-
 
 class AntiAliasingRenderer(nn.Module):
     """

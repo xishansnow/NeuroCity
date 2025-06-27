@@ -1,3 +1,4 @@
+from typing import Any, Optional, Union
 """
 SDF Network Dataset Implementation
 处理SDF网络训练所需的数据
@@ -8,10 +9,8 @@ import torch.utils.data as data
 import numpy as np
 import json
 import os
-from typing import Dict, List, Optional, Tuple, Any, Union
 import trimesh
 from scipy.spatial.distance import cdist
-
 
 class SDFDataset(data.Dataset):
     """SDF网络数据集
@@ -57,7 +56,7 @@ class SDFDataset(data.Dataset):
         
         print(f"Loaded {len(self.data_list)} {split} samples")
     
-    def _load_data_list(self) -> list[Dict]:
+    def _load_data_list(self) -> list[dict]:
         """加载数据列表"""
         split_file = os.path.join(self.data_root, f'{self.split}.json')
         
@@ -270,7 +269,6 @@ class SDFDataset(data.Dataset):
             sdf = distances - 0.5  # 假设单位球
             return sdf.astype(np.float32)
 
-
 class SyntheticSDFDataset(data.Dataset):
     """合成SDF数据集
     
@@ -347,7 +345,6 @@ class SyntheticSDFDataset(data.Dataset):
         
         return sdf.reshape(-1, 1)
 
-
 class LatentSDFDataset(data.Dataset):
     """潜在SDF数据集
     
@@ -399,7 +396,6 @@ class LatentSDFDataset(data.Dataset):
         
         return sample
 
-
 def create_sdf_dataloader(
     dataset: data.Dataset, batch_size: int = 8, shuffle: bool = True, num_workers: int = 4, **kwargs
 ) -> data.DataLoader:
@@ -428,14 +424,12 @@ def create_sdf_dataloader(
         dataset, batch_size=batch_size, shuffle=shuffle, num_workers=num_workers, collate_fn=collate_fn, **kwargs
     )
 
-
 # 数据变换类
 class SDFTransform:
     """SDF数据变换基类"""
     
-    def __call__(self, sample: Dict) -> Dict:
+    def __call__(self, sample: dict) -> dict:
         raise NotImplementedError
-
 
 class RandomRotationSDF(SDFTransform):
     """随机旋转变换（保持SDF值不变）"""
@@ -443,7 +437,7 @@ class RandomRotationSDF(SDFTransform):
     def __init__(self, max_angle: float = np.pi):
         self.max_angle = max_angle
     
-    def __call__(self, sample: Dict) -> Dict:
+    def __call__(self, sample: dict) -> dict:
         # 生成随机旋转矩阵
         angle = np.random.uniform(-self.max_angle, self.max_angle)
         axis = np.random.randn(3)
@@ -468,19 +462,17 @@ class RandomRotationSDF(SDFTransform):
         
         return sample
 
-
 class RandomNoiseSDF(SDFTransform):
     """随机噪声变换"""
     
     def __init__(self, noise_std: float = 0.01):
         self.noise_std = noise_std
     
-    def __call__(self, sample: Dict) -> Dict:
+    def __call__(self, sample: dict) -> dict:
         points = sample['points']
         noise = torch.randn_like(points) * self.noise_std
         sample['points'] = points + noise
         return sample
-
 
 class ComposeSDF(SDFTransform):
     """组合多个变换"""
@@ -488,7 +480,7 @@ class ComposeSDF(SDFTransform):
     def __init__(self, transforms: list[SDFTransform]):
         self.transforms = transforms
     
-    def __call__(self, sample: Dict) -> Dict:
+    def __call__(self, sample: dict) -> dict:
         for transform in self.transforms:
             sample = transform(sample)
         return sample 

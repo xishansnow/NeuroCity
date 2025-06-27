@@ -1,3 +1,4 @@
+from typing import Any, Optional, Union
 """
 Trainer module for BungeeNeRF
 Implements progressive training strategy
@@ -8,7 +9,6 @@ import torch.nn as nn
 import torch.optim as optim
 from torch.utils.data import DataLoader
 from torch.utils.tensorboard import SummaryWriter
-from typing import Dict, List, Optional, Tuple, Any, Union 
 import numpy as np
 import os
 import time
@@ -22,7 +22,6 @@ from .utils import (
 )
 
 logger = logging.getLogger(__name__)
-
 
 class BungeeNeRFTrainer:
     """
@@ -301,14 +300,13 @@ class BungeeNeRFTrainer:
         
         logger.info(f"Loaded checkpoint from {checkpoint_path}")
 
-
 class ProgressiveTrainer(BungeeNeRFTrainer):
     """
     Progressive trainer for BungeeNeRF with multi-stage training
     """
     
     def __init__(
-        self, model: BungeeNeRF, config: BungeeNeRFConfig, train_dataset: MultiScaleDataset, val_dataset: Optional[BungeeNeRFDataset] = None, device: str = "cuda", progressive_schedule: Optional[Dict] = None
+        self, model: BungeeNeRF, config: BungeeNeRFConfig, train_dataset: MultiScaleDataset, val_dataset: Optional[BungeeNeRFDataset] = None, device: str = "cuda", progressive_schedule: Optional[dict] = None
     ):
         super().__init__(model, config, train_dataset, val_dataset, device)
         
@@ -430,7 +428,6 @@ class ProgressiveTrainer(BungeeNeRFTrainer):
             self._save_checkpoint(save_dir, f"epoch_{epoch+1}")
         
         logger.info("Progressive training completed")
-
 
 class MultiScaleTrainer(ProgressiveTrainer):
     """

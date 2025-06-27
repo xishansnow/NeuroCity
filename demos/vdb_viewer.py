@@ -1,3 +1,4 @@
+from typing import Optional
 #!/usr/bin/env python3
 """
 VDB数据查看器
@@ -10,7 +11,6 @@ import matplotlib.pyplot as plt
 from mpl_toolkits.mplot3d import Axes3D
 import argparse
 import os
-from typing import Optional, Tuple
 
 class VDBViewer:
     def __init__(self, data_path: str):

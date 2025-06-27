@@ -1,3 +1,4 @@
+from typing import Optional, import logging
 """
 合成场景生成器模块
 
@@ -5,12 +6,10 @@
 """
 
 import numpy as np
-from typing import Dict, List, Optional, Tuple, import logging
 from .occupancy_generator import OccupancyGenerator
 from .sdf_generator import SDFGenerator
 
 logger = logging.getLogger(__name__)
-
 
 class SyntheticSceneGenerator:
     """合成场景生成器"""
@@ -138,7 +137,7 @@ class SyntheticSceneGenerator:
             'occupancy': scene_occupancy, 'trees': trees, 'scene_type': 'forest'
         }
     
-    def generate_mixed_scene(self, scene_configs: list[Dict]) -> dict[str, np.ndarray]:
+    def generate_mixed_scene(self, scene_configs: list[dict]) -> dict[str, np.ndarray]:
         """
         生成混合场景
         
@@ -188,7 +187,7 @@ class SyntheticSceneGenerator:
         
         return noisy_occupancy.astype(np.float32)
     
-    def save_scene(self, scene_data: Dict, output_path: str):
+    def save_scene(self, scene_data: dict, output_path: str):
         """
         保存场景数据
         

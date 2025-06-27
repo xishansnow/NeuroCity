@@ -1,3 +1,4 @@
+from typing import Optional
 """
 Progressive Positional Encoder Module
 Implements progressive positional encoding for BungeeNeRF
@@ -6,12 +7,10 @@ Implements progressive positional encoding for BungeeNeRF
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-from typing import List, Optional, Tuple
 import numpy as np
 import logging
 
 logger = logging.getLogger(__name__)
-
 
 class ProgressivePositionalEncoder(nn.Module):
     """
@@ -110,7 +109,6 @@ class ProgressivePositionalEncoder(nn.Module):
         result = torch.cat(encoded, dim=-1)
         
         return result
-
 
 class MultiScaleEncoder(nn.Module):
     """
@@ -235,7 +233,6 @@ class MultiScaleEncoder(nn.Module):
         
         return encoded
 
-
 class FrequencyScheduler:
     """
     Scheduler for progressive frequency activation
@@ -290,7 +287,6 @@ class FrequencyScheduler:
         """Get number of frequency bands for given stage"""
         stage = min(stage, len(self.schedule) - 1)
         return self.schedule[stage]
-
 
 class AnisotropicEncoder(nn.Module):
     """
@@ -347,7 +343,6 @@ class AnisotropicEncoder(nn.Module):
             encoded.append(torch.cos(freq_input))
         
         return torch.cat(encoded, dim=-1)
-
 
 class HierarchicalEncoder(nn.Module):
     """

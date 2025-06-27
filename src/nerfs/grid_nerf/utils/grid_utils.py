@@ -1,3 +1,4 @@
+from typing import Any, Optional, Union
 """
 Grid utilities for Grid-NeRF.
 
@@ -7,9 +8,7 @@ This module provides utility functions for grid operations, spatial computations
 import torch
 import torch.nn.functional as F
 import numpy as np
-from typing import List, Optional, Tuple, Union, Any, Dict
 import math
-
 
 def compute_grid_bounds(
     points: torch.Tensor,
@@ -23,7 +22,7 @@ def compute_grid_bounds(
         margin: Additional margin to add to bounds
         
     Returns:
-        Tuple of (x_min, y_min, z_min, x_max, y_max, z_max)
+        tuple of (x_min, y_min, z_min, x_max, y_max, z_max)
     """
     min_bounds = torch.min(points, dim=0)[0]
     max_bounds = torch.max(points, dim=0)[0]
@@ -36,7 +35,6 @@ def compute_grid_bounds(
     max_bounds += margin_size
     
     return (*min_bounds.tolist(), *max_bounds.tolist())
-
 
 def world_to_grid_coords(
     world_coords: torch.Tensor,
@@ -65,7 +63,6 @@ def world_to_grid_coords(
     
     return grid_coords
 
-
 def grid_to_world_coords(
     grid_coords: torch.Tensor,
     scene_bounds: torch.Tensor,
@@ -92,7 +89,6 @@ def grid_to_world_coords(
     world_coords = normalized * scene_size + scene_min
     
     return world_coords
-
 
 def trilinear_interpolation(grid_features: torch.Tensor, grid_coords: torch.Tensor) -> torch.Tensor:
     """
@@ -129,7 +125,6 @@ def trilinear_interpolation(grid_features: torch.Tensor, grid_coords: torch.Tens
     interpolated = interpolated.squeeze(0).squeeze(1).squeeze(1).transpose(0, 1)
     
     return interpolated
-
 
 def create_voxel_grid(
     points: torch.Tensor,
@@ -185,7 +180,6 @@ def create_voxel_grid(
     
     return voxel_grid
 
-
 def dilate_grid(grid: torch.Tensor, kernel_size: int = 3) -> torch.Tensor:
     """
     Dilate a 3D grid using morphological dilation.
@@ -220,7 +214,6 @@ def dilate_grid(grid: torch.Tensor, kernel_size: int = 3) -> torch.Tensor:
     
     return dilated_grid
 
-
 def prune_grid(grid: torch.Tensor, threshold: float = 0.01) -> torch.Tensor:
     """
     Prune grid cells below threshold.
@@ -243,7 +236,6 @@ def prune_grid(grid: torch.Tensor, threshold: float = 0.01) -> torch.Tensor:
     
     return pruned_grid
 
-
 def compute_grid_occupancy(grid: torch.Tensor, threshold: float = 0.01) -> torch.Tensor:
     """
     Compute occupancy mask for grid.
@@ -263,7 +255,6 @@ def compute_grid_occupancy(grid: torch.Tensor, threshold: float = 0.01) -> torch
     
     return occupancy
 
-
 def adaptive_grid_subdivision(
     grid: torch.Tensor,
     occupancy_threshold: float = 0.01,
@@ -278,7 +269,7 @@ def adaptive_grid_subdivision(
         subdivision_threshold: Threshold for subdivision
         
     Returns:
-        Tuple of (subdivided grid [D*2, H*2, W*2, C], subdivision mask [D, H, W])
+        tuple of (subdivided grid [D*2, H*2, W*2, C], subdivision mask [D, H, W])
     """
     # Compute occupancy
     occupancy = compute_grid_occupancy(grid, occupancy_threshold)
@@ -305,7 +296,6 @@ def adaptive_grid_subdivision(
     
     return subdivided_grid, subdivision_mask
 
-
 def compute_grid_gradient(grid: torch.Tensor) -> torch.Tensor:
     """
     Compute spatial gradients of grid.
@@ -329,7 +319,6 @@ def compute_grid_gradient(grid: torch.Tensor) -> torch.Tensor:
     gradients = torch.stack([dx, dy, dz], dim=-1)
     
     return gradients
-
 
 def smooth_grid(grid: torch.Tensor, sigma: float = 1.0) -> torch.Tensor:
     """
@@ -374,7 +363,6 @@ def smooth_grid(grid: torch.Tensor, sigma: float = 1.0) -> torch.Tensor:
     smoothed_grid = torch.stack(smoothed_channels, dim=-1)
     
     return smoothed_grid
-
 
 def compute_grid_statistics(grid: torch.Tensor) -> dict[str, Union[float, int]]:
     """

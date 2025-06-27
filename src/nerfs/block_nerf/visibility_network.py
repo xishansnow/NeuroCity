@@ -1,3 +1,4 @@
+from typing import Optional
 """
 Visibility Network for Block-NeRF
 
@@ -10,9 +11,7 @@ import torch.nn as nn
 import torch.nn.functional as F
 import numpy as np
 from pathlib import Path
-from typing import Optional, Tuple
 from .block_nerf_model import positional_encoding
-
 
 class VisibilityNetwork(nn.Module):
     """
@@ -178,7 +177,6 @@ class VisibilityNetwork(nn.Module):
         
         return distance_mask & visibility_mask
 
-
 class VisibilityGuidedSampler:
     """
     Visibility-guided sampling for efficient training
@@ -204,7 +202,7 @@ class VisibilityGuidedSampler:
             visibility_weight: Weight for visibility-based sampling
             
         Returns:
-            Tuple of (sampled_origins, sampled_directions)
+            tuple of (sampled_origins, sampled_directions)
         """
         num_rays = ray_origins.shape[0]
         device = ray_origins.device

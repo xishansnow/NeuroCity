@@ -1,3 +1,4 @@
+from typing import Any, Optional, Union
 """
 Volumetric Renderer for Mega-NeRF
 
@@ -8,12 +9,10 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 import numpy as np
-from typing import Dict, List, Optional, Tuple, Any, Union 
 import logging
 from tqdm import tqdm
 
 logger = logging.getLogger(__name__)
-
 
 class VolumetricRenderer:
     """Standard volumetric renderer for NeRF-style models"""
@@ -357,7 +356,6 @@ class VolumetricRenderer:
         
         return ray_origins, ray_directions
 
-
 class BatchRenderer:
     """Efficient batch renderer for multiple rays and cameras"""
     
@@ -423,7 +421,7 @@ class BatchRenderer:
     def render_multiple_views(
         self,
         model,
-        camera_list: List,
+        camera_list: list,
         chunk_size: int = 1024,
         appearance_ids: Optional[list[int]] = None
     ) -> list[dict[str, np.ndarray]]:
@@ -432,12 +430,12 @@ class BatchRenderer:
         
         Args:
             model: Mega-NeRF model
-            camera_list: List of camera information
+            camera_list: list of camera information
             chunk_size: Chunk size for ray processing
-            appearance_ids: List of appearance IDs for each camera
+            appearance_ids: list of appearance IDs for each camera
             
         Returns:
-            List of rendered outputs for each camera
+            list of rendered outputs for each camera
         """
         results = []
         
@@ -451,7 +449,6 @@ class BatchRenderer:
             results.append(result)
         
         return results
-
 
 class InteractiveRenderer:
     """Interactive renderer with caching for real-time visualization"""

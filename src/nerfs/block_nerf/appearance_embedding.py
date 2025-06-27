@@ -1,3 +1,4 @@
+from typing import Optional, Union
 """
 Appearance Embedding Module for Block-NeRF
 
@@ -12,9 +13,7 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 import numpy as np
-from typing import Dict, List, Optional, Tuple, Union 
 import math
-
 
 class AppearanceEmbedding(nn.Module):
     """
@@ -183,7 +182,6 @@ class AppearanceEmbedding(nn.Module):
         
         return torch.argmin(distances).item()
 
-
 class ExposureEmbedding(nn.Module):
     """
     Exposure embedding module for handling camera exposure variations.
@@ -232,7 +230,6 @@ class ExposureEmbedding(nn.Module):
             # Positional encoding
             scaled = exposure_values * self.freq_bands
             return torch.cat([torch.sin(scaled), torch.cos(scaled)], dim=-1)
-
 
 class EnvironmentalEmbedding(nn.Module):
     """
@@ -295,7 +292,6 @@ class EnvironmentalEmbedding(nn.Module):
         
         return self.combiner(combined)
 
-
 class AdaptiveAppearanceEmbedding(nn.Module):
     """
     Adaptive appearance embedding that can handle various types of environmental variations.
@@ -303,7 +299,7 @@ class AdaptiveAppearanceEmbedding(nn.Module):
     
     def __init__(
         self,
-        appearance_config: Dict,
+        appearance_config: dict,
         use_exposure: bool = True,
         use_environmental: bool = False
     ):

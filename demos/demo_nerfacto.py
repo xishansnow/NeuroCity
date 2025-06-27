@@ -1,3 +1,4 @@
+from typing import Optional
 #!/usr/bin/env python3
 """
 Nerfacto 演示脚本
@@ -14,7 +15,6 @@ import os
 import torch
 import numpy as np
 import matplotlib.pyplot as plt
-from typing import Dict, List, Optional, Tuple
 
 # 添加项目根目录到Python路径
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
@@ -26,7 +26,6 @@ try:
 except ImportError as e:
     print(f"⚠️ Nerfacto模块导入失败: {e}")
     NERFACTO_AVAILABLE = False
-
 
 class MockNerfactoConfig:
     """模拟Nerfacto配置"""
@@ -45,7 +44,6 @@ class MockNerfactoConfig:
         self.far = 1000.0
         self.num_samples = 64
         self.num_importance_samples = 128
-
 
 class MockNerfacto(torch.nn.Module):
     """模拟Nerfacto模型"""
@@ -141,7 +139,6 @@ class MockNerfacto(torch.nn.Module):
             'density': density.squeeze(-1), 'color': color
         }
 
-
 def create_realistic_dataset(
     num_views: int = 100,
     image_size: int = 64,
@@ -199,7 +196,6 @@ def create_realistic_dataset(
     return (
         torch.stack(ray_origins), torch.stack(ray_directions), torch.stack(colors)
     )
-
 
 def train_nerfacto(
     model: MockNerfacto,
@@ -272,7 +268,6 @@ def train_nerfacto(
     print("✅ 训练完成!")
     return training_history
 
-
 def demonstrate_nerfacto():
     """演示Nerfacto的完整流程"""
     print("🌟 Nerfacto 演示")
@@ -329,7 +324,6 @@ def demonstrate_nerfacto():
     print("   ✅ 工程化设计")
     
     return model, training_history
-
 
 if __name__ == '__main__':
     print("启动Nerfacto演示...")

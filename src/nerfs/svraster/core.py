@@ -1,3 +1,4 @@
+from typing import Any, ByteString, Callable, Collection, Container, Deque, Generator, Generic, Iterable, Iterator, Mapping, Match, Optional, Pattern, Reversible, Sequence, SupportsAbs, SupportsBytes, SupportsComplex, SupportsFloat, SupportsIndex, SupportsInt, SupportsRound, Text, TypeVar, Union
 """
 Core components for SVRaster: Adaptive sparse voxels and rasterization.
 
@@ -9,13 +10,11 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 import numpy as np
-from typing import List, Optional, Tuple, Any, Dict, Union, Callable, Iterable, Iterator, Generator, TypeVar, Generic, Optional, Sequence, Mapping, Container, Collection, Set, FrozenSet, Deque, ByteString, Text, Pattern, Match, Reversible, SupportsInt, SupportsFloat, SupportsComplex, SupportsIndex, SupportsAbs, SupportsRound, SupportsBytes, SupportsFloat, SupportsComplex, SupportsAbs, SupportsRound, SupportsBytes, SupportsFloat, SupportsComplex, SupportsAbs, SupportsRound, SupportsBytes, SupportsFloat, SupportsComplex, SupportsAbs, SupportsRound, SupportsBytes, SupportsFloat, SupportsComplex, SupportsAbs, SupportsRound, SupportsBytes, SupportsFloat, SupportsComplex, SupportsAbs, SupportsRound, SupportsBytes, SupportsFloat, SupportsComplex, SupportsAbs, SupportsRound, SupportsBytes, SupportsFloat, SupportsComplex, SupportsAbs, SupportsRound, SupportsBytes, SupportsFloat, SupportsComplex, SupportsAbs, SupportsRound, SupportsBytes, SupportsFloat, SupportsComplex, SupportsAbs, SupportsRound, SupportsBytes, SupportsFloat, SupportsComplex, SupportsAbs, SupportsRound, SupportsBytes, SupportsFloat, SupportsComplex, SupportsAbs, SupportsRound, SupportsBytes, SupportsFloat, SupportsComplex, SupportsAbs, SupportsRound, SupportsBytes, SupportsFloat, SupportsComplex, SupportsAbs
 from dataclasses import dataclass
 import logging
 import os
 
 logger = logging.getLogger(__name__)
-
 
 @dataclass
 class SVRasterConfig:
@@ -57,7 +56,6 @@ class SVRasterConfig:
     use_view_dependent_color: bool = True
     use_opacity_regularization: bool = True
     opacity_reg_weight: float = 0.01
-
 
 class AdaptiveSparseVoxels(nn.Module):
     """
@@ -117,7 +115,7 @@ class AdaptiveSparseVoxels(nn.Module):
         color_dim = 3 * self.num_sh_coeffs
         self.voxel_colors.append(nn.Parameter(torch.randn(num_voxels, color_dim) * 0.1))
         
-        # Set levels and Morton codes
+        # set levels and Morton codes
         self.voxel_levels.append(torch.zeros(num_voxels, dtype=torch.int))
         self.voxel_morton_codes.append(self._compute_morton_codes(positions, 0))
     
@@ -288,7 +286,6 @@ class AdaptiveSparseVoxels(nn.Module):
     def get_total_voxel_count(self) -> int:
         """Get total number of voxels across all levels."""
         return sum(pos.shape[0] for pos in self.voxel_positions)
-
 
 class VoxelRasterizer(nn.Module):
     """
@@ -466,7 +463,6 @@ class VoxelRasterizer(nn.Module):
         
         return rgb_acc, depth_acc, weight_acc
 
-
 class SVRasterModel(nn.Module):
     """
     Main SVRaster model combining adaptive sparse voxels and rasterization.
@@ -541,7 +537,6 @@ class SVRasterModel(nn.Module):
                 os.path.join(output_dir, f'level_{level_idx}_sizes.npy'),
                 sizes
             )
-
 
 class SVRasterLoss(nn.Module):
     """Loss functions for SVRaster training."""

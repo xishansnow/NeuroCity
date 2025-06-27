@@ -1,3 +1,4 @@
+from typing import Optional
 """
 Coordinate Utilities - 坐标转换工具
 
@@ -8,8 +9,6 @@ import math
 import numpy as np
 import mercantile
 import pyproj
-from typing import List, Optional, Tuple
-
 
 def lat_lon_to_mercator(lat: float, lon: float) -> tuple[float, float]:
     """
@@ -28,7 +27,6 @@ def lat_lon_to_mercator(lat: float, lon: float) -> tuple[float, float]:
     y = y * 20037508.34 / 180
     return x, y
 
-
 def mercator_to_lat_lon(x: float, y: float) -> tuple[float, float]:
     """
     将墨卡托投影坐标转换为经纬度
@@ -45,7 +43,6 @@ def mercator_to_lat_lon(x: float, y: float) -> tuple[float, float]:
     lat = 180 / math.pi * (2 * math.atan(math.exp(lat * math.pi / 180)) - math.pi / 2)
     return lat, lon
 
-
 def lat_lon_to_tile(lat: float, lon: float, zoom: int) -> tuple[int, int]:
     """
     将经纬度转换为瓦片坐标
@@ -60,7 +57,6 @@ def lat_lon_to_tile(lat: float, lon: float, zoom: int) -> tuple[int, int]:
     """
     tile = mercantile.tile(lon, lat, zoom)
     return tile.x, tile.y
-
 
 def tile_to_lat_lon(x: int, y: int, zoom: int) -> tuple[float, float]:
     """
@@ -79,7 +75,6 @@ def tile_to_lat_lon(x: int, y: int, zoom: int) -> tuple[float, float]:
     lon = (bounds.west + bounds.east) / 2
     return lat, lon
 
-
 def calculate_tile_bounds(x: int, y: int, zoom: int) -> tuple[float, float, float, float]:
     """
     计算瓦片的地理边界
@@ -95,16 +90,13 @@ def calculate_tile_bounds(x: int, y: int, zoom: int) -> tuple[float, float, floa
     bounds = mercantile.bounds(x, y, zoom)
     return bounds.west, bounds.south, bounds.east, bounds.north
 
-
 def degrees_to_radians(degrees: float) -> float:
     """角度转弧度"""
     return degrees * math.pi / 180
 
-
 def radians_to_degrees(radians: float) -> float:
     """弧度转角度"""
     return radians * 180 / math.pi
-
 
 def calculate_distance(lat1: float, lon1: float, lat2: float, lon2: float) -> float:
     """
@@ -135,7 +127,6 @@ def calculate_distance(lat1: float, lon1: float, lat2: float, lon2: float) -> fl
     
     return R * c
 
-
 def get_tiles_in_bbox(
     west: float,
     south: float,
@@ -155,7 +146,6 @@ def get_tiles_in_bbox(
     """
     tiles = list(mercantile.tiles(west, south, east, north, zoom))
     return [(tile.x, tile.y) for tile in tiles]
-
 
 def normalize_coordinates(
     coords: np.ndarray,
@@ -183,7 +173,6 @@ def normalize_coordinates(
     
     return normalized
 
-
 def denormalize_coordinates(
     normalized_coords: np.ndarray,
     bounds: tuple[float,
@@ -209,7 +198,6 @@ def denormalize_coordinates(
     
     return coords
 
-
 def calculate_zoom_level(bbox: tuple[float, float, float, float], target_tiles: int = 100) -> int:
     """
     根据边界框和目标瓦片数计算合适的缩放级别
@@ -229,7 +217,6 @@ def calculate_zoom_level(bbox: tuple[float, float, float, float], target_tiles: 
             return zoom
     
     return 0
-
 
 def project_coordinates(
     coords: np.ndarray,

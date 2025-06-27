@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 """
 Pose Refinement Module for Block-NeRF
 
@@ -7,13 +9,14 @@ for large-scale urban scenes, as described in the Block-NeRF paper.
 Based on Block-NeRF: Scalable Large Scene Neural View Synthesis (CVPR 2022)
 """
 
+from typing import Optional, Union
+
+
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
 import numpy as np
-from typing import Dict, List, Optional, Tuple, Union 
 import math
-
 
 class PoseRefinement(nn.Module):
     """

@@ -7,8 +7,6 @@ unisphere contraction, spherical coordinates, and other spatial operations.
 
 import torch
 import numpy as np
-from typing import Tuple
-
 
 def contract_to_unisphere(positions: torch.Tensor, scene_radius: float = 1.0) -> torch.Tensor:
     """
@@ -43,7 +41,6 @@ def contract_to_unisphere(positions: torch.Tensor, scene_radius: float = 1.0) ->
     
     return contracted_positions
 
-
 def uncontract_from_unisphere(
     contracted_positions: torch.Tensor,
     scene_radius: float = 1.0,
@@ -75,7 +72,6 @@ def uncontract_from_unisphere(
     
     return original_positions
 
-
 def spherical_to_cartesian(spherical: torch.Tensor) -> torch.Tensor:
     """
     Convert spherical coordinates to Cartesian.
@@ -98,7 +94,6 @@ def spherical_to_cartesian(spherical: torch.Tensor) -> torch.Tensor:
     z = r * torch.cos(phi)
     
     return torch.stack([x, y, z], dim=-1)
-
 
 def cartesian_to_spherical(cartesian: torch.Tensor) -> torch.Tensor:
     """
@@ -124,7 +119,6 @@ def cartesian_to_spherical(cartesian: torch.Tensor) -> torch.Tensor:
     
     return torch.stack([r, theta, phi], dim=-1)
 
-
 def normalize_coordinates(
     positions: torch.Tensor,
     bbox_min: torch.Tensor,
@@ -146,7 +140,6 @@ def normalize_coordinates(
     
     return torch.clamp(normalized, 0, 1)
 
-
 def denormalize_coordinates(
     normalized_positions: torch.Tensor,
     bbox_min: torch.Tensor,
@@ -167,7 +160,6 @@ def denormalize_coordinates(
     positions = normalized_positions * bbox_size + bbox_min
     
     return positions
-
 
 def apply_pose_transform(positions: torch.Tensor, pose: torch.Tensor) -> torch.Tensor:
     """
@@ -192,7 +184,6 @@ def apply_pose_transform(positions: torch.Tensor, pose: torch.Tensor) -> torch.T
     
     return transformed
 
-
 def rotate_points(points: torch.Tensor, rotation_matrix: torch.Tensor) -> torch.Tensor:
     """
     Rotate points using rotation matrix.
@@ -206,7 +197,6 @@ def rotate_points(points: torch.Tensor, rotation_matrix: torch.Tensor) -> torch.
     """
     return (rotation_matrix @ points.T).T
 
-
 def compute_scene_bounds(
     positions: torch.Tensor,
     percentile: float = 95.0,
@@ -219,14 +209,13 @@ def compute_scene_bounds(
         percentile: Percentile for robust bound estimation
         
     Returns:
-        Tuple of (bbox_min, bbox_max)
+        tuple of (bbox_min, bbox_max)
     """
     # Use percentiles for robust bound estimation
     bbox_min = torch.quantile(positions, (100 - percentile) / 100, dim=0)
     bbox_max = torch.quantile(positions, percentile / 100, dim=0)
     
     return bbox_min, bbox_max
-
 
 def generate_random_directions(num_directions: int, device: torch.device = None) -> torch.Tensor:
     """
@@ -249,7 +238,6 @@ def generate_random_directions(num_directions: int, device: torch.device = None)
     directions = directions / torch.norm(directions, dim=-1, keepdim=True)
     
     return directions
-
 
 def fibonacci_sphere(num_points: int, device: torch.device = None) -> torch.Tensor:
     """
@@ -281,7 +269,6 @@ def fibonacci_sphere(num_points: int, device: torch.device = None) -> torch.Tens
     
     return torch.stack([x, y, z], dim=-1)
 
-
 def compute_viewing_direction(camera_pos: torch.Tensor, world_pos: torch.Tensor) -> torch.Tensor:
     """
     Compute viewing direction from camera to world position.
@@ -303,7 +290,6 @@ def compute_viewing_direction(camera_pos: torch.Tensor, world_pos: torch.Tensor)
     directions = directions / torch.norm(directions, dim=-1, keepdim=True)
     
     return directions
-
 
 def sample_hemisphere(
     num_samples: int,
@@ -332,7 +318,6 @@ def sample_hemisphere(
     directions = torch.where(dot_products < 0, -directions, directions)
     
     return directions
-
 
 def coordinate_grid_3d(
     resolution: int,
@@ -372,7 +357,6 @@ def coordinate_grid_3d(
     coords = torch.stack([X.flatten(), Y.flatten(), Z.flatten()], dim=-1)
     
     return coords
-
 
 def test_coordinate_transforms() -> None:
     """Test coordinate transformation functions."""
@@ -414,7 +398,6 @@ def test_coordinate_transforms() -> None:
     print(f"Unit vector error: {unit_vector_error:.6f}")
     
     print("Coordinate transformation tests completed!")
-
 
 if __name__ == "__main__":
     test_coordinate_transforms() 

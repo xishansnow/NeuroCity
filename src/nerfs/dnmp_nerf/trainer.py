@@ -1,3 +1,4 @@
+from typing import Any, Optional
 """
 Training module for DNMP-NeRF.
 
@@ -13,7 +14,6 @@ from torch.utils.data import DataLoader
 from torch.utils.tensorboard import SummaryWriter
 import numpy as np
 import os
-from typing import Dict, List, Optional, Tuple, Any
 from pathlib import Path
 import time
 from tqdm import tqdm
@@ -24,7 +24,6 @@ from .mesh_autoencoder import MeshAutoEncoder
 from .rasterizer import DNMPRasterizer, RasterizationConfig
 from .dataset import DNMPDataset
 from .utils import evaluation_utils, rendering_utils
-
 
 class DNMPTrainer:
     """Base trainer class for DNMP."""
@@ -243,7 +242,6 @@ class DNMPTrainer:
         
         print(f"Loaded checkpoint from epoch {self.epoch}")
 
-
 class GeometryTrainer(DNMPTrainer):
     """Trainer for geometry optimization stage."""
     
@@ -305,7 +303,6 @@ class GeometryTrainer(DNMPTrainer):
             print(f"Epoch {epoch}: Train Loss = {train_losses['total_loss']:.6f}")
             if val_loader is not None:
                 print(f"           Val Loss = {val_losses['total_loss']:.6f}")
-
 
 class RadianceTrainer(DNMPTrainer):
     """Trainer for radiance field training stage."""
@@ -422,7 +419,6 @@ class RadianceTrainer(DNMPTrainer):
                     batch['image'].squeeze,
                 )
 
-
 class TwoStageTrainer:
     """Complete two-stage training pipeline."""
     
@@ -506,7 +502,6 @@ class TwoStageTrainer:
         return {
             'geometry_trainer': geometry_trainer, 'radiance_trainer': radiance_trainer
         }
-
 
 def create_trainer(stage: str, *args, **kwargs):
     """

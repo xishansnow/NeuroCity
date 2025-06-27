@@ -72,7 +72,7 @@ class TestSVRasterCore(unittest.TestCase):
             'positions': torch.randn(
                 num_voxels,
                 3,
-            )
+            ),
             'levels': torch.zeros(
                 num_voxels,
                 dtype=torch.int,

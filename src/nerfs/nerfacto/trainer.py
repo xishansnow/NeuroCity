@@ -1,3 +1,4 @@
+from typing import Any, Optional
 """
 Nerfacto Trainer Module
 
@@ -19,14 +20,12 @@ import numpy as np
 import os
 import json
 import time
-from typing import Dict, List, Optional, Tuple, Any
 from dataclasses import dataclass, field
 import wandb
 from tqdm import tqdm
 
 from .core import NerfactoModel, NerfactoConfig, NerfactoLoss
 from .dataset import NerfactoDataset, NerfactoDatasetConfig
-
 
 @dataclass
 class NerfactoTrainerConfig:
@@ -83,7 +82,6 @@ class NerfactoTrainerConfig:
     # Output directories
     output_dir: str = "outputs"
     experiment_name: str = "nerfacto_experiment"
-
 
 class NerfactoTrainer:
     """Main trainer class for Nerfacto."""
@@ -503,7 +501,6 @@ class NerfactoTrainer:
             self.scaler.load_state_dict(checkpoint['scaler_state_dict'])
         
         print(f"Loaded checkpoint from epoch {self.epoch}, step {self.step}")
-
 
 def create_nerfacto_trainer(
     data_dir: str, output_dir: str = "outputs", experiment_name: str = "nerfacto_experiment", **kwargs: Any

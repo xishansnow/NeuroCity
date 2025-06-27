@@ -1,3 +1,4 @@
+from typing import Optional, Union
 """
 Dataset module for DNMP-NeRF.
 
@@ -10,12 +11,10 @@ import torch.utils.data as data
 import numpy as np
 import os
 import json
-from typing import Dict, List, Optional, Tuple, Union
 from pathlib import Path
 import cv2
 from PIL import Image
 import open3d as o3d
-
 
 class DNMPDataset(data.Dataset):
     """Base dataset class for DNMP training."""
@@ -174,7 +173,6 @@ class DNMPDataset(data.Dataset):
             )
         }
 
-
 class UrbanSceneDataset(DNMPDataset):
     """Generic urban scene dataset."""
     
@@ -201,7 +199,7 @@ class UrbanSceneDataset(DNMPDataset):
         else:
             raise FileNotFoundError(f"Metadata file not found: {metadata_path}")
     
-    def _parse_camera(self, camera_data: Dict) -> dict[str, torch.Tensor]:
+    def _parse_camera(self, camera_data: dict) -> dict[str, torch.Tensor]:
         """Parse camera parameters from metadata."""
         return {
             'K': torch.tensor(
@@ -209,7 +207,6 @@ class UrbanSceneDataset(DNMPDataset):
                 dtype=torch.float32,
             )
         }
-
 
 class KITTI360Dataset(DNMPDataset):
     """KITTI-360 dataset for urban scene reconstruction."""
@@ -333,7 +330,6 @@ class KITTI360Dataset(DNMPDataset):
         
         return sample
 
-
 class WaymoDataset(DNMPDataset):
     """Waymo Open Dataset for urban scene reconstruction."""
     
@@ -371,7 +367,6 @@ class WaymoDataset(DNMPDataset):
             if pcd_path.exists():
                 self.point_cloud = self.load_point_cloud(str(pcd_path))
 
-
 def create_dataset(dataset_type: str, *args, **kwargs) -> DNMPDataset:
     """
     Factory function to create datasets.
@@ -392,7 +387,6 @@ def create_dataset(dataset_type: str, *args, **kwargs) -> DNMPDataset:
     else:
         raise ValueError(f"Unknown dataset type: {dataset_type}")
 
-
 def create_dataloader(
     dataset: DNMPDataset,
     batch_size: int = 1,
@@ -404,8 +398,7 @@ def create_dataloader(
         dataset, batch_size=batch_size, shuffle=shuffle, num_workers=num_workers, pin_memory=True, collate_fn=dnmp_collate_fn
     )
 
-
-def dnmp_collate_fn(batch: list[Dict]) -> dict[str, torch.Tensor]:
+def dnmp_collate_fn(batch: list[dict]) -> dict[str, torch.Tensor]:
     """Custom collate function for DNMP datasets."""
     # Handle variable-sized data
     collated = {}

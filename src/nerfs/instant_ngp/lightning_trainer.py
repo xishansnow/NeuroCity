@@ -1,8 +1,12 @@
+from __future__ import annotations
+
 """
 PyTorch Lightning trainer for Instant-NGP.
 
 This module provides a Lightning-based training framework for Instant-NGP models, optimized for fast neural radiance field training.
 """
+
+from typing import Any, Optional
 
 import torch
 import torch.nn.functional as F
@@ -11,7 +15,6 @@ from pytorch_lightning.callbacks import ModelCheckpoint, LearningRateMonitor, Ea
 from pytorch_lightning.loggers import TensorBoardLogger, WandbLogger
 from pytorch_lightning.strategies import DDPStrategy
 import torchmetrics
-from typing import Dict, List, Optional, Tuple, Any
 from dataclasses import dataclass
 import numpy as np
 import logging
@@ -20,7 +23,6 @@ from .core import InstantNGP, InstantNGPConfig, InstantNGPLoss, InstantNGPRender
 from .dataset import InstantNGPDataset
 
 logger = logging.getLogger(__name__)
-
 
 @dataclass
 class InstantNGPLightningConfig:
@@ -70,7 +72,6 @@ class InstantNGPLightningConfig:
     # Hash grid optimization
     hash_decay_rate: float = 0.95
     hash_update_freq: int = 100
-
 
 class InstantNGPLightningModule(pl.LightningModule):
     """PyTorch Lightning module for Instant-NGP training."""
@@ -156,13 +157,13 @@ class InstantNGPLightningModule(pl.LightningModule):
             self._log_hash_statistics()
         
         return losses['total_loss']
-    
+
     def validation_step(
         self,
         batch: dict[str,
         torch.Tensor],
         batch_idx: int,
-    )
+    ) -> dict[str, torch.Tensor]:
         """Validation step."""
         # Extract batch data
         rays_o = batch['rays_o']
@@ -338,7 +339,6 @@ class InstantNGPLightningModule(pl.LightningModule):
                     low_grad_mask = grad_magnitude < 1e-6
                     embedding.weight.data[low_grad_mask.squeeze()] *= self.config.hash_decay_rate
 
-
 def create_instant_ngp_lightning_trainer(
     config: InstantNGPLightningConfig, train_dataset: InstantNGPDataset, val_dataset: Optional[InstantNGPDataset] = None, max_epochs: int = 100, gpus: int | list[int] = 1, logger_type: str = "tensorboard", project_name: str = "instant_ngp", experiment_name: str = "default", checkpoint_dir: str = "checkpoints", **trainer_kwargs
 ) -> tuple[InstantNGPLightningModule, pl.Trainer]:
@@ -358,7 +358,7 @@ def create_instant_ngp_lightning_trainer(
         **trainer_kwargs: Additional trainer arguments
         
     Returns:
-        Tuple of (lightning_module, trainer)
+        tuple of (lightning_module, trainer)
     """
     # Create Lightning module
     lightning_module = InstantNGPLightningModule(config)
@@ -378,10 +378,11 @@ def create_instant_ngp_lightning_trainer(
     # Setup callbacks
     callbacks = [
         ModelCheckpoint(
-            dirpath=checkpoint_dir, filename=f"{
-                experiment_name,
-            }
-        ), LearningRateMonitor(logging_interval="step"), EarlyStopping(
+            dirpath=checkpoint_dir, 
+            filename=f"{experiment_name}"
+        ), 
+        LearningRateMonitor(logging_interval="step"), 
+        EarlyStopping(
             monitor="val/psnr", mode="max", patience=50, # Longer patience for Instant-NGP
             verbose=True
         )
@@ -400,7 +401,6 @@ def create_instant_ngp_lightning_trainer(
     )
     
     return lightning_module, trainer
-
 
 def train_instant_ngp_lightning(
     model_config: InstantNGPConfig, lightning_config: InstantNGPLightningConfig, train_dataset, val_dataset = None, **trainer_kwargs

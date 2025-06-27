@@ -1,3 +1,4 @@
+from typing import Any, Optional
 """
 Training Module for NeuralVDB
 
@@ -9,7 +10,6 @@ import torch.nn as nn
 import torch.optim as optim
 from torch.utils.data import DataLoader
 import numpy as np
-from typing import Dict, List, Optional, Tuple, Any
 import logging
 from tqdm import tqdm
 import os
@@ -17,7 +17,6 @@ import os
 from .networks import AdvancedLossFunction
 
 logger = logging.getLogger(__name__)
-
 
 class NeuralVDBTrainer:
     """NeuralVDB训练器 - 基础版本"""
@@ -220,7 +219,6 @@ class NeuralVDBTrainer:
             self.val_losses = checkpoint['val_losses']
         
         logger.info(f"模型已从 {path} 加载")
-
 
 class AdvancedNeuralVDBTrainer:
     """高级NeuralVDB训练器"""
@@ -509,7 +507,6 @@ class AdvancedNeuralVDBTrainer:
             self.sparse_grid.feature_compressor.quantization_bits = comp_data['quantization_bits']
         
         logger.info(f"高级模型已从 {path} 加载")
-
 
 class NeuralSDFTrainer:
     """SDF/Occupancy神经网络训练器"""

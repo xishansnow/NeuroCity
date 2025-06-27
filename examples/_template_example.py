@@ -97,7 +97,7 @@ def main():
         "--module",
         type=str,
         required=True,
-        help="NeRF module name,
+        help="NeRF module name"
     )
     parser.add_argument("--example", type=str, default="basic", help="Example to run")
     parser.add_argument(

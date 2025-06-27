@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 """
 Spatial Partitioner for Mega-NeRF
 
@@ -5,15 +7,16 @@ This module handles the spatial decomposition of large-scale scenes
 into manageable subregions for parallel training and rendering.
 """
 
+from typing import Any, Optional, Union
+
+
 import numpy as np
 import torch
-from typing import Dict, List, Optional, Tuple, Any, Union
 from dataclasses import dataclass
 import logging
 from abc import ABC, abstractmethod
 
 logger = logging.getLogger(__name__)
-
 
 class SpatialPartitioner(ABC):
     """Base class for spatial partitioning strategies"""
@@ -36,7 +39,6 @@ class SpatialPartitioner(ABC):
     def get_partition_bounds(self, partition_idx: int) -> tuple[float, ...]:
         """Get bounds for a specific partition"""
         pass
-
 
 class GridPartitioner(SpatialPartitioner):
     """Grid-based spatial partitioner"""
@@ -223,7 +225,6 @@ class GridPartitioner(SpatialPartitioner):
             logger.info(f"Partition visualization saved to {save_path}")
         
         return fig, ax
-
 
 class GeometryAwarePartitioner(SpatialPartitioner):
     """Geometry-aware spatial partitioner that considers scene structure"""

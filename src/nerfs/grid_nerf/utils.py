@@ -1,3 +1,4 @@
+from typing import Any, Optional
 """
 Grid-NeRF Utilities Module
 
@@ -17,14 +18,12 @@ import torch.nn.functional as F
 import numpy as np
 import logging
 from pathlib import Path
-from typing import Dict, List, Optional, Tuple, Any
 import matplotlib.pyplot as plt
 from PIL import Image
 import json
 import yaml
 from torchvision.utils import save_image as torch_save_image
 from torch.optim.lr_scheduler import _LRScheduler
-
 
 # Image Metrics
 def compute_psnr(pred: torch.Tensor, target: torch.Tensor, max_val: float = 1.0) -> float:
@@ -43,7 +42,6 @@ def compute_psnr(pred: torch.Tensor, target: torch.Tensor, max_val: float = 1.0)
     if mse == 0:
         return float('inf')
     return 20 * torch.log10(max_val / torch.sqrt(mse)).item()
-
 
 def compute_ssim(
     pred: torch.Tensor, target: torch.Tensor, window_size: int = 11, data_range: float = 1.0
@@ -100,7 +98,6 @@ def compute_ssim(
     
     return ssim_map.mean().item()
 
-
 def create_gaussian_window(window_size: int, sigma: float) -> torch.Tensor:
     """Create a 2D Gaussian window for SSIM computation."""
     gauss = torch.Tensor([
@@ -110,7 +107,6 @@ def create_gaussian_window(window_size: int, sigma: float) -> torch.Tensor:
     gauss = gauss / gauss.sum()
     window_2d = gauss.unsqueeze(1) @ gauss.unsqueeze(0)
     return window_2d
-
 
 def compute_lpips(pred: torch.Tensor, target: torch.Tensor, net: str = 'alex') -> float:
     """
@@ -156,7 +152,6 @@ def compute_lpips(pred: torch.Tensor, target: torch.Tensor, net: str = 'alex') -
     
     return lpips_val.mean().item()
 
-
 # Visualization and I/O
 def save_image(
     image: torch.Tensor, path: str | Path, normalize: bool = True, quality: int = 95
@@ -194,7 +189,6 @@ def save_image(
     else:
         cv2.imwrite(str(path), cv2.cvtColor(image, cv2.COLOR_RGB2BGR))
 
-
 def load_image(path: str | Path, target_size: Optional[tuple[int, int]] = None) -> np.ndarray:
     """
     Load an image from file.
@@ -219,7 +213,6 @@ def load_image(path: str | Path, target_size: Optional[tuple[int, int]] = None) 
     
     # Normalize to [0, 1]
     return image.astype(np.float32) / 255.0
-
 
 def create_video_from_images(
     image_dir: str | Path, output_path: str | Path, fps: int = 30, pattern: str = "*.png"
@@ -263,7 +256,6 @@ def create_video_from_images(
     
     print(f"Created video: {output_path}")
 
-
 def create_comparison_grid(
     images: list[torch.Tensor], titles: Optional[list[str]] = None, output_path: Optional[str | Path] = None, figsize: tuple[int, int] = (
         15,
@@ -274,7 +266,7 @@ def create_comparison_grid(
     Create a comparison grid of images.
     
     Args:
-        images: List of image tensors [H, W, C]
+        images: list of image tensors [H, W, C]
         titles: Optional list of titles for each image
         output_path: Optional path to save the figure
         figsize: Figure size
@@ -313,7 +305,6 @@ def create_comparison_grid(
     else:
         return fig
 
-
 # Logging and Configuration
 def setup_logging(log_file: Optional[str | Path] = None, level: int = logging.INFO) -> None:
     """Setup logging configuration."""
@@ -330,7 +321,6 @@ def setup_logging(log_file: Optional[str | Path] = None, level: int = logging.IN
         )
     )
 
-
 def load_config(config_path: str | Path) -> dict[str, Any]:
     """Load configuration from file."""
     config_path = Path(config_path)
@@ -342,7 +332,6 @@ def load_config(config_path: str | Path) -> dict[str, Any]:
             return json.load(f)
         else:
             raise ValueError(f"Unsupported config file format: {config_path.suffix}")
-
 
 def save_config(config: dict[str, Any], output_path: str | Path) -> None:
     """Save configuration to file."""
@@ -356,7 +345,6 @@ def save_config(config: dict[str, Any], output_path: str | Path) -> None:
             json.dump(config, f, indent=2)
         else:
             raise ValueError(f"Unsupported config file format: {output_path.suffix}")
-
 
 # Learning Rate Scheduling
 class CosineAnnealingWarmRestarts(_LRScheduler):
@@ -402,7 +390,6 @@ class CosineAnnealingWarmRestarts(_LRScheduler):
         for param_group, lr in zip(self.optimizer.param_groups, self.get_lr()):
             param_group['lr'] = lr
 
-
 def get_learning_rate_scheduler(
     optimizer, scheduler_type: str = 'cosine', max_steps: int = 100000, warmup_steps: int = 1000, **kwargs
 ):
@@ -428,7 +415,6 @@ def get_learning_rate_scheduler(
         )
     else:
         raise ValueError(f"Unknown scheduler type: {scheduler_type}")
-
 
 # Mathematical Utilities
 def positional_encoding(x: torch.Tensor, L: int = 10) -> torch.Tensor:
@@ -460,11 +446,9 @@ def positional_encoding(x: torch.Tensor, L: int = 10) -> torch.Tensor:
     new_shape = shape[:-1] + (encoded.shape[-1], )
     return encoded.view(new_shape)
 
-
 def safe_normalize(x: torch.Tensor, dim: int = -1, eps: float = 1e-8) -> torch.Tensor:
     """Safely normalize a tensor along a dimension."""
     return F.normalize(x, dim=dim, eps=eps)
-
 
 def get_ray_directions(
     H: int,
@@ -501,7 +485,6 @@ def get_ray_directions(
     ], dim=-1)  # [H, W, 3]
     
     return directions
-
 
 def sample_along_rays(
     rays_o: torch.Tensor, rays_d: torch.Tensor, near: float, far: float, n_samples: int, perturb: bool = True
@@ -543,7 +526,6 @@ def sample_along_rays(
     points = rays_o[..., None, :] + rays_d[..., None, :] * z_vals[..., :, None]
     
     return points, z_vals
-
 
 def volume_rendering(
     rgb: torch.Tensor, density: torch.Tensor, z_vals: torch.Tensor, rays_d: torch.Tensor, white_background: bool = False

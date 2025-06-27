@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 """
 Plenoxels Trainer Module
 
@@ -12,6 +14,9 @@ Key features:
 - Efficient ray batching
 """
 
+from typing import Any, Optional
+
+
 import os
 import time
 import torch
@@ -19,7 +24,6 @@ import torch.nn as nn
 import torch.optim as optim
 from torch.utils.tensorboard import SummaryWriter
 import numpy as np
-from typing import Dict, List, Optional, Tuple, Any
 from dataclasses import dataclass
 import logging
 from tqdm import tqdm
@@ -32,7 +36,6 @@ from .neuralvdb_interface import (
 )
 
 logger = logging.getLogger(__name__)
-
 
 @dataclass
 class PlenoxelTrainerConfig:
@@ -82,7 +85,6 @@ class PlenoxelTrainerConfig:
     save_neuralvdb: bool = False
     neuralvdb_config: Optional[NeuralVDBConfig] = None
     neuralvdb_save_interval: int = 10000
-
 
 class PlenoxelTrainer:
     """Main trainer class for Plenoxels."""
@@ -584,7 +586,6 @@ class PlenoxelTrainer:
                 imageio.imwrite(os.path.join(output_dir, f'render_{i:03d}.png'), rgb_uint8)
         
         return rendered_images
-
 
 def create_plenoxel_trainer(
     model_config: PlenoxelConfig,

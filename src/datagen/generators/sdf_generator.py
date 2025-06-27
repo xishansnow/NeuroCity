@@ -1,3 +1,4 @@
+from typing import Optional, import logging
 """
 SDF生成器模块
 
@@ -9,10 +10,8 @@ import torch.nn as nn
 import torch.optim as optim
 from torch.utils.data import Dataset, DataLoader
 import numpy as np
-from typing import Dict, List, Optional, Tuple, import logging
 
 logger = logging.getLogger(__name__)
-
 
 class SDFDataset(Dataset):
     """SDF数据集"""
@@ -33,7 +32,6 @@ class SDFDataset(Dataset):
     
     def __getitem__(self, idx):
         return self.coords[idx], self.sdf_values[idx]
-
 
 class PositionalEncoding(nn.Module):
     """位置编码"""
@@ -61,7 +59,6 @@ class PositionalEncoding(nn.Module):
         encoded = torch.stack(encodings, dim=1)  # (batch_size, num_features)
         
         return torch.cat([x, encoded], dim=1)
-
 
 class SDFMLP(nn.Module):
     """SDF多层感知机网络"""
@@ -136,13 +133,12 @@ class SDFMLP(nn.Module):
             x = self.pos_encoding(x)
         return self.network(x)
 
-
 class SDFGenerator:
     """SDF生成器"""
     
     def __init__(
         self,
-        model_config: Optional[Dict] = None,
+        model_config: Optional[dict] = None,
         device: str = 'auto',
         learning_rate: float = 1e-3,
         weight_decay: float = 1e-5,
@@ -187,7 +183,7 @@ class SDFGenerator:
         self,
         coordinates: np.ndarray,
         geometry_type: str = 'sphere',
-        geometry_params: Dict = None,
+        geometry_params: dict = None,
     )
         """生成几何体的SDF值"""
         if geometry_params is None:
@@ -202,7 +198,7 @@ class SDFGenerator:
         else:
             raise ValueError(f"未知几何体类型: {geometry_type}")
     
-    def _sphere_sdf(self, coords: np.ndarray, params: Dict) -> np.ndarray:
+    def _sphere_sdf(self, coords: np.ndarray, params: dict) -> np.ndarray:
         """计算球体SDF"""
         center = np.array(params.get('center', [0, 0, 0]))
         radius = params.get('radius', 1.0)
@@ -210,7 +206,7 @@ class SDFGenerator:
         distances = np.linalg.norm(coords - center, axis=1)
         return distances - radius
     
-    def _box_sdf(self, coords: np.ndarray, params: Dict) -> np.ndarray:
+    def _box_sdf(self, coords: np.ndarray, params: dict) -> np.ndarray:
         """计算盒子SDF"""
         center = np.array(params.get('center', [0, 0, 0]))
         size = np.array(params.get('size', [1, 1, 1]))
@@ -227,7 +223,7 @@ class SDFGenerator:
         
         return sdf
     
-    def _cylinder_sdf(self, coords: np.ndarray, params: Dict) -> np.ndarray:
+    def _cylinder_sdf(self, coords: np.ndarray, params: dict) -> np.ndarray:
         """计算圆柱体SDF"""
         center = np.array(params.get('center', [0, 0, 0]))
         radius = params.get('radius', 1.0)
@@ -384,7 +380,7 @@ class SDFGenerator:
         float,
         float,
         float],
-        geometry_configs: list[Dict],
+        geometry_configs: list[dict],
         n_samples: int = 100000,
         noise_std: float = 0.01,
     )

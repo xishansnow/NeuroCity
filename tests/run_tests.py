@@ -49,8 +49,10 @@ def run_test_file(test_file):
     
     try:
         result = subprocess.run(
-            [sys.executable,
-            str,
+            [sys.executable, str(test_file)],
+            capture_output=True,
+            text=True,
+            timeout=60
         )
         
         if result.stdout:

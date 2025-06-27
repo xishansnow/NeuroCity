@@ -1,3 +1,4 @@
+from typing import Optional
 #!/usr/bin/env python3
 """
 Classic NeRF 演示脚本
@@ -14,7 +15,6 @@ import os
 import torch
 import numpy as np
 import matplotlib.pyplot as plt
-from typing import Dict, List, Optional, Tuple
 
 # 添加项目根目录到Python路径
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
@@ -27,7 +27,6 @@ try:
 except ImportError as e:
     print(f"⚠️ Classic NeRF模块导入失败: {e}")
     CLASSIC_NERF_AVAILABLE = False
-
 
 class MockClassicNeRFConfig:
     """模拟Classic NeRF配置"""
@@ -43,7 +42,6 @@ class MockClassicNeRFConfig:
         self.num_importance_samples = 128
         self.pe_freq_pos = 10
         self.pe_freq_dir = 4
-
 
 class MockClassicNeRF(torch.nn.Module):
     """模拟Classic NeRF模型"""
@@ -131,7 +129,6 @@ class MockClassicNeRF(torch.nn.Module):
             'density': density.squeeze(-1), 'color': color
         }
 
-
 def create_synthetic_dataset(
     num_views: int = 100,
     image_size: int = 64,
@@ -180,7 +177,6 @@ def create_synthetic_dataset(
     return (
         torch.stack(ray_origins), torch.stack(ray_directions), torch.stack(colors)
     )
-
 
 def train_classic_nerf(
     config: MockClassicNeRFConfig,
@@ -239,7 +235,6 @@ def train_classic_nerf(
     print("✅ 训练完成!")
     return model
 
-
 def render_novel_views(
     model: MockClassicNeRF,
     config: MockClassicNeRFConfig,
@@ -280,7 +275,6 @@ def render_novel_views(
             rendered_images.append(image)
     
     return rendered_images
-
 
 def visualize_results(rendered_images: list[torch.Tensor], save_path: str = "demo_outputs"):
     """可视化渲染结果"""
@@ -325,7 +319,6 @@ def visualize_results(rendered_images: list[torch.Tensor], save_path: str = "dem
         plt.close()
     
     print(f"💾 结果保存到: {save_path}/")
-
 
 def demonstrate_classic_nerf():
     """演示Classic NeRF的完整流程"""
@@ -378,7 +371,6 @@ def demonstrate_classic_nerf():
     print("   ✅ 端到端可微分渲染")
     
     return model, rendered_images
-
 
 if __name__ == '__main__':
     print("启动Classic NeRF演示...")

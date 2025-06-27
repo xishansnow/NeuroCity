@@ -125,9 +125,7 @@ def test_dataset_creation():
         
         # 测试数据访问
         sample = dataset[0]
-        logger.info(f"✅ 数据访问成功: coords shape={
-            sample['coords'].shape,
-        }
+        logger.info(f"✅ 数据访问成功: coords shape={sample['coords'].shape}")
         
         return True, dataset
     except Exception as e:

@@ -1,3 +1,4 @@
+from typing import Optional
 """
 CNC-NeRF Trainer Module
 
@@ -11,7 +12,6 @@ import torch.optim as optim
 import numpy as np
 import time
 from pathlib import Path
-from typing import Dict, Optional
 from dataclasses import dataclass
 
 try:
@@ -22,7 +22,6 @@ except ImportError:
 
 from .core import CNCNeRF, CNCNeRFConfig
 from .dataset import CNCNeRFDataset, CNCNeRFDatasetConfig
-
 
 @dataclass
 class CNCNeRFTrainerConfig:
@@ -56,7 +55,6 @@ class CNCNeRFTrainerConfig:
     
     # Optimization
     grad_clip_norm: float = 1.0
-
 
 class CNCNeRFTrainer:
     """Trainer for CNC-NeRF model."""
@@ -403,7 +401,6 @@ class CNCNeRFTrainer:
         return {
             'compression_info': compression_info, 'compression_stats': stats
         }
-
 
 def create_cnc_nerf_trainer(
     model_config: CNCNeRFConfig,

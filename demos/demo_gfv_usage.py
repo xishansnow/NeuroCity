@@ -10,7 +10,6 @@ import sys
 import os
 import numpy as np
 import logging
-from typing import List, Tuple
 
 # 添加项目根目录到Python路径
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
@@ -27,7 +26,6 @@ from src.gfv.utils import (
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
-
 
 def demonstrate_migration_benefits() -> GlobalFeatureLibrary:
     """演示迁移到GFV包后的优势"""
@@ -54,7 +52,6 @@ def demonstrate_migration_benefits() -> GlobalFeatureLibrary:
     
     return gfv_library
 
-
 def compare_old_vs_new_usage():
     """对比旧用法和新用法"""
     logger.info("=== 新旧用法对比 ===")
@@ -68,7 +65,6 @@ def compare_old_vs_new_usage():
     logger.info("  from src.gfv.utils import plot_coverage_map, calculate_distance")
     logger.info("  from src.gfv.trainer import GFVTrainer, GFVLightningModule")
     logger.info("  # 功能按模块分离，更易维护和扩展")
-
 
 def demonstrate_new_features():
     """演示GFV包的新功能"""
@@ -113,7 +109,6 @@ def demonstrate_new_features():
     logger.info("   - 数据验证: validate_data_consistency")
     logger.info("   - 特征插值: interpolate_features")
 
-
 def demonstrate_performance_improvements():
     """演示性能改进"""
     logger.info("=== 性能改进演示 ===")
@@ -145,7 +140,6 @@ def demonstrate_performance_improvements():
     stats = gfv_library.database.get_database_stats()
     logger.info(f"✅ 缓存状态: {stats['cache_size']} 项缓存")
 
-
 def demonstrate_extensibility():
     """演示扩展性"""
     logger.info("=== 扩展性演示 ===")
@@ -170,7 +164,6 @@ def demonstrate_extensibility():
             super().__init__(*args, **kwargs)
             logger.info("   - 示例: 自定义训练器可以实现特殊的训练逻辑")
 
-
 def demonstrate_integration_with_neurocity():
     """演示与NeuroCity项目的集成"""
     logger.info("=== 与NeuroCity项目集成演示 ===")
@@ -194,7 +187,6 @@ def demonstrate_integration_with_neurocity():
     logger.info("   - 可以与NeuroCity的3D渲染系统集成")
     logger.info("   - 支持Web端交互式可视化")
     logger.info("   - 与TensorBoard集成进行训练监控")
-
 
 def main():
     """主演示函数"""
@@ -245,7 +237,6 @@ def main():
     except Exception as e:
         logger.error(f"演示过程中发生错误: {e}")
         raise
-
 
 if __name__ == "__main__":
     main() 

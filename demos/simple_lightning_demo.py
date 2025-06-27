@@ -1,3 +1,4 @@
+from typing import Any
 """
 简化的PyTorch Lightning NeRF演示
 
@@ -10,10 +11,8 @@ import pytorch_lightning as pl
 from pytorch_lightning.callbacks import ModelCheckpoint, EarlyStopping, LearningRateMonitor
 from pytorch_lightning.loggers import TensorBoardLogger
 import torchmetrics
-from typing import Dict, Any
 from dataclasses import dataclass
 import numpy as np
-
 
 @dataclass
 class SimpleNeRFConfig:
@@ -22,7 +21,6 @@ class SimpleNeRFConfig:
     num_layers: int = 4
     learning_rate: float = 5e-4
     pe_freq: int = 10  # 位置编码频率
-
 
 class SimpleNeRF(pl.LightningModule):
     """简化的NeRF模型，用于演示PyTorch Lightning"""
@@ -145,7 +143,6 @@ class SimpleNeRF(pl.LightningModule):
             }
         }
 
-
 class MockNeRFDataset(torch.utils.data.Dataset):
     """模拟NeRF数据集"""
     
@@ -165,7 +162,6 @@ class MockNeRFDataset(torch.utils.data.Dataset):
         return {
             'positions': position, 'colors': color
         }
-
 
 def demonstrate_lightning_advantages():
     """演示PyTorch Lightning的优势"""
@@ -260,7 +256,6 @@ def demonstrate_lightning_advantages():
     
     return model, trainer
 
-
 def compare_traditional_vs_lightning():
     """对比传统训练方式和Lightning方式的代码量"""
     
@@ -290,7 +285,6 @@ PyTorch Lightning代码:
     print(traditional_lines)
     print(lightning_lines)
     print("💡 Lightning减少了约80%的样板代码!")
-
 
 if __name__ == "__main__":
     import argparse

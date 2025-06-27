@@ -1,3 +1,4 @@
+from typing import Any, Optional, Union
 """
 Dataset module for Grid-NeRF.
 
@@ -10,7 +11,6 @@ from torch.utils.data import Dataset, DataLoader
 import numpy as np
 import os
 import json
-from typing import List, Optional, Tuple, Any, Union
 from pathlib import Path
 import cv2
 from PIL import Image
@@ -140,7 +140,6 @@ class GridNeRFDataset(Dataset):
         self.scene_center = (min_pos + max_pos) / 2
         scene_extent = np.max(max_pos - min_pos)
         self.scene_scale = 1.0 / (scene_extent * 0.5)  # Normalize to [-1, 1]
-
 
 class KITTI360GridDataset(GridNeRFDataset):
     """KITTI-360 dataset for Grid-NeRF training."""
@@ -278,7 +277,6 @@ class KITTI360GridDataset(GridNeRFDataset):
             )
         }
 
-
 class WaymoGridDataset(GridNeRFDataset):
     """Waymo dataset for Grid-NeRF training."""
     
@@ -381,7 +379,6 @@ class WaymoGridDataset(GridNeRFDataset):
             )
         }
 
-
 class UrbanSceneGridDataset(GridNeRFDataset):
     """Generic urban scene dataset for Grid-NeRF."""
     
@@ -419,7 +416,6 @@ class UrbanSceneGridDataset(GridNeRFDataset):
             scene_info = metadata['scene_info']
             self.scene_center = np.array(scene_info['center'])
             self.scene_scale = scene_info['scale']
-
 
 def create_dataloader(
     dataset: GridNeRFDataset,
@@ -486,7 +482,6 @@ def create_dataloader(
         dataset, batch_size=batch_size, shuffle=shuffle, num_workers=num_workers, collate_fn=collate_fn, pin_memory=True
     )
 
-
 def create_dataset(dataset_type: str, *args, **kwargs) -> GridNeRFDataset:
     """
     Factory function to create datasets.
@@ -506,7 +501,6 @@ def create_dataset(dataset_type: str, *args, **kwargs) -> GridNeRFDataset:
         return UrbanSceneGridDataset(*args, **kwargs)
     else:
         raise ValueError(f"Unknown dataset type: {dataset_type}")
-
 
 class RayBatchSampler:
     """Utility class for efficient ray batch sampling."""

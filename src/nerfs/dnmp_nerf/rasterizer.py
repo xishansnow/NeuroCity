@@ -1,3 +1,4 @@
+from typing import Optional, Union
 """
 Rasterization module for DNMP-NeRF.
 
@@ -7,10 +8,8 @@ This module implements mesh rasterization for deformable neural mesh primitives,
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-from typing import Dict, List, Optional, Tuple, Union
 from dataclasses import dataclass
 import numpy as np
-
 
 @dataclass
 class RasterizationConfig:
@@ -36,7 +35,6 @@ class RasterizationConfig:
     # Performance
     use_sparse_gradients: bool = True
     max_faces_per_bin: int = 256
-
 
 class VertexInterpolator(nn.Module):
     """Interpolates vertex features using barycentric coordinates."""
@@ -77,7 +75,6 @@ class VertexInterpolator(nn.Module):
                        barycentric_coords[:, 2:3] * v2_features)
         
         return interpolated
-
 
 class MeshRasterizer(nn.Module):
     """Core mesh rasterization functionality."""
@@ -346,7 +343,6 @@ class MeshRasterizer(nn.Module):
         
         return fragments
 
-
 class DNMPRasterizer(nn.Module):
     """Main rasterizer for DNMP primitives."""
     
@@ -357,7 +353,7 @@ class DNMPRasterizer(nn.Module):
     
     def forward(
         self,
-        primitives: List,
+        primitives: list,
         camera_matrix: torch.Tensor,
         view_matrix: torch.Tensor
     ):
@@ -365,7 +361,7 @@ class DNMPRasterizer(nn.Module):
         Rasterize all DNMP primitives.
         
         Args:
-            primitives: List of DeformableNeuralMeshPrimitive objects
+            primitives: list of DeformableNeuralMeshPrimitive objects
             camera_matrix: Camera projection matrix [4, 4]
             view_matrix: View transformation matrix [4, 4]
             

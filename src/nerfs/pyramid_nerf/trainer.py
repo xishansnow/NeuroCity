@@ -1,3 +1,4 @@
+from typing import Any, Optional
 """
 Training module for PyNeRF
 Implements the training loop and optimization strategies
@@ -11,7 +12,6 @@ from torch.utils.tensorboard import SummaryWriter
 import numpy as np
 import os
 import time
-from typing import Dict, List, Optional, Tuple, Any
 import logging
 
 from .core import PyNeRF, PyNeRFConfig, PyNeRFLoss
@@ -21,7 +21,6 @@ from .utils import (
 )
 
 logger = logging.getLogger(__name__)
-
 
 class PyNeRFTrainer:
     """
@@ -304,7 +303,6 @@ class PyNeRFTrainer:
         logger.info(f"Best validation PSNR: {self.best_psnr:.4f}")
         
         self.writer.close()
-
 
 class MultiScaleTrainer(PyNeRFTrainer):
     """

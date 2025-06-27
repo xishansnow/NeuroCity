@@ -1,3 +1,4 @@
+from typing import Optional, import logging
 """
 Dataset Module for NeuralVDB
 
@@ -8,12 +9,10 @@ volumetric data for NeuralVDB training.
 import torch
 from torch.utils.data import Dataset, DataLoader
 import numpy as np
-from typing import Dict, List, Optional, Tuple, import logging
 import os
 import json
 
 logger = logging.getLogger(__name__)
-
 
 class NeuralVDBDataset(Dataset):
     """NeuralVDB数据集"""
@@ -60,7 +59,6 @@ class NeuralVDBDataset(Dataset):
                 self.points,
             )
         }
-
 
 class VoxelDataset(Dataset):
     """体素数据集 - 用于SDF/Occupancy训练"""
@@ -133,7 +131,6 @@ class VoxelDataset(Dataset):
         
         return stats
 
-
 class TileDataset(Dataset):
     """瓦片数据集 - 用于大规模城市场景"""
     
@@ -169,7 +166,7 @@ class TileDataset(Dataset):
         
         logger.info(f"瓦片数据集初始化完成，包含 {len(self.tile_files)} 个瓦片")
     
-    def _scan_tile_files(self, tile_indices: Optional[list[tuple[int, int]]]) -> list[Dict]:
+    def _scan_tile_files(self, tile_indices: Optional[list[tuple[int, int]]]) -> list[dict]:
         """扫描瓦片文件"""
         tile_files = []
         
@@ -217,7 +214,7 @@ class TileDataset(Dataset):
         
         return tile_files
     
-    def _load_all_tiles(self) -> list[Dict]:
+    def _load_all_tiles(self) -> list[dict]:
         """加载所有瓦片到内存"""
         tiles_data = []
         
@@ -227,7 +224,7 @@ class TileDataset(Dataset):
         
         return tiles_data
     
-    def _load_single_tile(self, tile_file: Dict) -> Dict:
+    def _load_single_tile(self, tile_file: dict) -> dict:
         """Load a single tile."""
         # 加载体素数据
         voxel_grid = np.load(tile_file['npy_path'])
@@ -294,7 +291,6 @@ class TileDataset(Dataset):
             )
         }
 
-
 class MultiScaleDataset(Dataset):
     """多尺度数据集 - 支持不同分辨率的训练"""
     
@@ -352,7 +348,6 @@ class MultiScaleDataset(Dataset):
             'coords': scaled_coords, 'targets': targets, 'scale': scale, 'scale_idx': scale_idx, 'original_coords': coords
         }
 
-
 # 数据变换函数
 class DataTransforms:
     """数据变换函数集合"""
@@ -393,7 +388,6 @@ class DataTransforms:
         """随机缩放"""
         scale = torch.uniform(scale_range[0], scale_range[1])
         return coords * scale
-
 
 def create_data_loaders(
     dataset: Dataset,

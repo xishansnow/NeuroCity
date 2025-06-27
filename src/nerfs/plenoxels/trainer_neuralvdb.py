@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 """
 Extended Plenoxel Trainer with NeuralVDB Support
 
@@ -5,11 +7,13 @@ This module extends the basic Plenoxel trainer with NeuralVDB functionality
 for efficient external storage of voxel data.
 """
 
+from typing import Any, Optional
+
+
 import os
 import torch
 import wandb
 import logging
-from typing import Dict, List, Optional, Tuple, Any
 from dataclasses import dataclass
 from tqdm import tqdm
 import numpy as np
@@ -31,7 +35,6 @@ except ImportError:
 
 logger = logging.getLogger(__name__)
 
-
 @dataclass
 class NeuralVDBTrainerConfig(PlenoxelTrainerConfig):
     """Extended trainer configuration with NeuralVDB support."""
@@ -52,7 +55,6 @@ class NeuralVDBTrainerConfig(PlenoxelTrainerConfig):
     # Storage optimization
     optimize_storage: bool = True
     storage_stats_interval: int = 5000
-
 
 class NeuralVDBPlenoxelTrainer(PlenoxelTrainer):
     """Extended Plenoxel trainer with NeuralVDB functionality."""
@@ -371,7 +373,6 @@ class NeuralVDBPlenoxelTrainer(PlenoxelTrainer):
             logger.info(f"  LOD files: {len(lod_files)} levels")
         
         return export_info
-
 
 def create_neuralvdb_trainer(
     model_config: PlenoxelConfig,

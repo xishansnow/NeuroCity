@@ -1,3 +1,4 @@
+from typing import Optional, Union
 """
 Rendering utilities for DNMP.
 
@@ -7,8 +8,6 @@ This module provides functions for camera operations, ray generation, and render
 import torch
 import torch.nn.functional as F
 import numpy as np
-from typing import Dict, List, Optional, Tuple, Union
-
 
 def generate_camera_rays(
     camera_matrix: torch.Tensor,
@@ -61,7 +60,6 @@ def generate_camera_rays(
     
     return ray_origins, ray_directions
 
-
 def sample_rays_from_image(
     ray_origins: torch.Tensor,
     ray_directions: torch.Tensor,
@@ -104,7 +102,6 @@ def sample_rays_from_image(
             dim=1,
         )
     }
-
 
 def volume_rendering(
     colors: torch.Tensor,
@@ -158,7 +155,6 @@ def volume_rendering(
     return {
         'rgb': rendered_colors, 'depth': rendered_depth, 'opacity': opacity, 'weights': weights
     }
-
 
 def hierarchical_sampling(
     ray_origins: torch.Tensor,
@@ -234,7 +230,6 @@ def hierarchical_sampling(
         'sample_points': sample_points, 'sample_distances': t_combined, 't_coarse': t_coarse, 't_fine': t_fine if coarse_weights is not None and num_fine > 0 else None
     }
 
-
 def compute_psnr(pred: torch.Tensor, target: torch.Tensor) -> torch.Tensor:
     """
     Compute Peak Signal-to-Noise Ratio (PSNR).
@@ -249,7 +244,6 @@ def compute_psnr(pred: torch.Tensor, target: torch.Tensor) -> torch.Tensor:
     mse = F.mse_loss(pred, target)
     psnr = -10.0 * torch.log10(mse)
     return psnr
-
 
 def compute_ssim(
     pred: torch.Tensor,
@@ -312,7 +306,6 @@ def compute_ssim(
     
     return ssim_map.mean()
 
-
 def create_spherical_coordinates(phi: torch.Tensor, theta: torch.Tensor) -> torch.Tensor:
     """
     Convert spherical coordinates to Cartesian coordinates.
@@ -329,7 +322,6 @@ def create_spherical_coordinates(phi: torch.Tensor, theta: torch.Tensor) -> torc
     z = torch.cos(theta)
     
     return torch.stack([x, y, z], dim=-1)
-
 
 def fibonacci_sphere_sampling(num_samples: int, device: torch.device = None) -> torch.Tensor:
     """

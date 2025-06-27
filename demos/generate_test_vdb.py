@@ -9,7 +9,6 @@ import openvdb as vdb
 from scipy.spatial import cKDTree
 import os
 import json
-from typing import Dict, List, Tuple
 import random
 
 class CityVDBGenerator:
@@ -142,7 +141,7 @@ class CityVDBGenerator:
                 
         return terrain
     
-    def generate_city_layout(self) -> list[Dict]:
+    def generate_city_layout(self) -> list[dict]:
         """
         生成城市布局
         

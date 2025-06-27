@@ -1,3 +1,4 @@
+from typing import Any, Optional
 """
 Grid-NeRF Utils Package
 
@@ -8,8 +9,6 @@ This package contains utility modules for Grid-NeRF including:
 
 Additional utilities like setup_logging are available directly from nerfs.grid_nerf.utils
 """
-
-from typing import Any, Optional, Dict
 
 # Grid utilities
 from .grid_utils import (
@@ -63,7 +62,7 @@ except ImportError:
                 )
             )
     
-    def load_config(*args, **kwargs) -> Dict[str, Any]:
+    def load_config(*args, **kwargs) -> dict[str, Any]:
         """Load configuration from file."""
         return {}
     
@@ -91,7 +90,7 @@ except ImportError:
         """Sample points along rays."""
         return None, None
     
-    def volume_rendering(*args, **kwargs) -> Dict[str, Any]:
+    def volume_rendering(*args, **kwargs) -> dict[str, Any]:
         """Perform volume rendering."""
         return {}
 

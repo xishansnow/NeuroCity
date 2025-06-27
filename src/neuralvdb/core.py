@@ -1,3 +1,4 @@
+from typing import Any, Optional
 """
 NeuralVDB Core Module
 
@@ -7,7 +8,6 @@ This module contains the core NeuralVDB classes and configurations.
 import torch
 import torch.nn as nn
 import numpy as np
-from typing import Dict, List, Optional, Tuple, Any
 import logging
 from dataclasses import dataclass
 
@@ -16,7 +16,6 @@ from .trainer import NeuralVDBTrainer, AdvancedNeuralVDBTrainer
 from .dataset import NeuralVDBDataset
 
 logger = logging.getLogger(__name__)
-
 
 @dataclass
 class NeuralVDBConfig:
@@ -44,7 +43,6 @@ class NeuralVDBConfig:
     def __post_init__(self):
         if self.hidden_dims is None:
             self.hidden_dims = [256, 512, 512, 256, 128]
-
 
 @dataclass
 class AdvancedNeuralVDBConfig:
@@ -85,7 +83,6 @@ class AdvancedNeuralVDBConfig:
     def __post_init__(self):
         if self.hidden_dims is None:
             self.hidden_dims = [256, 512, 512, 256, 128]
-
 
 class NeuralVDB:
     """
@@ -306,7 +303,6 @@ class NeuralVDB:
                 count += self._count_nodes(child)
         
         return count
-
 
 class AdvancedNeuralVDB:
     """

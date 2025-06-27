@@ -1,14 +1,17 @@
+from __future__ import annotations
+
 """
 Rendering Utilities for Plenoxels
 
 This module provides rendering utilities including ray generation, point sampling, volume rendering, and ray-voxel intersection computations.
 """
 
+from typing import Any, Optional
+
+
 import torch
 import numpy as np
-from typing import Dict, List, Optional, Tuple, Any
 import math
-
 
 def generate_rays(
     poses: torch.Tensor,
@@ -30,7 +33,7 @@ def generate_rays(
         far: Far plane distance
         
     Returns:
-        Tuple of (ray_origins, ray_directions)
+        tuple of (ray_origins, ray_directions)
     """
     device = poses.device
     N = poses.shape[0]
@@ -69,7 +72,6 @@ def generate_rays(
     
     return rays_o, rays_d
 
-
 def sample_points_along_rays(
     ray_origins: torch.Tensor,
     ray_directions: torch.Tensor,
@@ -90,7 +92,7 @@ def sample_points_along_rays(
         perturb: Whether to add random perturbation
         
     Returns:
-        Tuple of (sample_points, t_values)
+        tuple of (sample_points, t_values)
     """
     device = ray_origins.device
     N = ray_origins.shape[0]
@@ -111,7 +113,6 @@ def sample_points_along_rays(
     points = ray_origins.unsqueeze(-2) + t_vals.unsqueeze(-1) * ray_directions.unsqueeze(-2)
     
     return points, t_vals
-
 
 def volume_render(
     densities: torch.Tensor,
@@ -173,7 +174,6 @@ def volume_render(
         'rgb': rgb, 'depth': depth, 'disp': disp, 'acc': acc, 'weights': weights, 'alpha': alpha, 'transmittance': transmittance
     }
 
-
 def compute_ray_aabb_intersection(
     ray_origins: torch.Tensor,
     ray_directions: torch.Tensor,
@@ -190,7 +190,7 @@ def compute_ray_aabb_intersection(
         aabb_max: AABB maximum coordinates [3]
         
     Returns:
-        Tuple of (t_near, t_far) intersection distances
+        tuple of (t_near, t_far) intersection distances
     """
     # Compute intersection with each slab
     inv_dir = 1.0 / (ray_directions + 1e-8)
@@ -212,7 +212,6 @@ def compute_ray_aabb_intersection(
     
     return t_near, t_far
 
-
 def hierarchical_sampling(
     ray_origins: torch.Tensor,
     ray_directions: torch.Tensor,
@@ -233,7 +232,7 @@ def hierarchical_sampling(
         perturb: Whether to add perturbation
         
     Returns:
-        Tuple of (fine_points, fine_t_vals)
+        tuple of (fine_points, fine_t_vals)
     """
     device = ray_origins.device
     N = ray_origins.shape[0]
@@ -271,7 +270,6 @@ def hierarchical_sampling(
     
     return points_fine, t_fine
 
-
 def compute_optical_depth(densities: torch.Tensor, dists: torch.Tensor) -> torch.Tensor:
     """
     Compute optical depth from densities and distances.
@@ -284,7 +282,6 @@ def compute_optical_depth(densities: torch.Tensor, dists: torch.Tensor) -> torch
         Optical depth values [N, num_samples]
     """
     return torch.relu(densities) * dists
-
 
 def alpha_composite(colors: torch.Tensor, alphas: torch.Tensor) -> torch.Tensor:
     """
@@ -311,7 +308,6 @@ def alpha_composite(colors: torch.Tensor, alphas: torch.Tensor) -> torch.Tensor:
     
     return rgb
 
-
 def compute_expected_depth(t_vals: torch.Tensor, weights: torch.Tensor) -> torch.Tensor:
     """
     Compute expected depth from sample positions and weights.
@@ -324,7 +320,6 @@ def compute_expected_depth(t_vals: torch.Tensor, weights: torch.Tensor) -> torch
         Expected depth values [N]
     """
     return torch.sum(weights * t_vals, dim=-1)
-
 
 def compute_depth_variance(
     t_vals: torch.Tensor,
@@ -346,7 +341,6 @@ def compute_depth_variance(
     variance = torch.sum(weights * depth_diff ** 2, dim=-1)
     return variance
 
-
 def ray_sphere_intersection(
     ray_origins: torch.Tensor,
     ray_directions: torch.Tensor,
@@ -363,7 +357,7 @@ def ray_sphere_intersection(
         sphere_radius: Sphere radius
         
     Returns:
-        Tuple of (t_near, t_far) intersection distances
+        tuple of (t_near, t_far) intersection distances
     """
     # Vector from ray origin to sphere center
     oc = ray_origins - sphere_center
@@ -389,7 +383,6 @@ def ray_sphere_intersection(
     t_far = torch.where(valid, t_far, torch.full_like(t_far, -float('inf')))
     
     return t_near, t_far
-
 
 def compute_ray_bundle_intersections(
     ray_origins: torch.Tensor,

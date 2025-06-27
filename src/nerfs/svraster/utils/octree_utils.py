@@ -1,11 +1,10 @@
+from typing import Optional
 """
 Octree utilities for SVRaster.
 """
 
 import torch
 import numpy as np
-from typing import List, Optional, Tuple
-
 
 def octree_subdivision(
     voxel_positions: torch.Tensor,
@@ -21,7 +20,7 @@ def octree_subdivision(
         subdivision_mask: Boolean mask for voxels to subdivide [N]
         
     Returns:
-        Tuple of (child_positions, child_sizes)
+        tuple of (child_positions, child_sizes)
     """
     if not subdivision_mask.any():
         return torch.empty(
@@ -61,7 +60,6 @@ def octree_subdivision(
     
     return child_positions, child_sizes_tensor
 
-
 def octree_pruning(voxel_densities: torch.Tensor, threshold: float = 0.001) -> torch.Tensor:
     """
     Create pruning mask for low-density voxels.
@@ -81,7 +79,6 @@ def octree_pruning(voxel_densities: torch.Tensor, threshold: float = 0.001) -> t
     
     return keep_mask
 
-
 def compute_octree_level(voxel_size: float, base_size: float) -> int:
     """
     Compute octree level based on voxel size.
@@ -98,7 +95,6 @@ def compute_octree_level(voxel_size: float, base_size: float) -> int:
     
     level = int(np.log2(base_size / voxel_size))
     return level
-
 
 def get_octree_neighbors(
     voxel_position: torch.Tensor,

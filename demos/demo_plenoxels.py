@@ -1,3 +1,4 @@
+from typing import Optional
 #!/usr/bin/env python3
 """
 Plenoxels 演示脚本
@@ -13,7 +14,6 @@ import sys
 import os
 import torch
 import numpy as np
-from typing import Dict, List, Optional, Tuple
 
 # 添加项目根目录到Python路径
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
@@ -26,7 +26,6 @@ except ImportError as e:
     print(f"⚠️ Plenoxels模块导入失败: {e}")
     PLENOXELS_AVAILABLE = False
 
-
 class MockPlenoxelsConfig:
     """模拟Plenoxels配置"""
     def __init__(self):
@@ -37,7 +36,6 @@ class MockPlenoxelsConfig:
         self.voxel_size = 0.03125  # 4.0 / 128
         self.use_sparse_grid = True
         self.pruning_threshold = 1e-4
-
 
 class MockPlenoxels(torch.nn.Module):
     """模拟Plenoxels模型"""
@@ -149,7 +147,6 @@ class MockPlenoxels(torch.nn.Module):
             self.density_grid.data[~self.active_mask] = 0
             self.sh_grid.data[~self.active_mask] = 0
 
-
 def create_voxel_dataset(num_views: int = 80, grid_resolution: int = 64) -> dict[str, torch.Tensor]:
     """创建体素数据集"""
     print(f"📊 创建体素数据集: {num_views}个视角, 网格分辨率{grid_resolution}³")
@@ -192,7 +189,6 @@ def create_voxel_dataset(num_views: int = 80, grid_resolution: int = 64) -> dict
             ray_origins,
         )
     }
-
 
 def train_plenoxels(
     model: MockPlenoxels,
@@ -265,7 +261,6 @@ def train_plenoxels(
     print("✅ 训练完成!")
     return training_history
 
-
 def demonstrate_plenoxels():
     """演示Plenoxels的完整流程"""
     print("🌟 Plenoxels 演示")
@@ -323,7 +318,6 @@ def demonstrate_plenoxels():
     print("   ✅ NeuralVDB集成")
     
     return model, training_history
-
 
 if __name__ == '__main__':
     print("启动Plenoxels演示...")

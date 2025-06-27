@@ -1,3 +1,4 @@
+from typing import Any, Optional
 """
 Data Generators for NeuralVDB
 
@@ -8,12 +9,10 @@ synthetic volumetric datasets for training and testing.
 import numpy as np
 import json
 import os
-from typing import Dict, List, Optional, Tuple, Any
 import random
 import logging
 
 logger = logging.getLogger(__name__)
-
 
 class TileCityGenerator:
     """瓦片城市生成器 - 用于生成大规模城市场景"""
@@ -207,7 +206,7 @@ class TileCityGenerator:
         self,
         tile_x: int,
         tile_y: int,
-        buildings: list[Dict],
+        buildings: list[dict],
     )
         """
         生成单个瓦片的体素网格和建筑信息
@@ -251,7 +250,7 @@ class TileCityGenerator:
         
         return tile_grid, tile_buildings
     
-    def generate_global_buildings(self, density: str = 'medium') -> list[Dict]:
+    def generate_global_buildings(self, density: str = 'medium') -> list[dict]:
         """
         生成全局建筑信息
         
@@ -323,7 +322,7 @@ class TileCityGenerator:
     def save_tile(
         self,
         tile_grid: np.ndarray,
-        tile_buildings: list[Dict],
+        tile_buildings: list[dict],
         tile_x: int,
         tile_y: int,
     )
@@ -394,7 +393,6 @@ class TileCityGenerator:
             json.dump(global_info, f, indent=2)
         
         logger.info(f"城市生成完成！共 {total_tiles} 个瓦片，{len(buildings)} 个建筑")
-
 
 class SimpleVDBGenerator:
     """简单VDB生成器 - 用于生成基础几何体"""
@@ -679,7 +677,7 @@ class SimpleVDBGenerator:
         
         return grid
     
-    def save_vdb(self, grid: np.ndarray, filepath: str, metadata: Optional[Dict] = None):
+    def save_vdb(self, grid: np.ndarray, filepath: str, metadata: Optional[dict] = None):
         """
         保存VDB数据
         
@@ -707,7 +705,6 @@ class SimpleVDBGenerator:
         
         logger.info(f"VDB数据已保存到: {filepath}")
         logger.info(f"元数据已保存到: {metadata_path}")
-
 
 def generate_sample_dataset(
     output_dir: str,

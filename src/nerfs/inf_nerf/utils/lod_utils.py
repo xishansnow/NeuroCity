@@ -1,3 +1,4 @@
+from typing import Any, Optional
 """
 Level of Detail (LoD) utilities for InfNeRF.
 
@@ -11,11 +12,9 @@ This module provides tools for:
 import torch
 import torch.nn.functional as F
 import numpy as np
-from typing import Dict, List, Optional, Tuple, Any
 import math
 
 from ..core import InfNeRFConfig, OctreeNode
-
 
 class LoDManager:
     """
@@ -113,7 +112,6 @@ class LoDManager:
         # Clamp to reasonable range
         return max(16, min(adaptive_samples, base_samples * 4))
 
-
 def anti_aliasing_sampling(
     positions: torch.Tensor,
     radii: torch.Tensor,
@@ -148,7 +146,6 @@ def anti_aliasing_sampling(
     
     return perturbed_positions, perturbed_radii
 
-
 def determine_lod_level(sample_radius: float, root_gsd: float, max_level: int) -> int:
     """
     Determine LoD level based on sample radius (Equation 5 in paper).
@@ -170,7 +167,6 @@ def determine_lod_level(sample_radius: float, root_gsd: float, max_level: int) -
     # Clamp to valid range
     return max(0, min(level, max_level))
 
-
 def pyramid_supervision(
     images: list[torch.Tensor],
     num_levels: int = 4,
@@ -180,12 +176,12 @@ def pyramid_supervision(
     Create image pyramids for multi-scale supervision.
     
     Args:
-        images: List of input images [H, W, 3]
+        images: list of input images [H, W, 3]
         num_levels: Number of pyramid levels
         scale_factor: Scale factor between levels
         
     Returns:
-        List of image pyramids, one per input image
+        list of image pyramids, one per input image
     """
     pyramids = []
     
@@ -222,7 +218,6 @@ def pyramid_supervision(
     
     return pyramids
 
-
 def compute_level_consistency_loss(
     parent_node: OctreeNode,
     child_nodes: list[OctreeNode],
@@ -234,7 +229,7 @@ def compute_level_consistency_loss(
     
     Args:
         parent_node: Parent octree node
-        child_nodes: List of child nodes
+        child_nodes: list of child nodes
         sample_positions: [N, 3] sample positions
         sample_directions: [N, 3] sample directions
         
@@ -296,7 +291,6 @@ def compute_level_consistency_loss(
     
     return consistency_loss
 
-
 def compute_sample_radius(
     depth: torch.Tensor,
     focal_length: float,
@@ -317,7 +311,6 @@ def compute_sample_radius(
     radii = depth * pixel_width / (2 * focal_length)
     return radii
 
-
 def frustum_culling(
     octree_nodes: list[OctreeNode],
     camera_origin: np.ndarray,
@@ -330,7 +323,7 @@ def frustum_culling(
     Perform frustum culling to select visible octree nodes.
     
     Args:
-        octree_nodes: List of octree nodes
+        octree_nodes: list of octree nodes
         camera_origin: [3] camera position
         view_direction: [3] camera view direction (normalized)
         field_of_view: Field of view in radians
@@ -338,7 +331,7 @@ def frustum_culling(
         far_plane: Far clipping plane distance
         
     Returns:
-        List of visible nodes
+        list of visible nodes
     """
     visible_nodes = []
     
@@ -375,7 +368,6 @@ def frustum_culling(
     
     return visible_nodes
 
-
 def adaptive_lod_selection(
     visible_nodes: list[OctreeNode],
     camera_origin: np.ndarray,
@@ -385,12 +377,12 @@ def adaptive_lod_selection(
     Select appropriate LoD level for each visible node.
     
     Args:
-        visible_nodes: List of visible octree nodes
+        visible_nodes: list of visible octree nodes
         camera_origin: [3] camera position
         pixel_size_at_distance: Function to compute pixel size at given distance
         
     Returns:
-        List of nodes with appropriate LoD
+        list of nodes with appropriate LoD
     """
     selected_nodes = []
     
@@ -410,7 +402,6 @@ def adaptive_lod_selection(
                 selected_nodes.append(node.parent)
     
     return list(set(selected_nodes))  # Remove duplicates
-
 
 class MultiScaleRenderer:
     """

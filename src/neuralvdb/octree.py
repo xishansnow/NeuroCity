@@ -1,3 +1,4 @@
+from typing import Any, Optional
 """
 Octree Data Structures for NeuralVDB
 
@@ -8,13 +9,11 @@ for efficient storage and processing of volumetric data.
 import numpy as np
 import torch
 import torch.nn as nn
-from typing import Dict, List, Optional, Tuple, Any
 import logging
 from scipy.spatial import cKDTree
 from sklearn.cluster import KMeans
 
 logger = logging.getLogger(__name__)
-
 
 class OctreeNode:
     """八叉树节点 - 基础版本"""
@@ -93,7 +92,6 @@ class OctreeNode:
         ]
         
         return all(conditions)
-
 
 class AdaptiveOctreeNode(OctreeNode):
     """自适应八叉树节点 - 高级版本"""
@@ -206,7 +204,6 @@ class AdaptiveOctreeNode(OctreeNode):
         
         # 至少满足一个自适应条件
         return any(adaptive_conditions)
-
 
 class SparseVoxelGrid:
     """稀疏体素网格 - 基础版本"""
@@ -354,7 +351,6 @@ class SparseVoxelGrid:
         
         return max_child_depth
 
-
 class AdvancedSparseVoxelGrid(SparseVoxelGrid):
     """高级稀疏体素网格"""
     
@@ -484,7 +480,7 @@ class AdvancedSparseVoxelGrid(SparseVoxelGrid):
         points: np.ndarray,
         occupancies: np.ndarray,
         threshold: float,
-        candidates: List,
+        candidates: list,
     )
         """收集需要细化的候选节点"""
         if node is None:

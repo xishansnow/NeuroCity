@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 """
 Trainer module for Instant NGP.
 
@@ -12,18 +14,18 @@ The trainer is used to:
 - Backward pass
 """
 
+from typing import Optional
+
 import os
 import time
 import torch
 import torch.optim as optim
 from torch.utils.data import DataLoader
 from torch.utils.tensorboard import SummaryWriter
-from typing import Dict, Optional
 from tqdm import tqdm
 import numpy as np
 
 from .core import InstantNGP, InstantNGPConfig, InstantNGPLoss, InstantNGPRenderer
-
 
 class InstantNGPTrainer:
     """Trainer for Instant NGP."""

@@ -1,11 +1,10 @@
+from typing import Optional
 """
 Rendering utilities for SVRaster.
 """
 
 import torch
 import numpy as np
-from typing import Dict, List, Optional, Tuple
-
 
 def ray_direction_dependent_ordering(
     voxel_positions: torch.Tensor,
@@ -33,7 +32,6 @@ def ray_direction_dependent_ordering(
     
     return sort_indices
 
-
 def depth_peeling(
     voxel_positions: torch.Tensor,
     voxel_sizes: torch.Tensor,
@@ -52,7 +50,7 @@ def depth_peeling(
         num_layers: Number of depth layers to peel
         
     Returns:
-        List of voxel indices for each depth layer
+        list of voxel indices for each depth layer
     """
     # Compute distances from ray origin
     to_voxels = voxel_positions - ray_origin
@@ -74,7 +72,6 @@ def depth_peeling(
     
     return layers
 
-
 def compute_ray_aabb_intersection(
     ray_origin: torch.Tensor,
     ray_direction: torch.Tensor,
@@ -91,7 +88,7 @@ def compute_ray_aabb_intersection(
         box_max: Box maximum corner [3] or [M, 3]
         
     Returns:
-        Tuple of (t_near, t_far, valid_mask)
+        tuple of (t_near, t_far, valid_mask)
     """
     # Handle broadcasting
     if ray_origin.dim() == 1:
@@ -117,7 +114,6 @@ def compute_ray_aabb_intersection(
     
     return t_near, t_far, valid_mask
 
-
 def volume_rendering_integration(
     densities: torch.Tensor,
     colors: torch.Tensor,
@@ -132,7 +128,7 @@ def volume_rendering_integration(
         distances: Distance intervals [N]
         
     Returns:
-        Tuple of (integrated_color, integrated_alpha)
+        tuple of (integrated_color, integrated_alpha)
     """
     # Compute alpha values
     alphas = 1.0 - torch.exp(-densities * distances)
@@ -152,7 +148,6 @@ def volume_rendering_integration(
     
     return integrated_color, integrated_alpha
 
-
 def render_rays(
     ray_origins: torch.Tensor, ray_directions: torch.Tensor, near: float, far: float, num_samples: int = 64, perturb: bool = True
 ) -> dict[str, torch.Tensor]:
@@ -163,7 +158,6 @@ def render_rays(
     return {
         "samples": samples["points"], "intervals": samples["intervals"], "ray_indices": samples["ray_indices"]
     }
-
 
 def compute_ray_samples(
     ray_origins: torch.Tensor, ray_directions: torch.Tensor, near: float, far: float, num_samples: int = 64, perturb: bool = True

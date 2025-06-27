@@ -1,3 +1,4 @@
+from typing import Optional
 """
 Pyramid Encoder Module
 Implements multi-resolution hash encoding for PyNeRF
@@ -6,12 +7,10 @@ Implements multi-resolution hash encoding for PyNeRF
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-from typing import List, Optional, Tuple
 import numpy as np
 import logging
 
 logger = logging.getLogger(__name__)
-
 
 class HashEncoder(nn.Module):
     """
@@ -154,7 +153,6 @@ class HashEncoder(nn.Module):
         # Concatenate features from all levels
         return torch.cat(features, dim=-1)
 
-
 class PyramidEncoder(nn.Module):
     """
     Pyramid encoder that manages multiple hash encoders for different scales
@@ -233,7 +231,6 @@ class PyramidEncoder(nn.Module):
                 for encoder in self.encoders.values()
             )
 
-
 class PositionalEncoding(nn.Module):
     """
     Positional encoding for high-frequency details
@@ -283,7 +280,6 @@ class PositionalEncoding(nn.Module):
                 encoded.append(func(positions * freq))
         
         return torch.cat(encoded, dim=-1)
-
 
 class IntegratedPositionalEncoding(nn.Module):
     """

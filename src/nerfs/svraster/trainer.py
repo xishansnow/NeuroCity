@@ -1,3 +1,4 @@
+from typing import Any, Optional
 """
 Trainer module for SVRaster.
 """
@@ -10,7 +11,6 @@ import torch.optim as optim
 from torch.utils.data import DataLoader
 from torch.utils.tensorboard import SummaryWriter
 import numpy as np
-from typing import Dict, List, Optional, Tuple, Any
 from dataclasses import dataclass
 import logging
 from tqdm import tqdm
@@ -19,7 +19,6 @@ from .core import SVRasterModel, SVRasterConfig, SVRasterLoss
 from .dataset import SVRasterDataset, SVRasterDatasetConfig
 
 logger = logging.getLogger(__name__)
-
 
 @dataclass
 class SVRasterTrainerConfig:
@@ -71,7 +70,6 @@ class SVRasterTrainerConfig:
     # Rendering settings
     render_batch_size: int = 4096
     render_chunk_size: int = 1024
-
 
 class SVRasterTrainer:
     """Main trainer class for SVRaster model."""
@@ -318,7 +316,6 @@ class SVRasterTrainer:
         self.best_val_psnr = checkpoint['best_val_psnr']
         
         logger.info(f"Loaded checkpoint from epoch {self.current_epoch}")
-
 
 def create_svraster_trainer(
     model_config: SVRasterConfig,

@@ -1,13 +1,16 @@
+from __future__ import annotations
+
 """
 Tests for Plenoxels implementation
 
 This module contains unit tests for the core Plenoxels components.
 """
 
+from typing import Any
+
 import unittest
 import torch
 import numpy as np
-from typing import Dict, Any
 import sys
 import os
 
@@ -19,7 +22,6 @@ from nerfs.plenoxels.core import (
 )
 from nerfs.plenoxels.dataset import PlenoxelDatasetConfig
 from nerfs.plenoxels.trainer import PlenoxelTrainerConfig
-
 
 class TestSphericalHarmonics(unittest.TestCase):
     """Test spherical harmonics utilities."""
@@ -69,7 +71,6 @@ class TestSphericalHarmonics(unittest.TestCase):
         # Colors should be in [0, 1] range due to sigmoid
         self.assertTrue(torch.all(colors >= 0))
         self.assertTrue(torch.all(colors <= 1))
-
 
 class TestVoxelGrid(unittest.TestCase):
     """Test voxel grid functionality."""
@@ -131,7 +132,6 @@ class TestVoxelGrid(unittest.TestCase):
         self.assertEqual(l1_loss.shape, ())
         self.assertTrue(l1_loss >= 0)
 
-
 class TestPlenoxelModel(unittest.TestCase):
     """Test Plenoxel model functionality."""
     
@@ -186,7 +186,6 @@ class TestPlenoxelModel(unittest.TestCase):
         self.assertTrue(0 <= stats['sparsity_ratio'] <= 1)
         self.assertAlmostEqual(stats['occupancy_ratio'] + stats['sparsity_ratio'], 1.0, places=5)
 
-
 class TestPlenoxelLoss(unittest.TestCase):
     """Test Plenoxel loss function."""
     
@@ -213,7 +212,6 @@ class TestPlenoxelLoss(unittest.TestCase):
         self.assertIsInstance(losses['color_loss'], torch.Tensor)
         self.assertEqual(losses['color_loss'].shape, ())
         self.assertTrue(losses['color_loss'] >= 0)
-
 
 class TestConfigurations(unittest.TestCase):
     """Test configuration classes."""
@@ -254,7 +252,6 @@ class TestConfigurations(unittest.TestCase):
         self.assertEqual(config.learning_rate, 0.1)
         self.assertTrue(config.use_tensorboard)
 
-
 class TestIntegration(unittest.TestCase):
     """Integration tests for the complete pipeline."""
     
@@ -290,7 +287,6 @@ class TestIntegration(unittest.TestCase):
         self.assertIn('color_loss', losses)
         self.assertTrue(losses['color_loss'] >= 0)
 
-
 def run_tests():
     """Run all tests."""
     # Create test suite
@@ -311,7 +307,6 @@ def run_tests():
     result = runner.run(suite)
     
     return result.wasSuccessful()
-
 
 if __name__ == '__main__':
     # Run tests

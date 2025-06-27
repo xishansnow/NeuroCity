@@ -1,3 +1,4 @@
+from typing import Any, Optional, Union
 """
 Occupancy Network Core Implementation
 基于论文: "Occupancy Networks: Learning 3D Reconstruction in Function Space"
@@ -10,8 +11,6 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 import numpy as np
-from typing import Dict, List, Optional, Tuple, Any, Union
-
 
 class ResnetBlockFC(nn.Module):
     """全连接残差块
@@ -54,7 +53,6 @@ class ResnetBlockFC(nn.Module):
             x_s = x
         
         return x_s + dx
-
 
 class OccupancyNetwork(nn.Module):
     """占用网络模型
@@ -218,7 +216,7 @@ class OccupancyNetwork(nn.Module):
     
     def extract_mesh(
         self, condition: Optional[torch.Tensor] = None, resolution: int = 64, threshold: float = 0.5, bbox: Optional[tuple[float, float]] = None
-    ) -> Dict:
+    ) -> dict:
         """提取网格表面
         
         Args:
@@ -308,7 +306,6 @@ class OccupancyNetwork(nn.Module):
         return {
             'total_parameters': total_params, 'trainable_parameters': trainable_params, 'model_size_mb': model_size_mb
         }
-
 
 class ConditionalOccupancyNetwork(OccupancyNetwork):
     """条件占用网络

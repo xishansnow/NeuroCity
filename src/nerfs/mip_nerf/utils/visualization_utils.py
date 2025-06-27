@@ -1,3 +1,4 @@
+from typing import Any, Optional
 """
 Visualization utilities for Mip-NeRF
 
@@ -7,11 +8,9 @@ This module contains functions for visualizing training progress, rendering resu
 import torch
 import numpy as np
 import matplotlib.pyplot as plt
-from typing import Dict, List, Optional, Tuple, Any
 import cv2
 import imageio
 from pathlib import Path
-
 
 def visualize_rays(
     origins: torch.Tensor,
@@ -58,7 +57,6 @@ def visualize_rays(
     ax.set_zlabel('Z')
     ax.set_title('Ray Sampling Visualization')
     plt.show()
-
 
 def plot_training_curves(
     losses: dict[str,
@@ -125,7 +123,6 @@ def plot_training_curves(
         plt.savefig(save_path, dpi=150, bbox_inches='tight')
     plt.show()
 
-
 def render_video(
     model: torch.nn.Module,
     poses: torch.Tensor,
@@ -171,7 +168,6 @@ def render_video(
     imageio.mimsave(output_path, frames, fps=fps)
     print(f"Video saved to {output_path}")
 
-
 def save_rendered_images(
     images: dict[str,
     torch.Tensor],
@@ -209,7 +205,6 @@ def save_rendered_images(
             image_np = (image_np * 255).astype(np.uint8)
             cv2.imwrite(str(output_path / f"{prefix}_{name}.png"), image_np)
 
-
 def visualize_depth_map(depth: torch.Tensor, title: str = "Depth Map") -> None:
     """
     Visualize depth map with colormap
@@ -233,7 +228,6 @@ def visualize_depth_map(depth: torch.Tensor, title: str = "Depth Map") -> None:
     plt.title(title)
     plt.axis('off')
     plt.show()
-
 
 def compare_images(pred: torch.Tensor, target: torch.Tensor, title: str = "Comparison") -> None:
     """
@@ -275,7 +269,6 @@ def compare_images(pred: torch.Tensor, target: torch.Tensor, title: str = "Compa
     plt.tight_layout()
     plt.show()
 
-
 def visualize_weights(
     weights: torch.Tensor,
     t_vals: torch.Tensor,
@@ -312,7 +305,6 @@ def visualize_weights(
     plt.title(title)
     plt.grid(True, alpha=0.3)
     plt.show()
-
 
 def plot_frustum_visualization(
     origins: torch.Tensor,
@@ -377,7 +369,6 @@ def plot_frustum_visualization(
     ax.legend()
     plt.show()
 
-
 def generate_rays_from_pose(
     pose: torch.Tensor,
     focal_length: float,
@@ -394,7 +385,7 @@ def generate_rays_from_pose(
         image_height: Image height
         
     Returns:
-        Tuple of (origins, directions, radii)
+        tuple of (origins, directions, radii)
     """
     # Create pixel coordinates
     i, j = torch.meshgrid(
@@ -419,7 +410,6 @@ def generate_rays_from_pose(
     radii = torch.full(dirs.shape[:-1], pixel_radius)
     
     return origins, dirs, radii
-
 
 def render_image(
     model: torch.nn.Module,

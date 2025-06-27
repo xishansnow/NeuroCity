@@ -1,3 +1,4 @@
+from typing import Any, Optional, Union
 """
 Metrics and evaluation utilities for Grid-NeRF.
 
@@ -7,11 +8,9 @@ This module provides utility functions for computing evaluation metrics, visuali
 import torch
 import torch.nn.functional as F
 import numpy as np
-from typing import List, Optional, Tuple, Union, Dict, Any
 import math
 import matplotlib.pyplot as plt
 from PIL import Image
-
 
 def compute_psnr(pred: torch.Tensor, target: torch.Tensor, max_val: float = 1.0) -> torch.Tensor:
     """
@@ -33,7 +32,6 @@ def compute_psnr(pred: torch.Tensor, target: torch.Tensor, max_val: float = 1.0)
     psnr = 20 * torch.log10(max_val / torch.sqrt(mse))
     
     return psnr
-
 
 def compute_ssim(pred: torch.Tensor, target: torch.Tensor) -> torch.Tensor:
     """
@@ -69,7 +67,6 @@ def compute_ssim(pred: torch.Tensor, target: torch.Tensor) -> torch.Tensor:
            ((mu1**2 + mu2**2 + c1) * (sigma1_sq + sigma2_sq + c2))
     
     return ssim
-
 
 def compute_lpips(pred: torch.Tensor, target: torch.Tensor, net: str = 'alex') -> torch.Tensor:
     """
@@ -110,12 +107,11 @@ def compute_lpips(pred: torch.Tensor, target: torch.Tensor, net: str = 'alex') -
     
     return grad_loss
 
-
 def compute_depth_metrics(
     pred_depth: torch.Tensor,
     target_depth: torch.Tensor,
     mask: Optional[torch.Tensor] = None
-) -> Dict[str, torch.Tensor]:
+) -> dict[str, torch.Tensor]:
     """
     Compute depth estimation metrics.
     
@@ -147,11 +143,10 @@ def compute_depth_metrics(
     
     return {'abs_rel': abs_rel, 'rmse': rmse}
 
-
 def compute_novel_view_metrics(
     pred_images: torch.Tensor,
     target_images: torch.Tensor
-) -> Dict[str, torch.Tensor]:
+) -> dict[str, torch.Tensor]:
     """
     Compute novel view synthesis metrics.
     
@@ -186,7 +181,6 @@ def compute_novel_view_metrics(
         result[f'{key}_std'] = torch.std(torch.stack(values))
     
     return result
-
 
 def visualize_grid(
     grid: torch.Tensor,
@@ -228,7 +222,6 @@ def visualize_grid(
     
     return slice_data.cpu().numpy()
 
-
 def create_error_map(pred: torch.Tensor, target: torch.Tensor, colormap: str = 'hot') -> np.ndarray:
     """
     Create error visualization map.
@@ -253,7 +246,6 @@ def create_error_map(pred: torch.Tensor, target: torch.Tensor, colormap: str = '
     
     return error_map
 
-
 def save_rendering_comparison(
     pred_images: list[torch.Tensor],
     target_images: list[torch.Tensor],
@@ -264,8 +256,8 @@ def save_rendering_comparison(
     Save rendering comparison visualization.
     
     Args:
-        pred_images: List of predicted images [H, W, C]
-        target_images: List of target images [H, W, C]
+        pred_images: list of predicted images [H, W, C]
+        target_images: list of target images [H, W, C]
         save_path: Path to save visualization
         num_samples: Number of samples to visualize
     """
@@ -295,8 +287,7 @@ def save_rendering_comparison(
     plt.savefig(save_path)
     plt.close()
 
-
-def compute_rendering_statistics(images: torch.Tensor) -> Dict[str, float]:
+def compute_rendering_statistics(images: torch.Tensor) -> dict[str, float]:
     """
     Compute statistics for rendered images.
     
@@ -317,13 +308,12 @@ def compute_rendering_statistics(images: torch.Tensor) -> Dict[str, float]:
     
     return stats
 
-
 def evaluate_model_performance(
     model: Any,
     test_dataloader: Any,
     device: str = 'cuda',
     save_dir: Optional[str] = None
-) -> Dict[str, Any]:
+) -> dict[str, Any]:
     """
     Evaluate model performance on test dataset.
     
@@ -361,14 +351,13 @@ def evaluate_model_performance(
     
     return result
 
-
 def plot_training_curves(train_losses: list[float], val_losses: list[float], save_path: str) -> None:
     """
     Plot training and validation loss curves.
     
     Args:
-        train_losses: List of training losses
-        val_losses: List of validation losses
+        train_losses: list of training losses
+        val_losses: list of validation losses
         save_path: Path to save plot
     """
     plt.figure(figsize=(10, 6))
@@ -381,7 +370,6 @@ def plot_training_curves(train_losses: list[float], val_losses: list[float], sav
     plt.grid(True)
     plt.savefig(save_path)
     plt.close()
-
 
 def save_image(image: torch.Tensor, path: str, normalize: bool = True) -> None:
     """
@@ -397,7 +385,6 @@ def save_image(image: torch.Tensor, path: str, normalize: bool = True) -> None:
     
     image = (image * 255).byte().cpu().numpy()
     Image.fromarray(image).save(path)
-
 
 def load_image(path: str, to_tensor: bool = True) -> Union[torch.Tensor, np.ndarray]:
     """
@@ -416,7 +403,6 @@ def load_image(path: str, to_tensor: bool = True) -> Union[torch.Tensor, np.ndar
         image = torch.from_numpy(image).float() / 255.0
     
     return image
-
 
 def create_video_from_images(
     image_dir: str,
@@ -457,7 +443,6 @@ def create_video_from_images(
     
     out.release()
 
-
 def create_comparison_grid(
     images: list[torch.Tensor],
     titles: Optional[list[str]] = None,
@@ -468,7 +453,7 @@ def create_comparison_grid(
     Create comparison grid of images.
     
     Args:
-        images: List of images [H, W, C]
+        images: list of images [H, W, C]
         titles: Optional list of titles
         save_path: Path to save visualization
         grid_size: Grid dimensions (rows, cols)

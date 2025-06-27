@@ -1,4 +1,5 @@
 from __future__ import annotations
+from typing import Any, Callable, Optional, TypeVar, Union
 
 """
 Classic NeRF: Representing Scenes as Neural Radiance Fields for View Synthesis.
@@ -19,7 +20,6 @@ import torch.nn as nn
 import torch.nn.functional as F
 import numpy as np
 import math
-from typing import Dict, List, Optional, Any, Union, Callable, TypeVar
 from dataclasses import dataclass
 
 T = TypeVar('T', bound=torch.Tensor)
@@ -63,7 +63,6 @@ class NeRFConfig:
     beta1: float = 0.9                   # Adam beta1
     beta2: float = 0.999                 # Adam beta2
     epsilon: float = 1e-7                # Adam epsilon
-
 
 class Embedder(nn.Module):
     """Positional encoding embedder for coordinates and directions."""
@@ -121,7 +120,6 @@ class Embedder(nn.Module):
         # Concatenate all embeddings
         return torch.cat(embeds, dim=-1)
 
-
 def get_embedder(multires: int, input_dims: int = 3) -> tuple[Embedder | nn.Identity, int]:
     """Get positional encoding embedder."""
     if multires == -1:
@@ -132,7 +130,6 @@ def get_embedder(multires: int, input_dims: int = 3) -> tuple[Embedder | nn.Iden
     
     embedder_obj = Embedder(**embed_kwargs)
     return embedder_obj, embedder_obj.out_dim
-
 
 class NeRF(nn.Module):
     """Classic NeRF model."""
@@ -211,7 +208,6 @@ class NeRF(nn.Module):
         
         return outputs
 
-
 def raw2outputs(
     raw: torch.Tensor,
     z_vals: torch.Tensor,
@@ -286,7 +282,6 @@ def raw2outputs(
     
     return ret
 
-
 def sample_pdf(
     bins: torch.Tensor,
     weights: torch.Tensor,
@@ -343,7 +338,6 @@ def sample_pdf(
     samples = bins_g[..., 0] + t * (bins_g[..., 1] - bins_g[..., 0])
     
     return samples
-
 
 class NeRFRenderer:
     """Volume renderer for NeRF."""
@@ -402,7 +396,7 @@ class NeRFRenderer:
         Volumetric rendering.
         
         Args:
-            ray_batch: Dict with ray information including:
+            ray_batch: dict with ray information including:
                 rays_o: [N_rays, 3] ray origins
                 rays_d: [N_rays, 3] ray directions  
                 viewdirs: [N_rays, 3] ray viewing directions
@@ -495,7 +489,6 @@ class NeRFRenderer:
         
         return ret
 
-
 def create_nerf(config: NeRFConfig) -> tuple[NeRF, NeRF | None, dict[str, Any]]:
     """
     Create NeRF models.
@@ -549,7 +542,6 @@ def create_nerf(config: NeRFConfig) -> tuple[NeRF, NeRF | None, dict[str, Any]]:
     
     return model, model_fine, render_kwargs_train
 
-
 class NeRFLoss(nn.Module):
     """Loss function for NeRF."""
     
@@ -586,7 +578,6 @@ class NeRFLoss(nn.Module):
             'img_loss': img_loss
         }
 
-
 def create_bungee_nerf(
     num_views: int = 50,
     max_resolution: int = 128,
@@ -594,14 +585,12 @@ def create_bungee_nerf(
     """Create Bungee NeRF model."""
     # ... existing code ...
 
-
 def batch_process_coordinates(
     coords_list: list[np.ndarray],
     batch_size: int = 1000,
 ):
     """Process coordinates in batches."""
     # ... existing code ...
-
 
 def compute_voxel_bounds(
     voxel_positions: torch.Tensor,

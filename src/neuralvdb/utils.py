@@ -1,3 +1,4 @@
+from typing import Any, Optional
 """
 Utility Functions for NeuralVDB
 
@@ -9,12 +10,10 @@ import torch
 import json
 import os
 import pickle
-from typing import Dict, List, Optional, Tuple, Any
 import logging
 from torch.utils.data import DataLoader
 
 logger = logging.getLogger(__name__)
-
 
 def create_sample_data(
     n_points: int = 10000,
@@ -91,7 +90,6 @@ def create_sample_data(
     
     return points, occupancies
 
-
 def _create_urban_scene(points: np.ndarray) -> np.ndarray:
     """创建城市场景"""
     occupancies = np.zeros(len(points), dtype=np.float32)
@@ -130,7 +128,6 @@ def _create_urban_scene(points: np.ndarray) -> np.ndarray:
         occupancies[on_road] = 0.1
     
     return occupancies
-
 
 def load_training_data(
     samples_dir: str,
@@ -205,7 +202,6 @@ def load_training_data(
     
     return train_loader, val_loader
 
-
 def save_vdb_data(data: dict[str, Any], filepath: str, format: str = 'npz') -> None:
     """
     保存VDB数据
@@ -258,7 +254,6 @@ def save_vdb_data(data: dict[str, Any], filepath: str, format: str = 'npz') -> N
         raise ValueError(f"不支持的格式: {format}")
     
     logger.info(f"VDB数据保存完成")
-
 
 def load_vdb_data(filepath: str, format: str = 'auto') -> dict[str, Any]:
     """
@@ -320,7 +315,6 @@ def load_vdb_data(filepath: str, format: str = 'auto') -> dict[str, Any]:
     
     return data
 
-
 def compute_sdf_from_occupancy(occupancy_grid: np.ndarray, voxel_size: float = 1.0) -> np.ndarray:
     """
     从占用网格计算SDF
@@ -353,7 +347,6 @@ def compute_sdf_from_occupancy(occupancy_grid: np.ndarray, voxel_size: float = 1
     
     return sdf_grid
 
-
 def extract_surface_points(
     sdf_grid: np.ndarray,
     threshold: float = 0.1,
@@ -383,7 +376,6 @@ def extract_surface_points(
     logger.info(f"提取到 {len(surface_points)} 个表面点")
     
     return surface_points, surface_sdf_values
-
 
 def visualize_training_data(
     points: np.ndarray,
@@ -487,7 +479,6 @@ def visualize_training_data(
         plt.show()
     else:
         plt.close()
-
 
 def visualize_predictions(
     points: np.ndarray,
@@ -597,7 +588,6 @@ def visualize_predictions(
         plt.show()
     else:
         plt.close()
-
 
 def compute_metrics(
     predictions: np.ndarray,

@@ -1,3 +1,4 @@
+from typing import Any, Optional
 """
 Core implementation of InfNeRF: Infinite Scale NeRF with O(log n) Space Complexity
 
@@ -13,10 +14,8 @@ import torch.nn as nn
 import torch.nn.functional as F
 import numpy as np
 import math
-from typing import Dict, List, Optional, Tuple, Any
 from dataclasses import dataclass
 from abc import ABC, abstractmethod
-
 
 @dataclass
 class InfNeRFConfig:
@@ -75,7 +74,6 @@ class InfNeRFConfig:
     use_pruning: bool = True            # Enable octree pruning
     pruning_threshold: float = 1e-4     # Density threshold for pruning
     sparse_point_threshold: int = 10    # Minimum sparse points for node
-
 
 class OctreeNode:
     """
@@ -137,7 +135,7 @@ class OctreeNode:
         Subdivide this node into 8 children.
         
         Returns:
-            List of 8 child nodes
+            list of 8 child nodes
         """
         if not self.is_leaf:
             return [child for child in self.children if child is not None]
@@ -177,7 +175,6 @@ class OctreeNode:
         # Estimate based on NeRF parameters
         param_count = sum(p.numel() for p in self.nerf.parameters())
         return param_count * 4  # 4 bytes per float32 parameter
-
 
 class LoDAwareNeRF(nn.Module):
     """
@@ -281,7 +278,6 @@ class LoDAwareNeRF(nn.Module):
             'density': density, 'color': color
         }
 
-
 class HashEncoder(nn.Module):
     """Multi-resolution hash encoding for spatial positions."""
     
@@ -325,7 +321,6 @@ class HashEncoder(nn.Module):
         
         return torch.cat(encoded_features, dim=-1)
 
-
 class SphericalHarmonicsEncoder(nn.Module):
     """Spherical harmonics encoding for viewing directions."""
     
@@ -355,7 +350,6 @@ class SphericalHarmonicsEncoder(nn.Module):
         # Higher degrees would be added here
         
         return torch.stack(features[:self.output_dim], dim=-1)
-
 
 class InfNeRFRenderer(nn.Module):
     """Renderer for InfNeRF with octree-based sampling."""
@@ -489,7 +483,6 @@ class InfNeRFRenderer(nn.Module):
         return {
             'rgb': rgb, 'depth': depth, 'acc': acc, 'weights': weights
         }
-
 
 class InfNeRF(nn.Module):
     """

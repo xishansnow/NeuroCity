@@ -1,3 +1,4 @@
+from typing import Optional
 """
 Sampling utilities for Instant NGP.
 
@@ -8,8 +9,6 @@ including adaptive sampling, importance sampling, and hierarchical sampling.
 import torch
 import torch.nn.functional as F
 import numpy as np
-from typing import Optional, Tuple
-
 
 def adaptive_sampling(
     z_vals: torch.Tensor,
@@ -72,7 +71,6 @@ def adaptive_sampling(
     
     return samples
 
-
 def importance_sampling(
     pdf: torch.Tensor,
     z_vals: torch.Tensor,
@@ -96,7 +94,6 @@ def importance_sampling(
     
     # Use adaptive sampling with PDF as weights
     return adaptive_sampling(z_vals, pdf, num_samples, det)
-
 
 def stratified_sampling(
     near: torch.Tensor,
@@ -134,7 +131,6 @@ def stratified_sampling(
     
     return z_vals
 
-
 def uniform_sampling(near: torch.Tensor, far: torch.Tensor, num_samples: int) -> torch.Tensor:
     """
     Perform uniform sampling along rays.
@@ -148,7 +144,6 @@ def uniform_sampling(near: torch.Tensor, far: torch.Tensor, num_samples: int) ->
         [N, num_samples] z-values
     """
     return stratified_sampling(near, far, num_samples, perturb=False)
-
 
 def hierarchical_sampling(
     coarse_z_vals: torch.Tensor,
@@ -169,7 +164,6 @@ def hierarchical_sampling(
         [N, num_fine] fine z-values
     """
     return adaptive_sampling(coarse_z_vals, coarse_weights, num_fine, det)
-
 
 def sample_pdf_2d(
     pdf: torch.Tensor,
@@ -212,7 +206,6 @@ def sample_pdf_2d(
     sampled_coords = coords[y_indices, x_indices]
     
     return sampled_coords
-
 
 def poisson_disk_sampling(
     num_samples: int,
@@ -316,7 +309,6 @@ def poisson_disk_sampling(
     
     return torch.stack(samples)
 
-
 def blue_noise_sampling(num_samples: int, bounds: torch.Tensor) -> torch.Tensor:
     """
     Generate blue noise sampling pattern.
@@ -333,7 +325,6 @@ def blue_noise_sampling(num_samples: int, bounds: torch.Tensor) -> torch.Tensor:
     radius = bbox_size / (2 * np.sqrt(num_samples))
     
     return poisson_disk_sampling(num_samples, radius.item(), bounds)
-
 
 def halton_sequence(num_samples: int, base: int = 2, scramble: bool = True) -> torch.Tensor:
     """
@@ -366,7 +357,6 @@ def halton_sequence(num_samples: int, base: int = 2, scramble: bool = True) -> t
     
     return sequence
 
-
 def sobol_sampling(num_samples: int, dimension: int = 3, scramble: bool = True) -> torch.Tensor:
     """
     Generate Sobol sequence for quasi-random sampling.
@@ -388,7 +378,6 @@ def sobol_sampling(num_samples: int, dimension: int = 3, scramble: bool = True) 
     except ImportError:
         # Fallback to uniform sampling
         return torch.rand(num_samples, dimension)
-
 
 def test_sampling_functions() -> None:
     """Test sampling function implementations."""
@@ -416,7 +405,6 @@ def test_sampling_functions() -> None:
     print(f"Poisson disk sampling shape: {poisson_samples.shape}")
     
     print("Sampling function tests completed!")
-
 
 if __name__ == "__main__":
     test_sampling_functions() 

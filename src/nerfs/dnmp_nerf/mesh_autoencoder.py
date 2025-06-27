@@ -1,3 +1,4 @@
+from typing import Optional
 """
 Mesh AutoEncoder for DNMP.
 
@@ -8,9 +9,7 @@ low-dimensional latent codes and decodes them back to vertex positions.
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-from typing import Optional, Tuple
 import numpy as np
-
 
 class LatentCode(nn.Module):
     """Learnable latent code for mesh shape representation."""
@@ -27,7 +26,6 @@ class LatentCode(nn.Module):
         """Reset latent code to random initialization."""
         with torch.no_grad():
             self.code.data = torch.randn_like(self.code) * init_std
-
 
 class MeshEncoder(nn.Module):
     """
@@ -117,7 +115,6 @@ class MeshEncoder(nn.Module):
                 return latent_code.squeeze(0)
             else:
                 return latent_code
-
 
 class MeshDecoder(nn.Module):
     """
@@ -230,7 +227,6 @@ class MeshDecoder(nn.Module):
         else:
             return vertices
 
-
 class MeshAutoEncoder(nn.Module):
     """
     Complete mesh autoencoder combining encoder and decoder.
@@ -341,7 +337,6 @@ class MeshAutoEncoder(nn.Module):
 
         return self.decode(latent_interp)
 
-
 def create_mesh_autoencoder(config_dict: dict) -> MeshAutoEncoder:
     """
     Factory function to create mesh autoencoder from config.
@@ -353,7 +348,6 @@ def create_mesh_autoencoder(config_dict: dict) -> MeshAutoEncoder:
         MeshAutoEncoder instance
     """
     return MeshAutoEncoder(latent_dim=config_dict.get("latent_dim", 128))
-
 
 def pretrain_mesh_autoencoder(
     autoencoder: MeshAutoEncoder,

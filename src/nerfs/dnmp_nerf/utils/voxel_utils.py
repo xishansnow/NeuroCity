@@ -1,3 +1,4 @@
+from typing import Optional, Union
 """
 Voxel processing utilities for DNMP.
 
@@ -6,9 +7,7 @@ This module provides functions for voxel grid operations, point cloud voxelizati
 
 import torch
 import numpy as np
-from typing import Dict, List, Optional, Tuple, Union 
 import open3d as o3d
-
 
 def voxelize_point_cloud(
     points: torch.Tensor,
@@ -61,7 +60,6 @@ def voxelize_point_cloud(
         'voxel_centers': voxel_centers, 'voxel_coords': unique_coords, 'point_voxel_ids': inverse_indices, 'points_per_voxel': counts, 'voxel_size': voxel_size, 'origin': min_coords
     }
 
-
 def create_voxel_grid(
     scene_bounds: tuple[float, float, float, float, float, float],
     voxel_size: float
@@ -96,7 +94,6 @@ def create_voxel_grid(
     return {
         'voxel_centers': voxel_centers, 'voxel_coords': voxel_coords, 'grid_size': grid_size, 'voxel_size': voxel_size, 'scene_bounds': scene_bounds
     }
-
 
 def adaptive_voxel_subdivision(
     points: torch.Tensor,
@@ -169,7 +166,6 @@ def adaptive_voxel_subdivision(
         'voxel_centers': all_centers, 'voxel_coords': all_coords, 'voxel_sizes': all_sizes, 'adaptive': True
     }
 
-
 def compute_voxel_features(
     points: torch.Tensor,
     point_features: Optional[torch.Tensor],
@@ -215,7 +211,6 @@ def compute_voxel_features(
                 raise ValueError(f"Unknown aggregation method: {aggregation}")
     
     return voxel_features
-
 
 def voxel_to_mesh(
     voxel_centers: torch.Tensor,
@@ -273,7 +268,6 @@ def voxel_to_mesh(
     faces = torch.cat(all_faces, dim=0)
     
     return vertices, faces
-
 
 def sparse_voxel_grid(
     points: torch.Tensor,

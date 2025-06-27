@@ -1,3 +1,4 @@
+from typing import Optional, import matplotlib.pyplot as plt
 #!/usr/bin/env python3
 """
 SDF/Occupancy神经网络训练模块
@@ -11,7 +12,6 @@ from torch.utils.data import Dataset, DataLoader
 import numpy as np
 import json
 import os
-from typing import Dict, List, Optional, Tuple, import matplotlib.pyplot as plt
 from tqdm import tqdm
 import logging
 

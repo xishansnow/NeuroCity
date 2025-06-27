@@ -1,3 +1,4 @@
+from typing import Any, Optional
 """
 Memory management components for Mega-NeRF++
 
@@ -14,13 +15,11 @@ import numpy as np
 import gc
 import psutil
 import time
-from typing import Dict, List, Optional, Tuple, Any
 from collections import OrderedDict
 import threading
 import queue
 from pathlib import Path
 import pickle
-
 
 class MemoryManager:
     """
@@ -165,7 +164,6 @@ class MemoryManager:
         optimal_batch_size = int(available_memory * safety_factor / sample_memory)
         
         return min(max(optimal_batch_size, 1), base_batch_size * 2)
-
 
 class CacheManager:
     """
@@ -316,7 +314,6 @@ class CacheManager:
         self.cache_metadata.clear()
         self._save_cache_metadata()
 
-
 class StreamingDataLoader:
     """
     Streaming data loader for very large datasets that don't fit in memory
@@ -404,7 +401,7 @@ class StreamingDataLoader:
         except queue.Empty:
             raise StopIteration
     
-    def _collate_batch(self, batch_data: list[Dict]) -> dict[str, torch.Tensor]:
+    def _collate_batch(self, batch_data: list[dict]) -> dict[str, torch.Tensor]:
         """Collate batch data"""
         
         if not batch_data:
@@ -441,7 +438,6 @@ class StreamingDataLoader:
     def __del__(self):
         """Cleanup"""
         self.stop()
-
 
 class MemoryOptimizer:
     """

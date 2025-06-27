@@ -6,8 +6,6 @@ This module provides functions for Morton encoding, hash table operations, and o
 
 import torch
 import numpy as np
-from typing import Tuple
-
 
 def morton_encode_3d(coords: torch.Tensor) -> torch.Tensor:
     """
@@ -46,7 +44,6 @@ def morton_encode_3d(coords: torch.Tensor) -> torch.Tensor:
     
     return torch.from_numpy(morton_codes).to(coords.device)
 
-
 def morton_decode_3d(morton_codes: torch.Tensor) -> torch.Tensor:
     """
     Decode Morton codes back to 3D coordinates.
@@ -76,7 +73,6 @@ def morton_decode_3d(morton_codes: torch.Tensor) -> torch.Tensor:
     
     return torch.from_numpy(coords).to(morton_codes.device)
 
-
 def hash_function_simple(coords: torch.Tensor, table_size: int) -> torch.Tensor:
     """
     Simple hash function for 3D coordinates.
@@ -102,7 +98,6 @@ def hash_function_simple(coords: torch.Tensor, table_size: int) -> torch.Tensor:
     
     return hash_val
 
-
 def hash_function_coherent(coords: torch.Tensor, table_size: int) -> torch.Tensor:
     """
     Spatial-coherent hash function that preserves locality.
@@ -125,7 +120,6 @@ def hash_function_coherent(coords: torch.Tensor, table_size: int) -> torch.Tenso
     
     return torch.abs(hash_val) % table_size
 
-
 def compute_hash_grid_size(resolution: int, max_entries: int) -> int:
     """
     Compute optimal hash table size for given resolution.
@@ -147,7 +141,6 @@ def compute_hash_grid_size(resolution: int, max_entries: int) -> int:
     table_size = 2 ** int(np.ceil(np.log2(table_size)))
     
     return table_size
-
 
 def hash_grid_lookup(
     positions: torch.Tensor,
@@ -187,7 +180,6 @@ def hash_grid_lookup(
     
     return features
 
-
 def compute_hash_collisions(coords_list: list, table_size: int) -> float:
     """
     Compute collision rate for hash function.
@@ -210,7 +202,6 @@ def compute_hash_collisions(coords_list: list, table_size: int) -> float:
     collision_rate = 1.0 - (unique_hashes / total_coords)
     
     return collision_rate
-
 
 def optimize_hash_parameters(coords_list: list, target_collision_rate: float = 0.1) -> dict:
     """
@@ -253,7 +244,6 @@ def optimize_hash_parameters(coords_list: list, target_collision_rate: float = 0
         'optimal_log_size': best_result['log_size'], 'optimal_table_size': best_result['table_size'], 'collision_rate': best_result['collision_rate'], 'memory_mb': best_result['memory_mb'], 'all_results': results
     }
 
-
 def visualize_hash_distribution(
     coords: torch.Tensor,
     table_size: int,
@@ -276,7 +266,6 @@ def visualize_hash_distribution(
     hist, _ = np.histogram(hash_indices.cpu().numpy(), bins=bins, range=(0, table_size))
     
     return hist
-
 
 def test_hash_functions() -> None:
     """Test hash function implementations."""
@@ -310,7 +299,6 @@ def test_hash_functions() -> None:
     print(f"Simple hash collision rate: {collision_simple:.3f}")
     
     print("Hash function tests completed!")
-
 
 if __name__ == "__main__":
     test_hash_functions() 

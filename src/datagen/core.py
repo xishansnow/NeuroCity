@@ -1,3 +1,4 @@
+from typing import Any, Optional
 """
 DataGen 核心模块
 
@@ -7,12 +8,10 @@ DataGen 核心模块
 import torch
 import numpy as np
 from dataclasses import dataclass
-from typing import Dict, List, Optional, Tuple, Any
 from pathlib import Path
 import logging
 
 logger = logging.getLogger(__name__)
-
 
 @dataclass
 class DataGenConfig:
@@ -70,7 +69,6 @@ class DataGenConfig:
             raise ValueError("samples_per_tile 必须大于 0")
         
         return True
-
 
 class DataGenPipeline:
     """数据生成管道"""

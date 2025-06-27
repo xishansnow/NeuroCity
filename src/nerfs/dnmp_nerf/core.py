@@ -1,3 +1,4 @@
+from typing import Optional, Union
 """
 Core components of DNMP-NeRF implementation.
 
@@ -7,10 +8,8 @@ This module contains the main classes for Deformable Neural Mesh Primitives, inc
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-from typing import Dict, List, Optional, Tuple, Union
 from dataclasses import dataclass
 import numpy as np
-
 
 @dataclass
 class DNMPConfig:
@@ -52,7 +51,6 @@ class DNMPConfig:
     depth_loss_weight: float = 0.1
     mesh_regularization_weight: float = 0.01
     latent_regularization_weight: float = 0.001
-
 
 class DeformableNeuralMeshPrimitive(nn.Module):
     """
@@ -142,7 +140,6 @@ class DeformableNeuralMeshPrimitive(nn.Module):
         vertices = self.get_mesh_vertices()
         return vertices, self.faces, self.vertex_features
 
-
 class RadianceMLP(nn.Module):
     """MLP for predicting radiance from interpolated vertex features."""
 
@@ -194,7 +191,6 @@ class RadianceMLP(nn.Module):
 
         return torch.cat([rgb, opacity], dim=-1)
 
-
 class DNMPRenderer(nn.Module):
     """Renderer for DNMP-based scene representation."""
 
@@ -216,7 +212,7 @@ class DNMPRenderer(nn.Module):
         Args:
             ray_origins: Ray origins [N, 3]
             ray_directions: Ray directions [N, 3]
-            primitives: List of DNMP primitives
+            primitives: list of DNMP primitives
             rasterizer: Rasterization module
 
         Returns:
@@ -326,7 +322,6 @@ class DNMPRenderer(nn.Module):
             ),
         }
 
-
 class DNMPLoss(nn.Module):
     """Loss function for DNMP training."""
 
@@ -346,7 +341,7 @@ class DNMPLoss(nn.Module):
         Args:
             predictions: Rendered outputs
             targets: Ground truth targets
-            primitives: List of DNMP primitives
+            primitives: list of DNMP primitives
 
         Returns:
             Dictionary of loss components
@@ -390,7 +385,6 @@ class DNMPLoss(nn.Module):
         losses["total_loss"] = total_loss
 
         return losses
-
 
 class DNMP(nn.Module):
     """

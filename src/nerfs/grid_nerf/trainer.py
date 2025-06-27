@@ -1,8 +1,13 @@
+from __future__ import annotations
+
 """
 Grid-NeRF Trainer Module
 
 This module provides comprehensive training functionality for Grid-NeRF models, including multi-GPU support, checkpointing, evaluation, and visualization.
 """
+
+from typing import Any, Optional
+
 
 import os
 import sys
@@ -12,7 +17,6 @@ import torch.nn as nn
 import torch.distributed as dist
 from torch.nn.parallel import DistributedDataParallel as DDP
 from torch.utils.tensorboard import SummaryWriter
-from typing import List, Optional, Tuple, Any
 import numpy as np
 import logging
 from pathlib import Path
@@ -30,7 +34,6 @@ from .utils import (
 from . import utils as grid_utils
 setup_logging = grid_utils.setup_logging
 get_learning_rate_scheduler = grid_utils.get_learning_rate_scheduler
-
 
 class GridNeRFTrainer:
     """
@@ -429,7 +432,6 @@ class GridNeRFTrainer:
         if self.world_size > 1:
             dist.destroy_process_group()
 
-
 def setup_distributed_training(rank: int, world_size: int, backend: str = 'nccl') -> None:
     """Setup distributed training environment."""
     os.environ['MASTER_ADDR'] = 'localhost'
@@ -437,7 +439,6 @@ def setup_distributed_training(rank: int, world_size: int, backend: str = 'nccl'
     
     dist.init_process_group(backend, rank=rank, world_size=world_size)
     torch.cuda.set_device(rank)
-
 
 def main_worker(
     rank: int, world_size: int, config: GridNeRFConfig, output_dir: str, data_config: dict[str, Any]
@@ -490,7 +491,6 @@ def main_worker(
         
     finally:
         trainer.cleanup()
-
 
 if __name__ == "__main__":
     # Example usage - this would typically be called from a separate script

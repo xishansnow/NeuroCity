@@ -1,3 +1,4 @@
+from typing import Any, Optional
 """
 表面采样器模块
 
@@ -5,13 +6,11 @@
 """
 
 import numpy as np
-from typing import Dict, List, Optional, Tuple, Any
 import logging
 from scipy.spatial.distance import cdist
 from scipy.ndimage import gaussian_filter
 
 logger = logging.getLogger(__name__)
-
 
 class SurfaceSampler:
     """表面采样器类"""

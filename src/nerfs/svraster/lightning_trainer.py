@@ -1,3 +1,4 @@
+from typing import Any, Optional
 """
 PyTorch Lightning trainer for SVRaster.
 
@@ -11,7 +12,6 @@ from pytorch_lightning.callbacks import ModelCheckpoint, LearningRateMonitor, Ea
 from pytorch_lightning.loggers import TensorBoardLogger, WandbLogger
 from pytorch_lightning.strategies import DDPStrategy
 import torchmetrics
-from typing import Dict, List, Optional, Tuple, Any
 from dataclasses import dataclass
 import numpy as np
 import logging
@@ -20,7 +20,6 @@ from .core import SVRasterModel, SVRasterConfig, SVRasterLoss
 from .dataset import SVRasterDataset, SVRasterDatasetConfig
 
 logger = logging.getLogger(__name__)
-
 
 @dataclass
 class SVRasterLightningConfig:
@@ -65,7 +64,6 @@ class SVRasterLightningConfig:
     gradient_clip_val: float = 1.0
     use_ema: bool = True
     ema_decay: float = 0.999
-
 
 class SVRasterLightningModule(pl.LightningModule):
     """PyTorch Lightning module for SVRaster training."""
@@ -357,7 +355,6 @@ class SVRasterLightningModule(pl.LightningModule):
         final_count = self.model.sparse_voxels.get_total_voxel_count()
         logger.info(f"Pruned {initial_count - final_count} voxels")
 
-
 def create_lightning_trainer(
     config: SVRasterLightningConfig, train_dataset: SVRasterDataset, val_dataset: Optional[SVRasterDataset] = None, max_epochs: int = 100, gpus: int | list[int] = 1, logger_type: str = "tensorboard", # tensorboard, wandb
     project_name: str = "svraster", experiment_name: str = "default", checkpoint_dir: str = "checkpoints", **trainer_kwargs
@@ -378,7 +375,7 @@ def create_lightning_trainer(
         **trainer_kwargs: Additional trainer arguments
         
     Returns:
-        Tuple of (lightning_module, trainer)
+        tuple of (lightning_module, trainer)
     """
     # Create Lightning module
     lightning_module = SVRasterLightningModule(config)
@@ -421,7 +418,6 @@ def create_lightning_trainer(
     )
     
     return lightning_module, trainer
-
 
 def train_svraster_lightning(
     model_config: SVRasterConfig, lightning_config: SVRasterLightningConfig, train_dataset: SVRasterDataset, val_dataset: Optional[SVRasterDataset] = None, **trainer_kwargs

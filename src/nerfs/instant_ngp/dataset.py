@@ -1,3 +1,4 @@
+from typing import Any, Optional, Union
 """
 Dataset module for Instant NGP.
 
@@ -12,11 +13,9 @@ import numpy as np
 import json
 import os
 from pathlib import Path
-from typing import Dict, List, Optional, Tuple, Any, Union
 import cv2
 from PIL import Image
 import math
-
 
 class InstantNGPDataset(Dataset):
     """Dataset for Instant NGP training."""
@@ -261,7 +260,6 @@ class InstantNGPDataset(Dataset):
                 )
             }
 
-
 def create_instant_ngp_dataloader(
     data_root: str, 
     split: str = 'train', 
@@ -302,7 +300,6 @@ def create_instant_ngp_dataloader(
     
     return dataloader
 
-
 def load_blender_data(basedir: str, half_res: bool = False, testskip: int = 1) -> tuple[np.ndarray, np.ndarray, np.ndarray, list[int], list[int]]:
     """
     Load Blender synthetic dataset.
@@ -313,7 +310,7 @@ def load_blender_data(basedir: str, half_res: bool = False, testskip: int = 1) -
         testskip: Skip every N test images
         
     Returns:
-        Tuple of (images, poses, render_poses, hwf, i_split)
+        tuple of (images, poses, render_poses, hwf, i_split)
     """
     splits = ['train', 'val', 'test']
     metas = {}
@@ -370,7 +367,6 @@ def load_blender_data(basedir: str, half_res: bool = False, testskip: int = 1) -
     
     return imgs, poses, render_poses, [H, W, focal], i_split
 
-
 def pose_spherical(theta: float, phi: float, radius: float) -> torch.Tensor:
     """Generate spherical pose."""
     c2w = trans_t(radius)
@@ -379,12 +375,10 @@ def pose_spherical(theta: float, phi: float, radius: float) -> torch.Tensor:
     c2w = torch.Tensor(np.array([[-1, 0, 0, 0], [0, 0, 1, 0], [0, 1, 0, 0], [0, 0, 0, 1]])) @ c2w
     return c2w
 
-
 def trans_t(t: float) -> torch.Tensor:
     return torch.Tensor([
         [1, 0, 0, 0], [0, 1, 0, 0], [0, 0, 1, t], [0, 0, 0, 1]
     ]).float()
-
 
 def rot_phi(phi: float) -> torch.Tensor:
     return torch.Tensor([
@@ -393,7 +387,6 @@ def rot_phi(phi: float) -> torch.Tensor:
         [0, np.sin(phi), np.cos(phi), 0], 
         [0, 0, 0, 1]
     ]).float()
-
 
 def rot_theta(th: float) -> torch.Tensor:
     return torch.Tensor([

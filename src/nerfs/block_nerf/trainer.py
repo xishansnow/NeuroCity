@@ -1,3 +1,4 @@
+from typing import Any, Optional
 """
 Block-NeRF Trainer
 
@@ -11,7 +12,6 @@ import torch.optim as optim
 import torch.nn.functional as F
 from torch.utils.data import DataLoader
 import numpy as np
-from typing import Dict, List, Optional, Tuple, Any
 import time
 import os
 from pathlib import Path
@@ -22,7 +22,6 @@ from .block_manager import BlockManager
 from .block_compositor import BlockCompositor
 from .visibility_network import VisibilityNetwork
 from .dataset import BlockNeRFDataset
-
 
 class PoseRefinement(nn.Module):
     """
@@ -101,7 +100,6 @@ class PoseRefinement(nn.Module):
         
         return refined_poses
 
-
 class BlockNeRFTrainer:
     """
     Trainer for Block-NeRF with multiple blocks and components
@@ -110,8 +108,8 @@ class BlockNeRFTrainer:
     def __init__(
         self,
         block_manager: BlockManager,
-        network_config: Dict,
-        training_config: Dict,
+        network_config: dict,
+        training_config: dict,
         device: str = 'cuda',
     )
         """
@@ -272,7 +270,7 @@ class BlockNeRFTrainer:
         
         Args:
             batch: Training batch
-            active_blocks: List of active block names
+            active_blocks: list of active block names
             
         Returns:
             Dictionary of loss values

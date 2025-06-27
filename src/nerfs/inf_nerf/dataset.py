@@ -1,3 +1,4 @@
+from typing import Any, Optional
 """
 Dataset module for InfNeRF supporting large-scale scenes and multi-resolution supervision.
 
@@ -16,12 +17,10 @@ import cv2
 import json
 import os
 from pathlib import Path
-from typing import Dict, List, Optional, Tuple, Any
 from dataclasses import dataclass
 import math
 
 from .core import InfNeRFConfig
-
 
 @dataclass
 class InfNeRFDatasetConfig:
@@ -59,7 +58,6 @@ class InfNeRFDatasetConfig:
     color_jitter_strength: float = 0.1      # Color jitter strength
     use_random_crop: bool = False           # Apply random cropping
     crop_ratio: float = 0.9                 # Crop ratio for random cropping
-
 
 class InfNeRFDataset(Dataset):
     """
@@ -402,7 +400,6 @@ class InfNeRFDataset(Dataset):
         else:
             raise IndexError("Invalid image index or pyramid level")
 
-
 def create_inf_nerf_dataloader(
     config: InfNeRFDatasetConfig,
     split: str = 'train',
@@ -434,7 +431,6 @@ def create_inf_nerf_dataloader(
     
     return dataloader
 
-
 # Utility functions for data preparation
 def prepare_colmap_data(colmap_dir: str, output_dir: str):
     """
@@ -447,7 +443,6 @@ def prepare_colmap_data(colmap_dir: str, output_dir: str):
     # This would contain code to convert COLMAP format to InfNeRF format
     # Including cameras.txt, images.txt, points3D.txt -> cameras.json, sparse_points.ply
     pass
-
 
 def prepare_nerfstudio_data(nerfstudio_dir: str, output_dir: str):
     """

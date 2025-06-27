@@ -1,3 +1,4 @@
+from typing import Any, Optional, Union
 """
 Training components for Mega-NeRF++
 
@@ -18,7 +19,6 @@ import numpy as np
 import time
 import os
 from pathlib import Path
-from typing import Dict, List, Optional, Tuple, Any, Union
 import logging
 import wandb
 from tqdm import tqdm
@@ -27,7 +27,6 @@ import json
 from .core import MegaNeRFPlus, MegaNeRFPlusConfig
 from .memory_manager import MemoryManager
 from .multires_renderer import PhotogrammetricVolumetricRenderer
-
 
 class MegaNeRFPlusTrainer:
     """
@@ -663,7 +662,6 @@ class MegaNeRFPlusTrainer:
             self.logger.error(f"Failed to load checkpoint: {e}")
             return False
 
-
 class MultiScaleTrainer(MegaNeRFPlusTrainer):
     """
     Multi-scale trainer with enhanced progressive training
@@ -695,7 +693,6 @@ class MultiScaleTrainer(MegaNeRFPlusTrainer):
         scale_step = self.global_step // self.steps_per_scale
         self.current_scale_idx = min(scale_step, len(self.scale_factors) - 1)
         self.current_resolution_level = self.current_scale_idx
-
 
 class DistributedTrainer(MegaNeRFPlusTrainer):
     """

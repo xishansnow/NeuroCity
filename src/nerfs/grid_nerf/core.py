@@ -1,3 +1,4 @@
+from typing import Any, Optional, Union
 """
 Grid-guided Neural Radiance Fields for Large Urban Scenes.
 
@@ -14,7 +15,6 @@ Key features:
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-from typing import List, Optional, Tuple, Any, Union, Dict
 from dataclasses import dataclass
 import numpy as np
 import math
@@ -22,7 +22,6 @@ import logging
 from pathlib import Path
 
 logger = logging.getLogger(__name__)
-
 
 @dataclass
 class GridNeRFConfig:
@@ -61,7 +60,6 @@ class GridNeRFConfig:
     color_loss_weight: float = 1.0
     depth_loss_weight: float = 0.1
     grid_regularization_weight: float = 0.001
-
 
 class HierarchicalGrid(nn.Module):
     """Hierarchical grid structure for multi-resolution scene representation."""
@@ -137,7 +135,6 @@ class HierarchicalGrid(nn.Module):
         occupied_mask = feature_magnitude > threshold
         
         return occupied_mask
-
 
 class GridGuidedMLP(nn.Module):
     """MLP network guided by hierarchical grid features."""
@@ -228,7 +225,6 @@ class GridGuidedMLP(nn.Module):
         rgb = torch.sigmoid(self.color_net(color_input))
         
         return rgb, density_features
-
 
 class GridNeRFRenderer(nn.Module):
     """Neural renderer for Grid-NeRF."""
@@ -356,7 +352,7 @@ class GridNeRFRenderer(nn.Module):
         t_vals: torch.Tensor,
         ray_directions: torch.Tensor,
         background_color: Optional[torch.Tensor] = None
-    ) -> Dict[str, torch.Tensor]:
+    ) -> dict[str, torch.Tensor]:
         """Render colors and depths using volume rendering equation.
         
         Args:
@@ -367,7 +363,7 @@ class GridNeRFRenderer(nn.Module):
             background_color: Optional background color [3]
             
         Returns:
-            Dict[str, torch.Tensor]: Rendering outputs containing:
+            dict[str, torch.Tensor]: Rendering outputs containing:
                 - 'color': Rendered RGB colors [N, 3]
                 - 'depth': Rendered depth values [N, 1]
                 - 'weights': Sample weights [N, num_samples]
@@ -409,7 +405,6 @@ class GridNeRFRenderer(nn.Module):
         
         return outputs
 
-
 class GridNeRF(nn.Module):
     """Grid-guided Neural Radiance Fields model."""
     
@@ -445,7 +440,7 @@ class GridNeRF(nn.Module):
         ray_origins: torch.Tensor,
         ray_directions: torch.Tensor,
         background_color: Optional[torch.Tensor] = None
-    ) -> Dict[str, torch.Tensor]:
+    ) -> dict[str, torch.Tensor]:
         """Forward pass of Grid-NeRF model.
         
         Args:
@@ -454,7 +449,7 @@ class GridNeRF(nn.Module):
             background_color: Optional background color [3]
             
         Returns:
-            Dict[str, torch.Tensor]: Rendering outputs containing:
+            dict[str, torch.Tensor]: Rendering outputs containing:
                 - 'coarse': Coarse rendering outputs
                 - 'fine': Fine rendering outputs (if using hierarchical sampling)
                 - 'combined': Combined rendering outputs
@@ -539,11 +534,11 @@ class GridNeRF(nn.Module):
             occupied = self.grid.get_occupied_cells(level, threshold)
             self.grid.grids[level].data[~occupied] = 0
     
-    def get_grid_statistics(self) -> Dict[str, Any]:
+    def get_grid_statistics(self) -> dict[str, Any]:
         """Get statistics about the grid representation.
         
         Returns:
-            Dict[str, Any]: Dictionary containing grid statistics:
+            dict[str, Any]: Dictionary containing grid statistics:
                 - 'num_occupied': Number of occupied cells per level
                 - 'occupancy_ratio': Ratio of occupied cells per level
                 - 'memory_usage': Approximate memory usage in MB
@@ -575,7 +570,6 @@ class GridNeRF(nn.Module):
                 if m.bias is not None:
                     nn.init.zeros_(m.bias)
 
-
 class GridNeRFLoss(nn.Module):
     """Loss function for Grid-NeRF model."""
     
@@ -590,9 +584,9 @@ class GridNeRFLoss(nn.Module):
     
     def forward(
         self,
-        predictions: Dict[str, torch.Tensor],
-        targets: Dict[str, torch.Tensor]
-    ) -> Dict[str, torch.Tensor]:
+        predictions: dict[str, torch.Tensor],
+        targets: dict[str, torch.Tensor]
+    ) -> dict[str, torch.Tensor]:
         """Compute the loss for Grid-NeRF predictions.
         
         Args:
@@ -605,7 +599,7 @@ class GridNeRFLoss(nn.Module):
                 - 'depth': Target depth values [N, 1] (optional)
             
         Returns:
-            Dict[str, torch.Tensor]: Dictionary containing loss terms:
+            dict[str, torch.Tensor]: Dictionary containing loss terms:
                 - 'loss': Total combined loss
                 - 'color_loss': Color reconstruction loss
                 - 'depth_loss': Depth supervision loss (if depth targets provided)

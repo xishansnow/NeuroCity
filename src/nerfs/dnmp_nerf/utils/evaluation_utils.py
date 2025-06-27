@@ -1,3 +1,4 @@
+from typing import Optional, Union
 """
 Evaluation utilities for DNMP.
 
@@ -8,10 +9,8 @@ import torch
 import torch.nn.functional as F
 import numpy as np
 import matplotlib.pyplot as plt
-from typing import Dict, List, Optional, Tuple, Union 
 import cv2
 from pathlib import Path
-
 
 def compute_image_metrics(
     pred_images: torch.Tensor,
@@ -49,7 +48,6 @@ def compute_image_metrics(
     return {
         'mse': mse.item(), 'psnr': psnr.item(), 'ssim': ssim.item(), 'lpips': lpips.item()
     }
-
 
 def evaluate_novel_view_synthesis(
     model,
@@ -123,7 +121,6 @@ def evaluate_novel_view_synthesis(
     
     return {**avg_metrics, **std_metrics}
 
-
 def save_image(image: torch.Tensor, filename: str):
     """Save image tensor to file."""
     if image.dim() == 4:
@@ -135,7 +132,6 @@ def save_image(image: torch.Tensor, filename: str):
     # Convert RGB to BGR for OpenCV
     image_bgr = cv2.cvtColor(image_np, cv2.COLOR_RGB2BGR)
     cv2.imwrite(str(filename), image_bgr)
-
 
 def create_video_from_images(image_dir: str, output_path: str, fps: int = 30):
     """Create video from sequence of images."""
@@ -159,7 +155,6 @@ def create_video_from_images(image_dir: str, output_path: str, fps: int = 30):
     
     video_writer.release()
     print(f"Video saved to {output_path}")
-
 
 def visualize_training_progress(log_dict: dict[str, list[float]], save_path: str):
     """Visualize training progress."""
@@ -196,7 +191,6 @@ def visualize_training_progress(log_dict: dict[str, list[float]], save_path: str
     plt.savefig(save_path)
     plt.close()
 
-
 def compute_geometry_metrics(
     pred_mesh_vertices: torch.Tensor,
     target_mesh_vertices: torch.Tensor
@@ -224,7 +218,6 @@ def compute_geometry_metrics(
         'chamfer_distance': cd.item(), 'hausdorff_distance': hausdorff_dist.item()
     }
 
-
 def render_depth_map(depth: torch.Tensor, near: float = 0.1, far: float = 100.0) -> torch.Tensor:
     """
     Render depth map as RGB image.
@@ -246,7 +239,6 @@ def render_depth_map(depth: torch.Tensor, near: float = 0.1, far: float = 100.0)
     
     return torch.from_numpy(depth_colored).float()
 
-
 def create_comparison_grid(
     images_dict: dict[str,
     torch.Tensor],
@@ -258,7 +250,7 @@ def create_comparison_grid(
     
     Args:
         images_dict: Dictionary of images {name: image_tensor}
-        titles: List of titles for images
+        titles: list of titles for images
         save_path: Path to save the grid (optional)
         
     Returns:
@@ -293,7 +285,6 @@ def create_comparison_grid(
     
     return grid_image
 
-
 def benchmark_rendering_speed(
     model,
     test_rays: tuple[torch.Tensor,
@@ -306,7 +297,7 @@ def benchmark_rendering_speed(
     
     Args:
         model: DNMP model
-        test_rays: Tuple of (ray_origins, ray_directions)
+        test_rays: tuple of (ray_origins, ray_directions)
         device: Device for computation
         num_runs: Number of runs for timing
         
@@ -353,7 +344,6 @@ def benchmark_rendering_speed(
         'mean_time': times.mean(
         )
     }
-
 
 def evaluate_view_dependent_effects(
     model,

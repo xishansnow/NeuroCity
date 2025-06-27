@@ -1,3 +1,4 @@
+from typing import Any, Optional, Union
 """
 Dataset module for PyNeRF
 Handles data loading and preprocessing for multi-scale training
@@ -11,11 +12,9 @@ import os
 import json
 from PIL import Image
 import cv2
-from typing import Dict, List, Optional, Tuple, Any, Union
 import logging
 
 logger = logging.getLogger(__name__)
-
 
 class PyNeRFDataset(data.Dataset):
     """
@@ -202,7 +201,7 @@ class PyNeRFDataset(data.Dataset):
             idx: Image index
             
         Returns:
-            Tuple of (ray_origins, ray_directions)
+            tuple of (ray_origins, ray_directions)
         """
         pose = self.poses[idx]
         
@@ -252,7 +251,6 @@ class PyNeRFDataset(data.Dataset):
         return {
             "image": image, "rays_o": rays_o, "rays_d": rays_d, "pose": pose, "bounds": bounds, "idx": idx
         }
-
 
 class MultiScaleDataset(PyNeRFDataset):
     """
@@ -308,7 +306,7 @@ class MultiScaleDataset(PyNeRFDataset):
             scale: Scale factor
             
         Returns:
-            Tuple of (ray_origins, ray_directions)
+            tuple of (ray_origins, ray_directions)
         """
         pose = self.poses[idx]
         focal = self.multiscale_focals[scale]
@@ -368,7 +366,6 @@ class MultiScaleDataset(PyNeRFDataset):
         
         return sample
 
-
 def create_dataloader(
     dataset: PyNeRFDataset, batch_size: int = 1, shuffle: bool = True, num_workers: int = 4, **kwargs
 ) -> DataLoader:
@@ -388,13 +385,12 @@ def create_dataloader(
         dataset, batch_size=batch_size, shuffle=shuffle, num_workers=num_workers, pin_memory=True, **kwargs
     )
 
-
-def collate_fn(batch: list[Dict]) -> dict[str, torch.Tensor]:
+def collate_fn(batch: list[dict]) -> dict[str, torch.Tensor]:
     """
     Custom collate function for PyNeRF data
     
     Args:
-        batch: List of data samples
+        batch: list of data samples
         
     Returns:
         Batched data dictionary

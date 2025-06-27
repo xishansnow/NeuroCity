@@ -1,3 +1,4 @@
+from typing import Any, Optional
 #!/usr/bin/env python3
 """
 Global Feature Vector Library based on Instant Neural Graphics Primitives
@@ -19,7 +20,6 @@ import json
 import os
 import hashlib
 import pickle
-from typing import Dict, List, Optional, Tuple, Any
 import matplotlib.pyplot as plt
 from tqdm import tqdm
 import logging
@@ -191,7 +191,7 @@ class GlobalFeatureDatabase:
         y: int,
         zoom: int,
         features: np.ndarray,
-        metadata: Dict = None,
+        metadata: dict = None,
     )
         """存储特征"""
         tile_id = self.get_tile_id(x, y, zoom)

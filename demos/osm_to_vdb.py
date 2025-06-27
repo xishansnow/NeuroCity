@@ -1,3 +1,4 @@
+from typing import Optional
 #!/usr/bin/env python3
 """
 从OpenStreetMap下载建筑物数据并转换为VDB格式
@@ -8,7 +9,6 @@ import os
 import json
 import numpy as np
 import openvdb as vdb
-from typing import Dict, List, Optional, Tuple
 import requests
 import xml.etree.ElementTree as ET
 from shapely.geometry import Polygon, Point
@@ -122,7 +122,7 @@ class OSMVDBConverter:
             logger.error(f"下载OSM数据失败: {e}")
             raise
     
-    def parse_osm_buildings(self, osm_file: str) -> list[Dict]:
+    def parse_osm_buildings(self, osm_file: str) -> list[dict]:
         """
         解析OSM文件中的建筑物数据
         
@@ -199,7 +199,7 @@ class OSMVDBConverter:
         logger.info(f"找到 {len(buildings)} 个建筑物")
         return buildings
     
-    def convert_coordinates_to_meters(self, buildings: list[Dict]) -> list[Dict]:
+    def convert_coordinates_to_meters(self, buildings: list[dict]) -> list[dict]:
         """
         将建筑物坐标从经纬度转换为米
         
@@ -238,7 +238,7 @@ class OSMVDBConverter:
         
         return converted_buildings
     
-    def create_building_mesh(self, building: Dict) -> Optional[trimesh.Trimesh]:
+    def create_building_mesh(self, building: dict) -> Optional[trimesh.Trimesh]:
         """
         从建筑物数据创建3D网格
         
@@ -348,7 +348,7 @@ class OSMVDBConverter:
     
     def create_vdb_from_buildings(
         self,
-        buildings: list[Dict],
+        buildings: list[dict],
         output_path: str = "osm_buildings.vdb",
     )
         """

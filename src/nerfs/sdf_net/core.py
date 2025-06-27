@@ -1,3 +1,4 @@
+from typing import Any, Optional, Union
 """
 DeepSDF Network Core Implementation
 基于论文: "DeepSDF: Learning Continuous Signed Distance Functions for Shape Representation"
@@ -10,7 +11,6 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 import numpy as np
-from typing import List, Optional, Tuple, Any, Union
 
 class SDFNetwork(nn.Module):
     """SDF网络模型
@@ -304,7 +304,6 @@ class SDFNetwork(nn.Module):
             'total_parameters': total_params, 'trainable_parameters': trainable_params, 'model_size_mb': model_size_mb
         }
 
-
 class LatentSDFNetwork(nn.Module):
     """潜在SDF网络
     
@@ -382,7 +381,6 @@ class LatentSDFNetwork(nn.Module):
             shape_id_tensor = shape_id_tensor.cuda()
         
         return self.latent_codes(shape_id_tensor)
-
 
 class MultiScaleSDFNetwork(SDFNetwork):
     """多尺度SDF网络

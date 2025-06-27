@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 """
 Plenoxels Dataset Module
 
@@ -11,12 +13,14 @@ Key features:
 - Camera pose handling and normalization
 """
 
+from typing import Any, Optional
+
+
 import os
 import json
 import numpy as np
 import torch
 from torch.utils.data import Dataset, DataLoader
-from typing import Dict, List, Optional, Tuple, Any
 from dataclasses import dataclass
 import cv2
 from pathlib import Path
@@ -24,7 +28,6 @@ import imageio
 import logging
 
 logger = logging.getLogger(__name__)
-
 
 @dataclass
 class PlenoxelDatasetConfig:
@@ -62,7 +65,6 @@ class PlenoxelDatasetConfig:
     near: float = 0.1
     far: float = 10.0
     scene_scale: float = 1.0
-
 
 def load_blender_data(
     basedir: str,
@@ -138,7 +140,6 @@ def load_blender_data(
     return {
         'images': imgs, 'poses': poses, 'i_split': i_split, 'H': H, 'W': W, 'focal': focal, 'near': 2.0, 'far': 6.0
     }
-
 
 def load_colmap_data(
     basedir: str,
@@ -221,7 +222,6 @@ def load_colmap_data(
     return {
         'images': imgs, 'poses': poses, 'hwf': hwf, 'K': K, 'near': 0.1, 'far': 100.0
     }
-
 
 class PlenoxelDataset(Dataset):
     """Main dataset class for Plenoxels."""
@@ -420,11 +420,9 @@ class PlenoxelDataset(Dataset):
         
         return np.stack(render_poses, axis=0)
 
-
 def normalize(x: np.ndarray) -> np.ndarray:
     """Normalize vector."""
     return x / np.linalg.norm(x)
-
 
 def create_plenoxel_dataloader(
     config: PlenoxelDatasetConfig,
@@ -442,7 +440,6 @@ def create_plenoxel_dataloader(
         shuffle=shuffle, num_workers=0, # Single threaded for ray sampling
         pin_memory=True
     )
-
 
 def create_plenoxel_dataset(
     data_dir: str,

@@ -1,3 +1,4 @@
+from typing import Any, Optional, Union
 """
 Instant NGP: Instant Neural Graphics Primitives with Multiresolution Hash Encoding.
 
@@ -17,9 +18,7 @@ import torch.nn as nn
 import torch.nn.functional as F
 import numpy as np
 import math
-from typing import Dict, List, Optional, Tuple, Any, Union
 from dataclasses import dataclass
-
 
 @dataclass 
 class InstantNGPConfig:
@@ -60,7 +59,6 @@ class InstantNGPConfig:
     # Loss parameters
     lambda_entropy: float = 1e-4         # Entropy regularization weight
     lambda_tv: float = 1e-4              # Total variation loss weight
-
 
 class HashEncoder(nn.Module):
     """Multiresolution hash encoding."""
@@ -209,7 +207,6 @@ class HashEncoder(nn.Module):
         encoded = torch.cat(encoded_features, dim=-1)
         return encoded
 
-
 class SHEncoder(nn.Module):
     """Spherical harmonics encoder for view directions."""
     
@@ -256,7 +253,6 @@ class SHEncoder(nn.Module):
             sh_features.append(-0.5900435899266435 * x * (x**2 - 3 * y**2))  # Y_3^3
         
         return torch.stack(sh_features[:self.output_dim], dim=-1)
-
 
 class InstantNGP(nn.Module):
     """Instant NGP model with hash encoding."""
@@ -387,7 +383,6 @@ class InstantNGP(nn.Module):
             density = self.forward(positions)
             return density
 
-
 class InstantNGPLoss(nn.Module):
     """Loss function for Instant NGP training."""
     
@@ -438,7 +433,6 @@ class InstantNGPLoss(nn.Module):
             losses['psnr'] = psnr
         
         return losses
-
 
 class InstantNGPRenderer:
     """Renderer for Instant NGP."""

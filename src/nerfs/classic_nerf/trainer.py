@@ -1,10 +1,11 @@
+from __future__ import annotations
+
+from typing import Any, Optional, Union
 """
 Trainer module for Classic NeRF.
 
 Handles training loop, validation, and model management.
 """
-
-from __future__ import annotations
 
 import os
 import time
@@ -14,7 +15,6 @@ import torch.nn as nn
 import torch.optim as optim
 from torch.utils.data import DataLoader
 from torch.utils.tensorboard import SummaryWriter
-from typing import Dict, Optional, Tuple, Any, Union 
 import imageio
 from tqdm import tqdm
 from torch import device as torch_device
@@ -22,7 +22,6 @@ from torch import device as torch_device
 from .core import NeRF, NeRFConfig, NeRFRenderer, NeRFLoss
 from .dataset import create_nerf_dataloader
 from .utils import to8b, img2mse, mse2psnr
-
 
 class NeRFTrainer:
     """Trainer class for Classic NeRF."""
@@ -266,7 +265,7 @@ class NeRFTrainer:
         val_interval: int = 10,
         save_interval: int = 50,
         render_test_interval: int = 100,
-        test_render_kwargs: Dict = None
+        test_render_kwargs: dict = None
     ):
         """
         Train the NeRF model.

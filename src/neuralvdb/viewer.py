@@ -1,3 +1,4 @@
+from typing import Any, Optional
 """
 Visualization Module for NeuralVDB
 
@@ -8,11 +9,9 @@ VDB data, including 2D/3D viewers and plotting functions.
 import numpy as np
 import json
 import os
-from typing import Dict, List, Optional, Tuple, Any
 import logging
 
 logger = logging.getLogger(__name__)
-
 
 class VDBViewer:
     """VDB数据查看器"""
@@ -441,7 +440,6 @@ class VDBViewer:
             if 'buildings' in self.metadata:
                 print(f"buildings: {len(self.metadata['buildings'])} 个建筑")
 
-
 def visualize_training_data(
     points: np.ndarray,
     occupancies: np.ndarray,
@@ -587,7 +585,6 @@ def visualize_training_data(
         plt.show()
     else:
         plt.close()
-
 
 def visualize_predictions(
     points: np.ndarray,
@@ -737,7 +734,6 @@ def visualize_predictions(
         plt.show()
     else:
         plt.close()
-
 
 def compare_predictions(
     points: np.ndarray,

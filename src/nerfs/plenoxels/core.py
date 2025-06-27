@@ -1,3 +1,6 @@
+from __future__ import annotations
+
+from typing import Any, Optional, Union
 """
 Plenoxels Core Module
 
@@ -15,9 +18,7 @@ import torch.nn as nn
 import torch.nn.functional as F
 import numpy as np
 import math
-from typing import Dict, List, Optional, Tuple, Any, Union
 from dataclasses import dataclass, field
-
 
 @dataclass
 class PlenoxelConfig:
@@ -61,7 +62,6 @@ class PlenoxelConfig:
     # Near and far planes
     near_plane: float = 0.1
     far_plane: float = 10.0
-
 
 class SphericalHarmonics:
     """Spherical harmonics utilities for view-dependent color representation."""
@@ -141,7 +141,6 @@ class SphericalHarmonics:
         
         return colors
 
-
 class VoxelGrid(nn.Module):
     """Sparse voxel grid for storing density and spherical harmonic coefficients."""
     
@@ -212,7 +211,7 @@ class VoxelGrid(nn.Module):
             coords: World coordinates [N, 3]
             
         Returns:
-            Tuple of (densities, sh_coeffs)
+            tuple of (densities, sh_coeffs)
         """
         # Convert to voxel coordinates
         voxel_coords = self.world_to_voxel_coords(coords)
@@ -305,7 +304,6 @@ class VoxelGrid(nn.Module):
         """Compute L1 sparsity loss."""
         return torch.mean(torch.abs(torch.exp(self.density))) + torch.mean(torch.abs(self.sh_coeffs))
 
-
 class VolumetricRenderer(nn.Module):
     """Volume renderer for Plenoxels."""
     
@@ -379,7 +377,6 @@ class VolumetricRenderer(nn.Module):
         return {
             'rgb': rgb, 'depth': depth, 'weights': weights, 'alpha': alpha, 'acc_weights': acc_weights
         }
-
 
 class PlenoxelModel(nn.Module):
     """Main Plenoxel model."""
@@ -510,7 +507,6 @@ class PlenoxelModel(nn.Module):
                 occupied_voxels / total_voxels,
             )
         }
-
 
 class PlenoxelLoss(nn.Module):
     """Loss function for Plenoxel training."""

@@ -1,3 +1,4 @@
+from typing import Any, Optional
 """
 PyTorch Lightning trainer for Mip-NeRF.
 
@@ -11,7 +12,6 @@ from pytorch_lightning.callbacks import ModelCheckpoint, LearningRateMonitor, Ea
 from pytorch_lightning.loggers import TensorBoardLogger, WandbLogger
 from pytorch_lightning.strategies import DDPStrategy
 import torchmetrics
-from typing import Dict, List, Optional, Tuple, Any
 from dataclasses import dataclass
 import numpy as np
 import logging
@@ -20,7 +20,6 @@ from .core import MipNeRF, MipNeRFConfig, MipNeRFLoss, ConicalFrustum
 from .dataset import MipNeRFDataset
 
 logger = logging.getLogger(__name__)
-
 
 @dataclass
 class MipNeRFLightningConfig:
@@ -68,7 +67,6 @@ class MipNeRFLightningConfig:
     # Advanced features
     use_multiscale_loss: bool = True
     stop_level_grad: bool = True
-
 
 class MipNeRFLightningModule(pl.LightningModule):
     """PyTorch Lightning module for Mip-NeRF training."""
@@ -331,7 +329,6 @@ class MipNeRFLightningModule(pl.LightningModule):
             self.log('val/sample_target_mean', target_rgb.mean())
             self.log('val/sample_coarse_mean', coarse_rgb.mean())
 
-
 def create_mip_nerf_lightning_trainer(
     config: MipNeRFLightningConfig, train_dataset, val_dataset = None, max_epochs: int = 200, gpus: int | list[int] = 1, logger_type: str = "tensorboard", project_name: str = "mip_nerf", experiment_name: str = "default", checkpoint_dir: str = "checkpoints", **trainer_kwargs
 ) -> tuple[MipNeRFLightningModule, pl.Trainer]:
@@ -351,7 +348,7 @@ def create_mip_nerf_lightning_trainer(
         **trainer_kwargs: Additional trainer arguments
         
     Returns:
-        Tuple of (lightning_module, trainer)
+        tuple of (lightning_module, trainer)
     """
     # Create Lightning module
     lightning_module = MipNeRFLightningModule(config)
@@ -392,7 +389,6 @@ def create_mip_nerf_lightning_trainer(
     )
     
     return lightning_module, trainer
-
 
 def train_mip_nerf_lightning(
     model_config: MipNeRFConfig, lightning_config: MipNeRFLightningConfig, train_dataset, val_dataset = None, **trainer_kwargs

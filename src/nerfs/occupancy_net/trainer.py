@@ -1,3 +1,4 @@
+from typing import Any, Optional, Union
 """
 Occupancy Network Trainer Implementation
 占用网络训练器
@@ -11,12 +12,10 @@ from torch.utils.tensorboard import SummaryWriter
 import numpy as np
 import os
 import time
-from typing import Dict, List, Optional, Tuple, Any, Union
 import json
 
 from .core import OccupancyNetwork, ConditionalOccupancyNetwork
 from .dataset import OccupancyDataset, create_occupancy_dataloader
-
 
 class OccupancyTrainer:
     """占用网络训练器
@@ -339,7 +338,7 @@ class OccupancyTrainer:
             'mesh_extraction_success_rate': success_rate, 'avg_vertices': avg_vertices, 'avg_faces': avg_faces
         }
     
-    def get_training_summary(self) -> Dict:
+    def get_training_summary(self) -> dict:
         """获取训练总结"""
         summary = {
             'total_epochs': self.epoch, 'total_steps': self.global_step, 'best_val_loss': self.best_val_loss, 'final_train_loss': self.train_losses[-1] if self.train_losses else None, 'final_val_loss': self.val_losses[-1] if self.val_losses else None, 'model_info': self.model.get_model_size(
@@ -358,8 +357,7 @@ class OccupancyTrainer:
         
         print(f'Training summary saved: {filepath}')
 
-
-def create_trainer_from_config(config: Dict) -> OccupancyTrainer:
+def create_trainer_from_config(config: dict) -> OccupancyTrainer:
     """从配置创建训练器"""
     
     # 创建模型

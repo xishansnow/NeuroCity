@@ -7,7 +7,6 @@
 import numpy as np
 import json
 import os
-from typing import Dict, List, Tuple
 import random
 
 class TileCityGenerator:
@@ -94,7 +93,7 @@ class TileCityGenerator:
         self,
         tile_x: int,
         tile_y: int,
-        buildings: list[Dict],
+        buildings: list[dict],
     )
         """
         生成单个tile的体素网格和建筑信息
@@ -120,7 +119,7 @@ class TileCityGenerator:
         tile_grid = np.maximum(tile_grid, roads)
         return tile_grid, tile_buildings
 
-    def generate_global_buildings(self, n_per_tile: int = 20) -> list[Dict]:
+    def generate_global_buildings(self, n_per_tile: int = 20) -> list[dict]:
         """
         生成全局建筑信息（均匀分布在所有tile）
         Returns:
@@ -147,7 +146,7 @@ class TileCityGenerator:
     def save_tile(
         self,
         tile_grid: np.ndarray,
-        tile_buildings: list[Dict],
+        tile_buildings: list[dict],
         tile_x: int,
         tile_y: int,
     )

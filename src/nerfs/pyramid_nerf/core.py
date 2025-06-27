@@ -1,3 +1,4 @@
+from typing import Any, Optional, Union
 """
 PyNeRF Core Module
 Implements the main PyNeRF model with pyramidal representation
@@ -6,7 +7,6 @@ Implements the main PyNeRF model with pyramidal representation
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-from typing import Dict, List, Optional, Tuple, Any, Union
 from dataclasses import dataclass
 import numpy as np
 import logging
@@ -16,7 +16,6 @@ from .pyramid_renderer import PyramidRenderer
 from .utils import compute_sample_area, get_pyramid_level, interpolate_pyramid_outputs
 
 logger = logging.getLogger(__name__)
-
 
 @dataclass
 class PyNeRFConfig:
@@ -52,7 +51,6 @@ class PyNeRFConfig:
     
     # Device
     device: str = "cuda"
-
 
 class PyNeRF(nn.Module):
     """
@@ -227,7 +225,6 @@ class PyNeRF(nn.Module):
             )
         }
 
-
 class PyNeRFMLP(nn.Module):
     """MLP head for PyNeRF pyramid level"""
     
@@ -280,7 +277,7 @@ class PyNeRFMLP(nn.Module):
             viewdirs: Viewing directions [N, 3]
             
         Returns:
-            Tuple of (rgb, sigma)
+            tuple of (rgb, sigma)
         """
         # Density prediction
         sigma = self.density_net(encoded_pts)
@@ -299,7 +296,6 @@ class PyNeRFMLP(nn.Module):
         rgb = self.color_net(color_input)
         
         return rgb, sigma.squeeze(-1)
-
 
 class PyNeRFLoss(nn.Module):
     """Loss function for PyNeRF training"""

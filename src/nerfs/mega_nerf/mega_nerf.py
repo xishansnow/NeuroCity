@@ -1,7 +1,14 @@
+from __future__ import annotations
+
 #!/usr/bin/env python3
 """
 Mega-NeRF: Scalable Construction of Large-Scale NeRFs for Virtual Fly-Throughs
 基于CVPR 2022论文的完整实现
+"""
+
+from typing import Optional
+
+import matplotlib.pyplot as plt
 
 核心特性:
 - 空间分解 (Spatial Partitioning)
@@ -18,7 +25,6 @@ import numpy as np
 import os
 import json
 import cv2
-from typing import Dict, List, Optional, Tuple, import matplotlib.pyplot as plt
 from tqdm import tqdm
 import logging
 from dataclasses import dataclass

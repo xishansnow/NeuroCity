@@ -1,3 +1,4 @@
+from typing import Any, Optional, Union
 """
 Core components for Mega-NeRF++
 
@@ -11,11 +12,9 @@ This module implements the main components of Mega-NeRF++, including:
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-from typing import Dict, List, Optional, Tuple, Any, Union
 from dataclasses import dataclass
 import numpy as np
 import math
-
 
 @dataclass
 class MegaNeRFPlusConfig:
@@ -70,7 +69,6 @@ class MegaNeRFPlusConfig:
     lambda_semantic: float = 0.1  # Semantic loss weight (if available)
     lambda_distortion: float = 0.01  # Distortion loss weight
 
-
 class HierarchicalSpatialEncoder(nn.Module):
     """
     Hierarchical spatial encoding for large-scale scenes
@@ -120,7 +118,6 @@ class HierarchicalSpatialEncoder(nn.Module):
         
         return torch.cat(features, dim=-1)
 
-
 class HashEncoder(nn.Module):
     """Simplified hash encoder implementation"""
     
@@ -151,7 +148,6 @@ class HashEncoder(nn.Module):
         indices = torch.clamp(indices, 0, self.embedding.num_embeddings - 1)
         
         return self.embedding(indices)
-
 
 class MultiResolutionMLP(nn.Module):
     """
@@ -230,7 +226,6 @@ class MultiResolutionMLP(nn.Module):
         return {
             'density': density, 'color': color
         }
-
 
 class PhotogrammetricRenderer(nn.Module):
     """
@@ -363,7 +358,6 @@ class PhotogrammetricRenderer(nn.Module):
             'rgb': rgb, 'depth': depth, 'disp': disp, 'acc_alpha': acc_alpha, 'weights': weights
         }
 
-
 class ScalableNeRFModel(nn.Module):
     """
     Scalable NeRF model for large scenes
@@ -425,7 +419,6 @@ class ScalableNeRFModel(nn.Module):
         # Forward through MLP
         return self.nerf_mlp(features, lod)
 
-
 class PositionalEncoder(nn.Module):
     """Positional encoder for view directions"""
     
@@ -443,7 +436,6 @@ class PositionalEncoder(nn.Module):
             features.append(torch.cos(2**freq * math.pi * x))
         
         return torch.cat(features, dim=-1)
-
 
 class MegaNeRFPlus(nn.Module):
     """

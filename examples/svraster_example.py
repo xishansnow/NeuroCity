@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 """
 SVRaster Example Usage
 
@@ -5,12 +7,13 @@ This script demonstrates how to use SVRaster for sparse voxel rasterization
 and efficient neural rendering.
 """
 
+from typing import Any, Optional
+
 import os
 import sys
 import torch
 import argparse
 from pathlib import Path
-from typing import List, Optional, Tuple, Any
 
 # Add the project root to Python path
 project_root = Path(__file__).parent.parent
@@ -25,7 +28,6 @@ except ImportError as e:
     print(f"Import error: {e}")
     print("Please make sure you're running from the project root directory")
     sys.exit(1)
-
 
 def basic_svraster_example():
     """Basic SVRaster example."""
@@ -51,7 +53,6 @@ def basic_svraster_example():
     print(f"Model parameters: {sum(p.numel() for p in model.parameters()):,d}")
     
     return model, config
-
 
 def train_svraster_example(data_path: str, output_dir: str):
     """Training example for SVRaster."""
@@ -121,7 +122,6 @@ def train_svraster_example(data_path: str, output_dir: str):
     
     return model, trainer
 
-
 def large_scene_example(data_path: str, output_dir: str):
     """Example for large scene reconstruction."""
     print("=== Large Scene SVRaster Training ===")
@@ -178,7 +178,6 @@ def large_scene_example(data_path: str, output_dir: str):
     
     return model, trainer
 
-
 def main():
     """Main function."""
     parser = argparse.ArgumentParser(description="SVRaster Example")
@@ -224,7 +223,6 @@ def main():
         # model, config = basic_svraster_example()
         # model.visualize_structure(args.output_dir)
         print("Model visualization completed!")
-
 
 if __name__ == "__main__":
     main() 

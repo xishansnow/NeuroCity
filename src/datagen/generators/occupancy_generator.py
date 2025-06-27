@@ -1,3 +1,4 @@
+from typing import Optional, import logging
 """
 占用网格生成器模块
 
@@ -5,11 +6,9 @@
 """
 
 import numpy as np
-from typing import Dict, List, Optional, Tuple, import logging
 import os
 
 logger = logging.getLogger(__name__)
-
 
 class OccupancyGenerator:
     """占用网格生成器"""
@@ -203,7 +202,7 @@ class OccupancyGenerator:
     
     def generate_complex_scene(
         self,
-        objects: list[Dict],
+        objects: list[dict],
         combination_mode: str = 'union',
     )
         """
@@ -237,7 +236,7 @@ class OccupancyGenerator:
         logger.info(f"生成复杂场景，对象数: {len(objects)}, 总占用体素数: {np.sum(result)}")
         return result
     
-    def _generate_single_object(self, obj_config: Dict) -> np.ndarray:
+    def _generate_single_object(self, obj_config: dict) -> np.ndarray:
         """生成单个对象的占用网格"""
         obj_type = obj_config['type']
         params = obj_config.get('params', {})
@@ -271,7 +270,7 @@ class OccupancyGenerator:
         'cylinder'],
         size_range: tuple[float,
         float] =,
-    ) -> tuple[np.ndarray, list[Dict]]:
+    ) -> tuple[np.ndarray, list[dict]]:
         """
         生成随机场景
         
@@ -332,7 +331,7 @@ class OccupancyGenerator:
         self,
         occupancy: np.ndarray,
         filepath: str,
-        metadata: Optional[Dict] = None,
+        metadata: Optional[dict] = None,
     ) -> None:
         """
         保存占用网格
@@ -362,7 +361,7 @@ class OccupancyGenerator:
         
         logger.info(f"占用网格已保存: {filepath}")
     
-    def load_occupancy_grid(self, filepath: str) -> tuple[np.ndarray, Dict]:
+    def load_occupancy_grid(self, filepath: str) -> tuple[np.ndarray, dict]:
         """
         加载占用网格
         

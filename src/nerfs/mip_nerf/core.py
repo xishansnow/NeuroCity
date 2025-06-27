@@ -1,4 +1,5 @@
 from __future__ import annotations
+from typing import Any, Optional, TypeVar, TypedDict, cast
 
 """
 Core Mip-NeRF implementation
@@ -13,7 +14,6 @@ This module implements the core components of Mip-NeRF including:
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-from typing import Dict, List, Optional, Tuple, Any, TypeVar, cast, TypedDict
 from dataclasses import dataclass
 import numpy as np
 import math
@@ -85,7 +85,6 @@ class MipNeRFConfig:
     stop_level_grad: bool = True  # If True, don't backprop gradients through levels
     use_multiscale_loss: bool = True  # If True, use multiscale loss
 
-
 class IntegratedPositionalEncoder(nn.Module):
     """
     Integrated Positional Encoding (IPE) for Mip-NeRF
@@ -143,7 +142,6 @@ class IntegratedPositionalEncoder(nn.Module):
     def forward(self, means: torch.Tensor, vars: torch.Tensor) -> torch.Tensor:
         """Forward pass of IPE"""
         return self.integrated_pos_enc(means, vars)
-
 
 class ConicalFrustum:
     """
@@ -231,7 +229,6 @@ class ConicalFrustum:
         # Extract diagonal variances from covariance matrices
         vars = torch.diagonal(self.covs, dim1=-2, dim2=-1)
         return self.means, vars
-
 
 class MipNeRFMLP(nn.Module):
     """
@@ -326,7 +323,6 @@ class MipNeRFMLP(nn.Module):
         return {
             'density': density, 'rgb': rgb
         }
-
 
 class MipNeRFRenderer(nn.Module):
     """
@@ -438,7 +434,6 @@ class MipNeRFRenderer(nn.Module):
             'rgb': rgb, 'depth': depth, 'acc_alpha': acc_alpha, 'weights': weights
         }
 
-
 class MipNeRF(nn.Module):
     """
     Complete Mip-NeRF model with coarse and fine networks
@@ -543,7 +538,6 @@ class MipNeRF(nn.Module):
             results['fine'] = fine_render
         
         return results
-
 
 class MipNeRFLoss(nn.Module):
     """Loss function for Mip-NeRF"""

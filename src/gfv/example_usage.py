@@ -6,7 +6,6 @@ This module demonstrates how to use the GFV library for global feature vector pr
 
 import numpy as np
 import logging
-from typing import List, Tuple
 
 # GFV imports
 from .core import GlobalHashConfig, GlobalFeatureLibrary
@@ -18,7 +17,6 @@ from .utils import (
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
-
 
 def basic_gfv_example():
     """基础GFV使用示例"""
@@ -63,7 +61,6 @@ def basic_gfv_example():
     logger.info(f"数据库统计: {stats}")
     
     return gfv_library
-
 
 def training_example():
     """训练示例"""
@@ -119,7 +116,6 @@ def training_example():
     
     return gfv_library, results
 
-
 def multiscale_example():
     """多尺度特征示例"""
     logger.info("=== 多尺度特征示例 ===")
@@ -158,7 +154,6 @@ def multiscale_example():
                 logger.info(f"  缩放级别 {zoom}: 瓦片({tile_x}, {tile_y}), 特征均值: {np.mean(features):.4f}")
     
     return multiscale_dataset
-
 
 def visualization_example():
     """可视化示例"""
@@ -206,7 +201,6 @@ def visualization_example():
     
     logger.info("可视化图表已保存")
 
-
 def performance_analysis_example():
     """性能分析示例"""
     logger.info("=== 性能分析示例 ===")
@@ -253,7 +247,6 @@ def performance_analysis_example():
         'single_query_time': single_query_time, 'batch_query_time': batch_query_time, 'distance_km': distance
     }
 
-
 def main():
     """主函数 - 运行所有示例"""
     logger.info("开始GFV库使用示例演示...")
@@ -280,7 +273,6 @@ def main():
     except Exception as e:
         logger.error(f"示例运行出错: {e}")
         raise
-
 
 if __name__ == "__main__":
     main() 

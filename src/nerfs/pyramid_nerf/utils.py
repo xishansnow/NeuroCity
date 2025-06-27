@@ -1,17 +1,16 @@
+from typing import Any, Optional, Union
 """
 Utility functions for PyNeRF
 """
 
 import torch
 import torch.nn.functional as F
-from typing import Dict, List, Optional, Tuple, Any, Union
 import numpy as np
 import logging
 import os
 import json
 
 logger = logging.getLogger(__name__)
-
 
 def compute_sample_area(
     rays_o: torch.Tensor, rays_d: torch.Tensor, z_vals: torch.Tensor, cone_angle: float = 0.00628
@@ -37,7 +36,6 @@ def compute_sample_area(
     
     return sample_areas
 
-
 def get_pyramid_level(
     sample_areas: torch.Tensor, pyramid_levels: list[int], scale_factor: float = 2.0
 ) -> torch.Tensor:
@@ -46,7 +44,7 @@ def get_pyramid_level(
     
     Args:
         sample_areas: Sample areas [N]
-        pyramid_levels: List of pyramid level resolutions
+        pyramid_levels: list of pyramid level resolutions
         scale_factor: Scale factor between levels
         
     Returns:
@@ -65,7 +63,6 @@ def get_pyramid_level(
     
     return level_indices.long()
 
-
 def interpolate_pyramid_outputs(
     rgb_outputs: list[tuple[torch.Tensor, torch.Tensor, torch.Tensor]], sigma_outputs: list[tuple[torch.Tensor, torch.Tensor, torch.Tensor]], pyramid_levels: torch.Tensor, num_points: int, device: torch.device
 ) -> tuple[torch.Tensor, torch.Tensor]:
@@ -73,14 +70,14 @@ def interpolate_pyramid_outputs(
     Interpolate outputs from different pyramid levels
     
     Args:
-        rgb_outputs: List of (rgb, mask, weight) tuples
-        sigma_outputs: List of (sigma, mask, weight) tuples
+        rgb_outputs: list of (rgb, mask, weight) tuples
+        sigma_outputs: list of (sigma, mask, weight) tuples
         pyramid_levels: Level indices for each point
         num_points: Total number of points
         device: Device for computations
         
     Returns:
-        Tuple of (final_rgb, final_sigma)
+        tuple of (final_rgb, final_sigma)
     """
     # Initialize output tensors
     final_rgb = torch.zeros(num_points, 3, device=device)
@@ -92,7 +89,6 @@ def interpolate_pyramid_outputs(
         final_sigma[mask] += sigma * sigma_weight
     
     return final_rgb, final_sigma
-
 
 def create_pyramid_hierarchy(
     num_levels: int = 8, base_resolution: int = 16, scale_factor: float = 2.0, max_resolution: int = 2048
@@ -107,7 +103,7 @@ def create_pyramid_hierarchy(
         max_resolution: Maximum resolution
         
     Returns:
-        List of resolutions for each level
+        list of resolutions for each level
     """
     resolutions = []
     for level in range(num_levels):
@@ -117,7 +113,6 @@ def create_pyramid_hierarchy(
         resolutions.append(int(resolution))
     
     return resolutions
-
 
 def save_pyramid_model(
     model: torch.nn.Module, config: dict, save_path: str, epoch: Optional[int] = None, optimizer_state: Optional[dict] = None
@@ -148,7 +143,6 @@ def save_pyramid_model(
     torch.save(checkpoint, save_path)
     logger.info(f"Model saved to {save_path}")
 
-
 def load_pyramid_model(
     model: torch.nn.Module, load_path: str, device: str = "cuda"
 ) -> tuple[torch.nn.Module, dict]:
@@ -161,7 +155,7 @@ def load_pyramid_model(
         device: Device to load model on
         
     Returns:
-        Tuple of (loaded_model, config)
+        tuple of (loaded_model, config)
     """
     checkpoint = torch.load(load_path, map_location=device)
     
@@ -171,7 +165,6 @@ def load_pyramid_model(
     logger.info(f"Model loaded from {load_path}")
     
     return model, config
-
 
 def compute_psnr(
     img_pred: torch.Tensor, img_gt: torch.Tensor, mask: Optional[torch.Tensor] = None
@@ -198,7 +191,6 @@ def compute_psnr(
     
     psnr = 20 * torch.log10(1.0 / torch.sqrt(mse))
     return psnr.item()
-
 
 def compute_ssim(
     img_pred: torch.Tensor, img_gt: torch.Tensor, window_size: int = 11, sigma: float = 1.5
@@ -255,7 +247,6 @@ def compute_ssim(
     
     return ssim_map.mean().item()
 
-
 def log_pyramid_stats(
     model: torch.nn.Module, step: int, losses: dict[str, float]
 ) -> None:
@@ -276,7 +267,6 @@ def log_pyramid_stats(
         logger.info(f"  Pyramid Levels: {pyramid_info['num_levels']}")
         logger.info(f"  Total Parameters: {pyramid_info['total_parameters']:, }")
 
-
 def create_training_schedule(
     max_steps: int, warmup_steps: int = 1000, decay_steps: int = 5000, decay_rate: float = 0.1
 ) -> dict[str, any]:
@@ -295,7 +285,6 @@ def create_training_schedule(
     return {
         "max_steps": max_steps, "warmup_steps": warmup_steps, "decay_steps": decay_steps, "decay_rate": decay_rate, "schedule_type": "exponential_decay_with_warmup"
     }
-
 
 def apply_learning_rate_schedule(
     optimizer: torch.optim.Optimizer, step: int, schedule: dict[str, any], base_lr: float

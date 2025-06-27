@@ -1,3 +1,4 @@
+from typing import Any, Optional
 """
 GFV Trainer Module - 训练器组件
 
@@ -10,7 +11,6 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 import numpy as np
-from typing import Dict, List, Optional, Tuple, Any
 import logging
 from tqdm import tqdm
 from torch.optim import Adam, AdamW
@@ -29,7 +29,6 @@ from .core import GlobalHashConfig, GlobalFeatureLibrary
 from .dataset import GlobalFeatureDataset, MultiScaleDataset
 
 logger = logging.getLogger(__name__)
-
 
 class GFVTrainer:
     """GFV传统训练器"""
@@ -219,7 +218,6 @@ class GFVTrainer:
         
         logger.info(f"检查点已从 {path} 加载")
 
-
 if LIGHTNING_AVAILABLE:
     class GFVLightningModule(pl.LightningModule):
         """GFV PyTorch Lightning模块"""
@@ -322,7 +320,6 @@ else:
         """Lightning不可用时的占位类"""
         def __init__(self, *args, **kwargs):
             raise ImportError("PyTorch Lightning is not installed. Please install it with: pip install pytorch-lightning")
-
 
 class GFVMultiScaleTrainer(GFVTrainer):
     """多尺度GFV训练器"""

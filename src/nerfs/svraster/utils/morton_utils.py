@@ -7,7 +7,6 @@ using Morton codes (Z-order curves) for spatial ordering.
 
 import torch
 import numpy as np
-from typing import Tuple
 
 def morton_encode_3d(x: int, y: int, z: int) -> int:
     """
@@ -30,7 +29,6 @@ def morton_encode_3d(x: int, y: int, z: int) -> int:
     
     return (part1by2(z) << 2) + (part1by2(y) << 1) + part1by2(x)
 
-
 def morton_decode_3d(morton_code: int) -> tuple[int, int, int]:
     """
     Decode Morton code back to 3D coordinates.
@@ -39,7 +37,7 @@ def morton_decode_3d(morton_code: int) -> tuple[int, int, int]:
         morton_code: Morton code as integer
         
     Returns:
-        Tuple of (x, y, z) coordinates
+        tuple of (x, y, z) coordinates
     """
     def compact1by2(n):
         """Compact bits by removing two zeros between each bit."""
@@ -55,7 +53,6 @@ def morton_decode_3d(morton_code: int) -> tuple[int, int, int]:
     z = compact1by2(morton_code >> 2)
     
     return x, y, z
-
 
 def morton_encode_batch(coords: torch.Tensor) -> torch.Tensor:
     """
@@ -78,7 +75,6 @@ def morton_encode_batch(coords: torch.Tensor) -> torch.Tensor:
     
     return morton_codes
 
-
 def morton_decode_batch(morton_codes: torch.Tensor) -> torch.Tensor:
     """
     Decode batch of Morton codes back to 3D coordinates.
@@ -96,7 +92,6 @@ def morton_decode_batch(morton_codes: torch.Tensor) -> torch.Tensor:
         coords[i] = torch.tensor([x, y, z])
     
     return coords
-
 
 def compute_morton_order(
     positions: torch.Tensor,
@@ -133,7 +128,6 @@ def compute_morton_order(
     # Compute Morton codes
     return morton_encode_batch(grid_coords)
 
-
 def sort_by_morton_order(
     positions: torch.Tensor,
     scene_bounds: tuple[float,
@@ -153,7 +147,7 @@ def sort_by_morton_order(
         grid_resolution: Grid resolution for discretization
         
     Returns:
-        Tuple of (sorted_positions, sort_indices)
+        tuple of (sorted_positions, sort_indices)
     """
     morton_codes = compute_morton_order(positions, scene_bounds, grid_resolution)
     sort_indices = torch.argsort(morton_codes)

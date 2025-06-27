@@ -1,3 +1,4 @@
+from typing import Optional, Union
 """
 Block-NeRF Model Implementation
 
@@ -9,9 +10,7 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 import numpy as np
-from typing import List, Optional, Tuple, Union 
 import math
-
 
 def positional_encoding(x: torch.Tensor, L: int) -> torch.Tensor:
     """
@@ -29,7 +28,6 @@ def positional_encoding(x: torch.Tensor, L: int) -> torch.Tensor:
         for fn in [torch.sin, torch.cos]:
             encoding.append(fn(2**i * math.pi * x))
     return torch.cat(encoding, dim=-1)
-
 
 def integrated_positional_encoding(means: torch.Tensor, covs: torch.Tensor, L: int) -> torch.Tensor:
     """
@@ -60,7 +58,6 @@ def integrated_positional_encoding(means: torch.Tensor, covs: torch.Tensor, L: i
                 encoding.append(torch.exp(variance_term) * torch.cos(freq * means))
     
     return torch.cat(encoding, dim=-1)
-
 
 class BlockNeRFNetwork(nn.Module):
     """
@@ -196,7 +193,6 @@ class BlockNeRFNetwork(nn.Module):
         return {
             'density': density, 'color': color, 'features': features
         }
-
 
 class BlockNeRF(nn.Module):
     """

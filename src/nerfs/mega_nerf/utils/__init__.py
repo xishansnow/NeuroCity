@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 """
 Utilities for Mega-NeRF
 
@@ -5,8 +7,10 @@ This module contains utility functions and classes for Mega-NeRF implementation.
 Note: Currently imports from nerfacto utils as the mega_nerf specific utils are not implemented.
 """
 
+from typing import Any, Callable, Optional, Union
+
+
 import torch
-from typing import Dict, List, Optional, Tuple, Any, Union, Callable
 from torch import Tensor
 
 # Import camera utilities from nerfacto since mega_nerf specific ones don't exist yet

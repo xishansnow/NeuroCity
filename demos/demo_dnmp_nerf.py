@@ -1,3 +1,4 @@
+from typing import Optional
 #!/usr/bin/env python3
 """
 DNMP NeRF 演示脚本
@@ -14,7 +15,6 @@ import os
 import torch
 import numpy as np
 import matplotlib.pyplot as plt
-from typing import Dict, List, Optional, Tuple
 
 # 添加项目根目录到Python路径
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
@@ -28,7 +28,6 @@ except ImportError as e:
     print(f"⚠️ DNMP NeRF模块导入失败: {e}")
     DNMP_NERF_AVAILABLE = False
 
-
 class MockDNMPNeRFConfig:
     """模拟DNMP NeRF配置"""
     def __init__(self):
@@ -40,7 +39,6 @@ class MockDNMPNeRFConfig:
         self.use_mesh_autoencoder = True
         self.rasterization_size = 256
         self.scene_bounds = (-2.0, -2.0, -2.0, 2.0, 2.0, 2.0)
-
 
 class MockMeshAutoencoder(torch.nn.Module):
     """模拟网格自动编码器"""
@@ -90,7 +88,6 @@ class MockMeshAutoencoder(torch.nn.Module):
         return {
             'latent': latent, 'reconstructed': reconstructed
         }
-
 
 class MockDNMPNeRF(torch.nn.Module):
     """模拟DNMP NeRF模型"""
@@ -167,7 +164,6 @@ class MockDNMPNeRF(torch.nn.Module):
             )
         }
 
-
 def create_mesh_dataset(
     num_meshes: int = 100,
     mesh_resolution: int = 64,
@@ -213,7 +209,6 @@ def create_mesh_dataset(
             meshes,
         )
     }
-
 
 def train_dnmp_nerf(
     model: MockDNMPNeRF,
@@ -289,7 +284,6 @@ def train_dnmp_nerf(
     print("✅ 训练完成!")
     return training_history
 
-
 def demonstrate_dnmp_nerf():
     """演示DNMP NeRF的完整流程"""
     print("🌟 DNMP NeRF 演示")
@@ -342,7 +336,6 @@ def demonstrate_dnmp_nerf():
     print("   ✅ 显式几何控制")
     
     return model, training_history
-
 
 if __name__ == '__main__':
     print("启动DNMP NeRF演示...")

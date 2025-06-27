@@ -1,3 +1,4 @@
+from typing import Any, Optional, Union
 """
 Dataset module for SVRaster.
 """
@@ -9,12 +10,10 @@ import torch.nn.functional as F
 from torch.utils.data import Dataset, DataLoader
 import numpy as np
 from PIL import Image
-from typing import Dict, List, Optional, Tuple, Any, Union
 from dataclasses import dataclass
 import logging
 
 logger = logging.getLogger(__name__)
-
 
 @dataclass
 class SVRasterDatasetConfig:
@@ -61,7 +60,6 @@ class SVRasterDatasetConfig:
     # Background handling
     white_background: bool = False
     black_background: bool = False
-
 
 class SVRasterDataset(Dataset):
     """Main dataset class for SVRaster."""
@@ -303,7 +301,6 @@ class SVRasterDataset(Dataset):
     def get_dataset_info(self) -> dict[str, Any]:
         """Get dataset information."""
 
-
 def create_svraster_dataloader(
     config: SVRasterDatasetConfig,
     split: str = "train",
@@ -319,7 +316,6 @@ def create_svraster_dataloader(
             split == "train",
         )
     )
-
 
 def create_svraster_dataset(config: SVRasterDatasetConfig, split: str = "train") -> SVRasterDataset:
     """Create a SVRaster dataset."""

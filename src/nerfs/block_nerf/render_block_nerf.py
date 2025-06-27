@@ -1,3 +1,6 @@
+from __future__ import annotations
+
+from typing import Optional
 #!/usr/bin/env python3
 """
 Block-NeRF Rendering Script
@@ -13,7 +16,6 @@ import numpy as np
 import json
 import cv2
 from pathlib import Path
-from typing import Dict, List, Optional, Tuple
 from tqdm import tqdm
 import imageio
 
@@ -22,7 +24,6 @@ sys.path.append(str(Path(__file__).parent.parent.parent))
 
 from .block_manager import BlockManager
 from .block_compositor import BlockCompositor
-
 
 class BlockNeRFRenderer:
     """
@@ -214,7 +215,7 @@ class BlockNeRFRenderer:
             save_depth: Whether to save depth maps
             
         Returns:
-            List of output file paths
+            list of output file paths
         """
         output_dir = Path(output_dir)
         output_dir.mkdir(parents=True, exist_ok=True)
@@ -273,7 +274,6 @@ class BlockNeRFRenderer:
         
         out.release()
         print(f"Video saved to {output_path}")
-
 
 def parse_args():
     """Parse command line arguments"""
@@ -369,7 +369,6 @@ def parse_args():
     
     return parser.parse_args()
 
-
 def generate_spiral_path(
     center: np.ndarray,
     radius: float,
@@ -410,7 +409,6 @@ def generate_spiral_path(
         poses.append(pose)
     
     return np.array(poses)
-
 
 def main():
     """Main rendering function"""
@@ -522,7 +520,6 @@ def main():
         renderer.create_video(output_files, str(video_path), args.fps)
     
     print(f"Rendering completed! Output saved to {args.output_dir}")
-
 
 if __name__ == '__main__':
     main() 

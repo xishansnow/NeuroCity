@@ -1,11 +1,10 @@
+from typing import Optional
 """
 Voxel utilities for SVRaster.
 """
 
 import torch
 import numpy as np
-from typing import Optional, Tuple
-
 
 def voxel_pruning(
     voxel_densities: torch.Tensor,
@@ -23,7 +22,7 @@ def voxel_pruning(
         threshold: Pruning threshold
         
     Returns:
-        Tuple of (pruned_densities, pruned_positions, pruned_sizes)
+        tuple of (pruned_densities, pruned_positions, pruned_sizes)
     """
     # Apply activation (assume exp activation)
     densities = torch.exp(voxel_densities)
@@ -38,7 +37,6 @@ def voxel_pruning(
     
     return pruned_densities, pruned_positions, pruned_sizes
 
-
 def compute_voxel_bounds(
     voxel_positions: torch.Tensor,
     voxel_sizes: torch.Tensor,
@@ -51,14 +49,13 @@ def compute_voxel_bounds(
         voxel_sizes: Voxel sizes [N]
         
     Returns:
-        Tuple of (box_min, box_max) each [N, 3]
+        tuple of (box_min, box_max) each [N, 3]
     """
     half_sizes = voxel_sizes.unsqueeze(-1) * 0.5
     box_min = voxel_positions - half_sizes
     box_max = voxel_positions + half_sizes
     
     return box_min, box_max
-
 
 def voxel_to_world_coords(
     voxel_coords: torch.Tensor,
@@ -92,7 +89,6 @@ def voxel_to_world_coords(
     world_coords = normalized_coords * scene_size + scene_min
     
     return world_coords
-
 
 def world_to_voxel_coords(
     world_coords: torch.Tensor,

@@ -1,3 +1,4 @@
+from typing import Any
 #!/usr/bin/env python3
 """
 Block-NeRF Training Script
@@ -13,7 +14,6 @@ import numpy as np
 import json
 import wandb
 from pathlib import Path
-from typing import Dict, Any
 
 # Add the parent directory to the path to import our modules
 sys.path.append(str(Path(__file__).parent.parent.parent))
@@ -21,7 +21,6 @@ sys.path.append(str(Path(__file__).parent.parent.parent))
 from src.nerfs.block_nerf import (
     BlockManager, BlockNeRFTrainer, BlockNeRFDataset, BlockCompositor, VisibilityNetwork
 )
-
 
 def parse_args():
     """Parse command line arguments"""
@@ -227,7 +226,6 @@ def parse_args():
     
     return parser.parse_args()
 
-
 def setup_config(args) -> dict[str, Any]:
     """Setup configuration dictionaries"""
     
@@ -245,7 +243,6 @@ def setup_config(args) -> dict[str, Any]:
     
     return network_config, training_config
 
-
 def setup_scene_bounds(args, dataset) -> tuple:
     """Setup scene bounds from arguments or dataset"""
     if args.scene_bounds:
@@ -257,7 +254,6 @@ def setup_scene_bounds(args, dataset) -> tuple:
         scene_bounds = tuple(zip(min_bounds, max_bounds))
     
     return scene_bounds
-
 
 def main():
     """Main training function"""
@@ -372,7 +368,6 @@ def main():
         wandb.finish()
     
     print(f"Training completed! Results saved to {exp_dir}")
-
 
 if __name__ == '__main__':
     main() 

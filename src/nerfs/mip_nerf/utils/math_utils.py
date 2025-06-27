@@ -1,3 +1,4 @@
+from typing import Optional
 """
 Mathematical utility functions for Mip-NeRF
 
@@ -8,23 +9,18 @@ positional encoding.
 import torch
 import torch.nn.functional as F
 import numpy as np
-from typing import Optional, Tuple
-
 
 def safe_exp(x: torch.Tensor, threshold: float = 10.0) -> torch.Tensor:
     """Safe exponential function to prevent overflow"""
     return torch.exp(torch.clamp(x, max=threshold))
 
-
 def safe_log(x: torch.Tensor, eps: float = 1e-8) -> torch.Tensor:
     """Safe logarithm function to prevent log(0)"""
     return torch.log(torch.clamp(x, min=eps))
 
-
 def safe_sqrt(x: torch.Tensor, eps: float = 1e-8) -> torch.Tensor:
     """Safe square root function to prevent sqrt of negative numbers"""
     return torch.sqrt(torch.clamp(x, min=eps))
-
 
 def expected_sin(x: torch.Tensor, x_var: torch.Tensor) -> torch.Tensor:
     """
@@ -41,7 +37,6 @@ def expected_sin(x: torch.Tensor, x_var: torch.Tensor) -> torch.Tensor:
     """
     return torch.exp(-0.5 * x_var) * torch.sin(x)
 
-
 def expected_cos(x: torch.Tensor, x_var: torch.Tensor) -> torch.Tensor:
     """
     Compute E[cos(x)] where x ~ N(x, x_var)
@@ -56,7 +51,6 @@ def expected_cos(x: torch.Tensor, x_var: torch.Tensor) -> torch.Tensor:
         Expected cos values [..., dim]
     """
     return torch.exp(-0.5 * x_var) * torch.cos(x)
-
 
 def integrated_pos_enc(
     x_coord: torch.Tensor,
@@ -100,7 +94,6 @@ def integrated_pos_enc(
     encoding = torch.cat([sin_vals, cos_vals], dim=-1)  # [..., num_freqs, 6]
     return encoding.reshape(*encoding.shape[:-2], -1)  # [..., 2*3*num_freqs]
 
-
 def lift_gaussian(
     directions: torch.Tensor,
     t_mean: torch.Tensor,
@@ -117,7 +110,7 @@ def lift_gaussian(
         r_var: [...] radial variance
         
     Returns:
-        Tuple of (mean, covariance) in 3D coordinates
+        tuple of (mean, covariance) in 3D coordinates
     """
     # Compute mean positions
     mean = directions * t_mean[..., None]
@@ -135,7 +128,6 @@ def lift_gaussian(
            r_var[..., None, None] * perp_outer)
     
     return mean, cov
-
 
 def compute_depth_variance(t_samples: torch.Tensor, weights: torch.Tensor) -> torch.Tensor:
     """
@@ -159,7 +151,6 @@ def compute_depth_variance(t_samples: torch.Tensor, weights: torch.Tensor) -> to
     
     return depth_var
 
-
 def compute_alpha_weights(
     density: torch.Tensor,
     dists: torch.Tensor,
@@ -172,7 +163,7 @@ def compute_alpha_weights(
         dists: [..., num_samples] distances between samples
         
     Returns:
-        Tuple of (alpha, weights)
+        tuple of (alpha, weights)
     """
     # Compute alpha from density and distance
     alpha = 1.0 - torch.exp(-F.relu(density) * dists)
@@ -187,7 +178,6 @@ def compute_alpha_weights(
     weights = alpha * transmittance
     
     return alpha, weights
-
 
 def piecewise_constant_pdf(
     t_vals: torch.Tensor,
@@ -241,7 +231,6 @@ def piecewise_constant_pdf(
     
     return samples
 
-
 def sample_along_rays(
     origins: torch.Tensor,
     directions: torch.Tensor,
@@ -285,7 +274,6 @@ def sample_along_rays(
         t_vals = lower + (upper - lower) * t_rand
     
     return t_vals.expand(*origins.shape[:-1], num_samples)
-
 
 def compute_multiscale_loss(
     pred_rgb: torch.Tensor,

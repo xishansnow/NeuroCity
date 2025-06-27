@@ -1,16 +1,19 @@
+from __future__ import annotations
+
 """
 Voxel Utilities for Plenoxels
 
 This module provides utilities for voxel grid operations, including creation, pruning, coordinate transformations, and boundary computations.
 """
 
+from typing import Any, Optional
+
+
 import torch
 import numpy as np
-from typing import Dict, List, Optional, Tuple, Any
 import logging
 
 logger = logging.getLogger(__name__)
-
 
 def create_voxel_grid(
     resolution: tuple[int,
@@ -64,7 +67,6 @@ def create_voxel_grid(
         )
     }
 
-
 def prune_voxel_grid(
     density: torch.Tensor,
     sh_coeffs: torch.Tensor,
@@ -79,7 +81,7 @@ def prune_voxel_grid(
         threshold: Density threshold for pruning
         
     Returns:
-        Tuple of (pruned_density, pruned_sh_coeffs)
+        tuple of (pruned_density, pruned_sh_coeffs)
     """
     # Compute occupancy mask
     occupancy_mask = torch.exp(density) > threshold
@@ -92,7 +94,6 @@ def prune_voxel_grid(
     pruned_sh_coeffs = sh_coeffs * mask_expanded.float()
     
     return pruned_density, pruned_sh_coeffs
-
 
 def compute_voxel_bounds(
     coords: torch.Tensor,
@@ -124,7 +125,6 @@ def compute_voxel_bounds(
     ], dim=-1)
     
     return normalized_coords
-
 
 def voxel_to_world_coords(
     voxel_indices: torch.Tensor,
@@ -165,7 +165,6 @@ def voxel_to_world_coords(
     ], dim=-1)
     
     return world_coords
-
 
 def world_to_voxel_coords(
     world_coords: torch.Tensor,
@@ -210,7 +209,6 @@ def world_to_voxel_coords(
     
     return voxel_indices
 
-
 def compute_voxel_occupancy_stats(
     density: torch.Tensor,
     threshold: float = 0.01,
@@ -236,7 +234,6 @@ def compute_voxel_occupancy_stats(
             occupied_voxels / total_voxels,
         )
     }
-
 
 def interpolate_voxel_grid(
     grid: torch.Tensor,
@@ -284,7 +281,6 @@ def interpolate_voxel_grid(
     
     return interpolated
 
-
 def subdivide_voxel_grid(
     density: torch.Tensor,
     sh_coeffs: torch.Tensor,
@@ -299,7 +295,7 @@ def subdivide_voxel_grid(
         subdivision_factor: Factor by which to increase resolution
         
     Returns:
-        Tuple of (subdivided_density, subdivided_sh_coeffs)
+        tuple of (subdivided_density, subdivided_sh_coeffs)
     """
     # Subdivide density
     density_expanded = density.unsqueeze(0).unsqueeze(0)  # [1, 1, D, H, W]
@@ -327,7 +323,6 @@ def subdivide_voxel_grid(
     
     return density_subdivided, sh_coeffs_subdivided
 
-
 def compute_voxel_gradient(density: torch.Tensor) -> torch.Tensor:
     """
     Compute gradient of density field for total variation loss.
@@ -353,7 +348,6 @@ def compute_voxel_gradient(density: torch.Tensor) -> torch.Tensor:
     
     return gradient_magnitude
 
-
 def apply_voxel_mask(
     density: torch.Tensor,
     sh_coeffs: torch.Tensor,
@@ -368,7 +362,7 @@ def apply_voxel_mask(
         mask: Binary mask [D, H, W]
         
     Returns:
-        Tuple of (masked_density, masked_sh_coeffs)
+        tuple of (masked_density, masked_sh_coeffs)
     """
     # Apply mask to density
     masked_density = density * mask.float()

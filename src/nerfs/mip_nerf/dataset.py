@@ -1,3 +1,4 @@
+from typing import Any, Optional
 """
 Dataset module for Mip-NeRF
 
@@ -10,11 +11,9 @@ import numpy as np
 import json
 import os
 from pathlib import Path
-from typing import Dict, List, Optional, Tuple, Any
 import cv2
 from PIL import Image
 import imageio
-
 
 class MipNeRFDataset(data.Dataset):
     """
@@ -36,7 +35,7 @@ class MipNeRFDataset(data.Dataset):
         Args:
             data_dir: Path to dataset directory
             split: Dataset split ('train', 'val', 'test')
-            img_wh: Tuple of (width, height) to resize images
+            img_wh: tuple of (width, height) to resize images
             white_bkgd: Whether to use white background
             half_res: Whether to use half resolution
             testskip: Skip every N frames for test set
@@ -107,7 +106,6 @@ class MipNeRFDataset(data.Dataset):
         return {
             'rays_o': rays_o, 'rays_d': rays_d, 'radii': radii
         }
-
 
 class BlenderMipNeRFDataset(MipNeRFDataset):
     """
@@ -206,7 +204,6 @@ class BlenderMipNeRFDataset(MipNeRFDataset):
         
         self.rays = torch.cat(all_rays, dim=0)
         self.rgbs = torch.cat(all_rgbs, dim=0)
-
 
 class LLFFMipNeRFDataset(MipNeRFDataset):
     """
@@ -311,7 +308,6 @@ class LLFFMipNeRFDataset(MipNeRFDataset):
         self.rays = torch.cat(all_rays, dim=0)
         self.rgbs = torch.cat(all_rgbs, dim=0)
 
-
 class MipNeRFRayDataset(data.Dataset):
     """
     Dataset that yields individual rays for training
@@ -351,7 +347,6 @@ class MipNeRFRayDataset(data.Dataset):
             'rays_o': rays_o, 'rays_d': rays_d, 'radii': radii, 'rgbs': batch_rgbs
         }
 
-
 def create_mip_nerf_dataset(
     data_dir: str,
     dataset_type: str = 'blender',
@@ -365,7 +360,7 @@ def create_mip_nerf_dataset(
         data_dir: Path to dataset director
         dataset_type: Type of dataset ('blender', 'llff', 'custom')
         split: Dataset split ('train', 'val', 'test')
-        img_wh: Tuple of (width, height) to resize images
+        img_wh: tuple of (width, height) to resize images
         white_bkgd: Whether to use white background
         half_res: Whether to use half resolution
         testskip: Skip every N frames for test set
@@ -380,7 +375,6 @@ def create_mip_nerf_dataset(
         return LLFFMipNeRFDataset(data_dir, split, **kwargs)
     else:
         raise ValueError(f"Unknown dataset type: {dataset_type}")
-
 
 def create_mip_nerf_dataloader(
     dataset: MipNeRFDataset | MipNeRFRayDataset, batch_size: int = 4096, shuffle: bool = True, num_workers: int = 4, pin_memory: bool = True
@@ -410,13 +404,12 @@ def create_mip_nerf_dataloader(
             dataset, batch_size=batch_size, shuffle=shuffle, num_workers=num_workers, pin_memory=pin_memory
         )
 
-
 def collate_fn(batch: list[dict[str, torch.Tensor]]) -> dict[str, torch.Tensor]:
     """
     Custom collate function for MipNeRF data
     
     Args:
-        batch: List of data samples
+        batch: list of data samples
         
     Returns:
         Batched data
@@ -429,7 +422,6 @@ def collate_fn(batch: list[dict[str, torch.Tensor]]) -> dict[str, torch.Tensor]:
         batched[key] = torch.stack(tensors, dim=0)
     
     return batched
-
 
 class MipNeRFImageDataset(data.Dataset):
     """

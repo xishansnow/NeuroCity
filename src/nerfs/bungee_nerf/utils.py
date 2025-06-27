@@ -1,17 +1,16 @@
+from typing import Any, Optional, Union
 """
 Utility functions for BungeeNeRF
 """
 
 import torch
 import torch.nn.functional as F
-from typing import Dict, List, Optional, Tuple, Any, Union
 import numpy as np
 import logging
 import os
 import json
 
 logger = logging.getLogger(__name__)
-
 
 def compute_scale_factor(
     distances: torch.Tensor, scale_thresholds: list[float]
@@ -35,7 +34,6 @@ def compute_scale_factor(
         scale_factors[mask] = 2.0 ** (len(scale_thresholds) - i)
     
     return scale_factors
-
 
 def get_level_of_detail(
     distances: torch.Tensor, lod_thresholds: list[float]
@@ -61,7 +59,6 @@ def get_level_of_detail(
     lod_levels = torch.clamp(lod_levels, 0, len(lod_thresholds))
     
     return lod_levels
-
 
 def progressive_positional_encoding(
     x: torch.Tensor, num_freqs: int, stage: int, max_stages: int, include_input: bool = True
@@ -107,7 +104,6 @@ def progressive_positional_encoding(
     
     return torch.cat(encoded, dim=-1)
 
-
 def multiscale_sampling(
     rays_o: torch.Tensor, rays_d: torch.Tensor, bounds: torch.Tensor, distances: torch.Tensor, num_samples_base: int = 64, scale_factors: list[float] = None
 ) -> tuple[torch.Tensor, torch.Tensor]:
@@ -123,7 +119,7 @@ def multiscale_sampling(
         scale_factors: Scale factors for different distances
         
     Returns:
-        Tuple of (sample_points, z_vals)
+        tuple of (sample_points, z_vals)
     """
     device = rays_o.device
     batch_size = rays_o.shape[0]
@@ -169,7 +165,6 @@ def multiscale_sampling(
         all_points[i, :num_samples] = points.squeeze(0)
     
     return all_points, all_z_vals
-
 
 def compute_multiscale_loss(
     outputs: dict[str, torch.Tensor], targets: dict[str, torch.Tensor], distances: torch.Tensor, stage: int, config
@@ -238,7 +233,6 @@ def compute_multiscale_loss(
     
     return losses
 
-
 def save_bungee_model(
     model: torch.nn.Module, config: dict, save_path: str, stage: Optional[int] = None, epoch: Optional[int] = None, optimizer_state: Optional[dict] = None
 ) -> None:
@@ -272,7 +266,6 @@ def save_bungee_model(
     torch.save(checkpoint, save_path)
     logger.info(f"Model saved to {save_path}")
 
-
 def load_bungee_model(
     model: torch.nn.Module, load_path: str, device: str = "cuda"
 ) -> tuple[torch.nn.Module, dict]:
@@ -285,7 +278,7 @@ def load_bungee_model(
         device: Device to load model on
         
     Returns:
-        Tuple of (loaded_model, config)
+        tuple of (loaded_model, config)
     """
     checkpoint = torch.load(load_path, map_location=device)
     
@@ -299,7 +292,6 @@ def load_bungee_model(
     logger.info(f"Model loaded from {load_path}")
     
     return model, config
-
 
 def compute_psnr(
     img_pred: torch.Tensor, img_gt: torch.Tensor, mask: Optional[torch.Tensor] = None
@@ -326,7 +318,6 @@ def compute_psnr(
     
     psnr = 20 * torch.log10(1.0 / torch.sqrt(mse))
     return psnr.item()
-
 
 def compute_ssim(
     img_pred: torch.Tensor, img_gt: torch.Tensor, window_size: int = 11, sigma: float = 1.5
@@ -383,7 +374,6 @@ def compute_ssim(
     
     return ssim_map.mean().item()
 
-
 def create_progressive_schedule(
     num_stages: int = 4, steps_per_stage: int = 50000, warmup_steps: int = 1000
 ) -> dict[str, any]:
@@ -408,7 +398,6 @@ def create_progressive_schedule(
     
     return schedule
 
-
 def apply_progressive_schedule(
     step: int, schedule: dict[str, any]
 ) -> int:
@@ -430,7 +419,6 @@ def apply_progressive_schedule(
             break
     
     return min(stage, schedule["num_stages"] - 1)
-
 
 def convert_ges_to_nerf_poses(
     ges_file: str, output_file: str, coordinate_system: str = "ENU"
@@ -487,7 +475,6 @@ def convert_ges_to_nerf_poses(
     
     logger.info(f"Converted {len(poses)} poses from GES to NeRF format")
 
-
 def compute_scene_bounds(
     poses: np.ndarray, percentile: float = 95.0
 ) -> tuple[float, float]:
@@ -499,7 +486,7 @@ def compute_scene_bounds(
         percentile: Percentile for robust bound estimation
         
     Returns:
-        Tuple of (near, far) bounds
+        tuple of (near, far) bounds
     """
     # Get camera positions
     positions = poses[:, :3, 3]
@@ -517,7 +504,6 @@ def compute_scene_bounds(
     far = max(far, near * 2.0)
     
     return near, far
-
 
 def visualize_multiscale_data(
     dataset, save_path: str, num_samples: int = 100

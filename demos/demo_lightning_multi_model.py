@@ -1,3 +1,4 @@
+from typing import Any, Optional
 """
 Comprehensive example demonstrating PyTorch Lightning usage with multiple NeRF models.
 
@@ -17,7 +18,6 @@ from pytorch_lightning.loggers import TensorBoardLogger, WandbLogger
 from pathlib import Path
 import argparse
 import yaml
-from typing import Dict, Optional, Any
 
 # Import different NeRF models and their Lightning trainers
 from src.nerfs.svraster.core import SVRasterConfig
@@ -39,7 +39,6 @@ from src.nerfs.mip_nerf.core import MipNeRFConfig
 from src.nerfs.mip_nerf.lightning_trainer import (
     MipNeRFLightningConfig, MipNeRFLightningModule, train_mip_nerf_lightning
 )
-
 
 def create_mock_dataset(model_type: str, size: int = 1000) -> torch.utils.data.Dataset:
     """Create a mock dataset for testing different models."""
@@ -73,7 +72,6 @@ def create_mock_dataset(model_type: str, size: int = 1000) -> torch.utils.data.D
     
     return MockDataset(size)
 
-
 def train_svraster_example():
     """Example of training SVRaster with Lightning."""
     print("🚀 Training SVRaster with PyTorch Lightning")
@@ -100,7 +98,6 @@ def train_svraster_example():
         trained_model.val_psnr.compute():.2f,
     }
     return trained_model
-
 
 def train_grid_nerf_example():
     """Example of training Grid-NeRF with Lightning."""
@@ -129,7 +126,6 @@ def train_grid_nerf_example():
     }
     return trained_model
 
-
 def train_instant_ngp_example():
     """Example of training Instant-NGP with Lightning."""
     print("⚡ Training Instant-NGP with PyTorch Lightning")
@@ -157,7 +153,6 @@ def train_instant_ngp_example():
     }
     return trained_model
 
-
 def train_mip_nerf_example():
     """Example of training MIP-NeRF with Lightning."""
     print("🎯 Training MIP-NeRF with PyTorch Lightning")
@@ -184,7 +179,6 @@ def train_mip_nerf_example():
         trained_model.val_psnr.compute():.2f,
     }
     return trained_model
-
 
 def compare_models():
     """Compare different NeRF models using Lightning."""
@@ -224,7 +218,6 @@ def compare_models():
             print(f"{model_name:15}: ✅ PSNR = {result['final_psnr']:.2f} dB")
     
     return results
-
 
 def advanced_lightning_features_demo():
     """Demonstrate advanced PyTorch Lightning features."""
@@ -291,7 +284,6 @@ def advanced_lightning_features_demo():
     print("✅ Advanced training completed!")
     return lightning_module, trainer
 
-
 def main():
     """Main function to run different examples."""
     parser = argparse.ArgumentParser(description="PyTorch Lightning NeRF Examples")
@@ -332,7 +324,6 @@ def main():
         advanced_lightning_features_demo()
     
     print("\n🎉 All examples completed successfully!")
-
 
 if __name__ == "__main__":
     main() 

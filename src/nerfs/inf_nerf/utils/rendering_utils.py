@@ -1,3 +1,4 @@
+from typing import Any, Callable, Optional
 """
 Rendering utilities for InfNeRF.
 
@@ -14,12 +15,10 @@ import torch.distributed as dist
 from torch.utils.data import DataLoader
 import numpy as np
 import math
-from typing import Dict, List, Optional, Tuple, Any, Callable
 import time
 from contextlib import contextmanager
 
 from ..core import InfNeRF, InfNeRFConfig, OctreeNode
-
 
 class DistributedRenderer:
     """
@@ -32,7 +31,7 @@ class DistributedRenderer:
         
         Args:
             model: InfNeRF model
-            device_ids: List of GPU device IDs
+            device_ids: list of GPU device IDs
             master_device: Master device ID
         """
         self.model = model
@@ -242,7 +241,6 @@ class DistributedRenderer:
         
         return {'rgb': rgb, 'depth': depth, 'acc': acc}
 
-
 class MemoryEfficientRenderer:
     """
     Memory-efficient renderer for large-scale scenes.
@@ -391,7 +389,6 @@ class MemoryEfficientRenderer:
         else:
             return self.model(*args, **kwargs)
 
-
 def distributed_rendering(
     model: InfNeRF,
     rays_o: torch.Tensor,
@@ -406,7 +403,7 @@ def distributed_rendering(
         model: InfNeRF model
         rays_o: [N, 3] ray origins
         rays_d: [N, 3] ray directions
-        device_ids: List of GPU device IDs
+        device_ids: list of GPU device IDs
         **kwargs: Additional rendering parameters
         
     Returns:
@@ -414,7 +411,6 @@ def distributed_rendering(
     """
     renderer = DistributedRenderer(model, device_ids)
     return renderer.render_distributed(rays_o, rays_d, **kwargs)
-
 
 def memory_efficient_rendering(
     model: InfNeRF,
@@ -439,7 +435,6 @@ def memory_efficient_rendering(
     renderer = MemoryEfficientRenderer(model, max_memory_gb)
     return renderer.render_memory_efficient(rays_o, rays_d, **kwargs)
 
-
 def batch_ray_sampling(
     images: list[torch.Tensor],
     cameras: list[dict[str,
@@ -451,8 +446,8 @@ def batch_ray_sampling(
     Sample rays from multiple images in batches.
     
     Args:
-        images: List of images [H, W, 3]
-        cameras: List of camera parameters
+        images: list of images [H, W, 3]
+        cameras: list of camera parameters
         batch_size: Number of rays per batch
         sampling_strategy: 'random', 'uniform', or 'importance'
         
@@ -486,7 +481,6 @@ def batch_ray_sampling(
     return {
         'rays_o': all_rays_o[indices], 'rays_d': all_rays_d[indices], 'target_rgb': all_colors[indices]
     }
-
 
 def _generate_rays_from_image(
     image: torch.Tensor,
@@ -530,7 +524,6 @@ def _generate_rays_from_image(
     
     return rays_o, rays_d, colors
 
-
 def _importance_sampling(colors: torch.Tensor, batch_size: int) -> torch.Tensor:
     """Perform importance sampling based on color variance."""
     # Compute importance weights based on color variance
@@ -541,7 +534,6 @@ def _importance_sampling(colors: torch.Tensor, batch_size: int) -> torch.Tensor:
     indices = torch.multinomial(weights, batch_size, replacement=True)
     
     return indices
-
 
 class RenderingProfiler:
     """
@@ -611,7 +603,6 @@ class RenderingProfiler:
             print(f"  Memory: {stat['avg_memory_mb']:.1f} MB average, "
                   f"{stat['max_memory_mb']:.1f} MB peak")
             print(f"  Calls: {stat['num_calls']}")
-
 
 # Global profiler instance
 rendering_profiler = RenderingProfiler() 

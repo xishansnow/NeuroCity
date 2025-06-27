@@ -32,9 +32,8 @@ sys.path.append(os.path.join(os.path.dirname(__file__), '..', '..', 'src'))
     # Fix relative imports for NeRF modules
     patterns = [
         # Fix "from . import" to proper module imports
-        (
-            r'from \. import \,
-        )
+        (r'from \. import ([^,]+)', r'from src.nerfs.\1 import')
+    ]
     
     # Determine module name from file path
     file_name = Path(file_path).stem

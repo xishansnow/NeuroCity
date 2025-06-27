@@ -178,9 +178,8 @@ def test_renderer():
         assert "acc" in outputs
         assert outputs["rgb"].shape == (batch_size, 3)
         
-        print(f"✓ Renderer output shapes: RGB {
-            outputs['rgb'].shape,
-        }
+        print(f"✓ Renderer output shapes: RGB {outputs['rgb'].shape}")
+        
         return True
     except Exception as e:
         print(f"✗ Renderer test failed: {e}")

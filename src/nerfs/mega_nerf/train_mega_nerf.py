@@ -1,3 +1,6 @@
+from __future__ import annotations
+
+from typing import Any
 #!/usr/bin/env python3
 """
 Mega-NeRF Training Script
@@ -13,7 +16,6 @@ import numpy as np
 import json
 import wandb
 from pathlib import Path
-from typing import Dict, Any
 
 # Add the parent directory to the path to import our modules
 sys.path.append(str(Path(__file__).parent.parent.parent))
@@ -21,7 +23,6 @@ sys.path.append(str(Path(__file__).parent.parent.parent))
 from src.nerfs.mega_nerf import (
     MegaNeRF, MegaNeRFConfig, MegaNeRFTrainer, ParallelTrainer, MegaNeRFDataset, CameraDataset, GridPartitioner, GeometryAwarePartitioner
 )
-
 
 def parse_args():
     """Parse command line arguments"""
@@ -200,7 +201,6 @@ def parse_args():
     
     return parser.parse_args()
 
-
 def setup_config(args) -> MegaNeRFConfig:
     """Setup Mega-NeRF configuration"""
     
@@ -230,7 +230,6 @@ def setup_config(args) -> MegaNeRFConfig:
     )
     
     return config
-
 
 def create_partitioner(args, camera_positions: np.ndarray):
     """Create spatial partitioner based on configuration"""
@@ -267,7 +266,6 @@ def create_partitioner(args, camera_positions: np.ndarray):
         raise ValueError(f"Unknown partitioning strategy: {args.partitioning_strategy}")
     
     return partitioner
-
 
 def main():
     """Main training function"""
@@ -405,7 +403,6 @@ def main():
         wandb.finish()
     
     print(f"Training completed! Results saved to {exp_dir}")
-
 
 if __name__ == '__main__':
     main() 

@@ -1,3 +1,4 @@
+from typing import Optional
 #!/usr/bin/env python3
 """
 Bungee NeRF 演示脚本
@@ -14,7 +15,6 @@ import os
 import torch
 import numpy as np
 import matplotlib.pyplot as plt
-from typing import Dict, List, Optional, Tuple
 
 # 添加项目根目录到Python路径
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
@@ -27,7 +27,6 @@ try:
 except ImportError as e:
     print(f"⚠️ Bungee NeRF模块导入失败: {e}")
     BUNGEE_NERF_AVAILABLE = False
-
 
 class MockBungeeNeRFConfig:
     """模拟Bungee NeRF配置"""
@@ -42,7 +41,6 @@ class MockBungeeNeRFConfig:
         self.encoding_end_freq = 8
         self.scene_bounds = (-4.0, -4.0, -4.0, 4.0, 4.0, 4.0)
         self.progressive_steps = [1000, 2000, 3000, 4000]
-
 
 class MockBungeeNeRF(torch.nn.Module):
     """模拟Bungee NeRF模型"""
@@ -102,7 +100,6 @@ class MockBungeeNeRF(torch.nn.Module):
         """设置训练步数"""
         self.training_step = step
 
-
 def create_multiscale_dataset(
     num_views: int = 50,
     max_resolution: int = 128,
@@ -146,7 +143,6 @@ def create_multiscale_dataset(
             }
     
     return datasets
-
 
 def progressive_training(
     model: MockBungeeNeRF,
@@ -216,7 +212,6 @@ def progressive_training(
     print("\n✅ 渐进式训练完成!")
     return training_history
 
-
 def demonstrate_bungee_nerf():
     """演示Bungee NeRF的完整流程"""
     print("🌟 Bungee NeRF 演示")
@@ -268,7 +263,6 @@ def demonstrate_bungee_nerf():
     print("   ✅ 稳定的训练收敛")
     
     return model, training_history
-
 
 if __name__ == '__main__':
     print("启动Bungee NeRF演示...")

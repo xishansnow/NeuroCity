@@ -1,9 +1,14 @@
+from __future__ import annotations
+
 """
 Mega-NeRF Dataset Module
 
 This module handles data loading, preprocessing, and partitioning
 for Mega-NeRF training and evaluation.
 """
+
+from typing import Any, Optional, Union
+
 
 import torch
 from torch.utils.data import Dataset, DataLoader
@@ -12,7 +17,6 @@ import cv2
 import json
 import os
 from pathlib import Path
-from typing import Dict, List, Optional, Tuple, Any, Union 
 import logging
 from dataclasses import dataclass
 import pickle
@@ -20,7 +24,6 @@ import h5py
 from PIL import Image
 
 logger = logging.getLogger(__name__)
-
 
 @dataclass
 class CameraInfo:
@@ -47,7 +50,6 @@ class CameraInfo:
     def get_principal_point(self) -> tuple[float, float]:
         """Get principal point (cx, cy)"""
         return self.intrinsics[0, 2], self.intrinsics[1, 2]
-
 
 class CameraDataset:
     """Dataset for managing camera information and images"""
@@ -379,7 +381,6 @@ class CameraDataset:
     def get_image(self, camera_id: int) -> Optional[np.ndarray]:
         """Get image by camera ID"""
         return self.images.get(camera_id)
-
 
 class MegaNeRFDataset(Dataset):
     """Dataset for Mega-NeRF training with spatial partitioning"""

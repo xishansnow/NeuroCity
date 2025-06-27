@@ -1,3 +1,6 @@
+from __future__ import annotations
+
+from typing import Optional
 #!/usr/bin/env python3
 """
 Mega-NeRF Rendering Script
@@ -13,7 +16,6 @@ import numpy as np
 import json
 import cv2
 from pathlib import Path
-from typing import Dict, List, Optional, Tuple
 from tqdm import tqdm
 import imageio
 
@@ -23,7 +25,6 @@ sys.path.append(str(Path(__file__).parent.parent.parent))
 from src.nerfs.mega_nerf import (
     MegaNeRF, MegaNeRFConfig, VolumetricRenderer, InteractiveRenderer, CameraDataset, create_sample_camera_path
 )
-
 
 class MegaNeRFRenderer:
     """
@@ -91,7 +92,7 @@ class MegaNeRFRenderer:
         Render a camera path
         
         Args:
-            camera_path: List of camera poses
+            camera_path: list of camera poses
             intrinsics: Camera intrinsics
             height: Image height
             width: Image width
@@ -100,7 +101,7 @@ class MegaNeRFRenderer:
             save_depth: Whether to save depth maps
             
         Returns:
-            List of output file paths
+            list of output file paths
         """
         from src.nerfs.mega_nerf.mega_nerf_dataset import CameraInfo
         
@@ -166,7 +167,6 @@ class MegaNeRFRenderer:
         
         out.release()
         print(f"Video saved to {output_path}")
-
 
 def parse_args():
     """Parse command line arguments"""
@@ -261,7 +261,6 @@ def parse_args():
     
     return parser.parse_args()
 
-
 def load_model_and_config(model_path: str, config_path: Optional[str] = None, device: str = 'cuda'):
     """Load trained model and configuration"""
     model_path = Path(model_path)
@@ -311,7 +310,6 @@ def load_model_and_config(model_path: str, config_path: Optional[str] = None, de
         raise FileNotFoundError(f"Model path not found: {model_path}")
     
     return model, config
-
 
 def generate_camera_path(
     render_type: str,
@@ -387,7 +385,6 @@ def generate_camera_path(
     
     else:
         raise ValueError(f"Unknown render type: {render_type}")
-
 
 def main():
     """Main rendering function"""
@@ -467,7 +464,6 @@ def main():
         json.dump(render_info, f, indent=2)
     
     print(f"Rendering completed! Output saved to {args.output_dir}")
-
 
 if __name__ == '__main__':
     main() 

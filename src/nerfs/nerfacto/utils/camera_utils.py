@@ -1,3 +1,4 @@
+from typing import Any, Optional, Union
 """
 Camera utilities for Nerfacto.
 
@@ -7,9 +8,7 @@ This module provides utility functions for camera operations, ray generation, an
 import torch
 import torch.nn.functional as F
 import numpy as np
-from typing import Dict, List, Optional, Tuple, Any, Union 
 import math
-
 
 def generate_rays(
     camera_poses: torch.Tensor, camera_intrinsics: torch.Tensor, image_height: int, image_width: int, device: str = 'cuda'
@@ -25,7 +24,7 @@ def generate_rays(
         device: Device to use
         
     Returns:
-        Tuple of (ray_origins, ray_directions) each [N, H, W, 3]
+        tuple of (ray_origins, ray_directions) each [N, H, W, 3]
     """
     N = camera_poses.shape[0]
     
@@ -76,7 +75,6 @@ def generate_rays(
     
     return ray_origins, ray_directions
 
-
 def sample_rays_uniform(
     ray_origins: torch.Tensor, ray_directions: torch.Tensor, num_rays: int, device: str = 'cuda'
 ) -> tuple[torch.Tensor, torch.Tensor]:
@@ -90,7 +88,7 @@ def sample_rays_uniform(
         device: Device to use
         
     Returns:
-        Tuple of sampled (ray_origins, ray_directions)
+        tuple of sampled (ray_origins, ray_directions)
     """
     N, H, W = ray_origins.shape[:3]
     
@@ -107,7 +105,6 @@ def sample_rays_uniform(
     sampled_directions = directions_flat[indices]
     
     return sampled_origins, sampled_directions
-
 
 def get_camera_frustum(
     pose: torch.Tensor, intrinsics: torch.Tensor, image_height: int, image_width: int, depth: float = 1.0
@@ -158,7 +155,6 @@ def get_camera_frustum(
     
     return world_corners
 
-
 def convert_poses_to_nerfstudio(poses: torch.Tensor) -> torch.Tensor:
     """
     Convert poses from OpenCV/COLMAP convention to Nerfstudio convention.
@@ -182,7 +178,6 @@ def convert_poses_to_nerfstudio(poses: torch.Tensor) -> torch.Tensor:
     
     return converted_poses
 
-
 def compute_camera_distances(poses: torch.Tensor) -> torch.Tensor:
     """
     Compute distances between all camera pairs.
@@ -201,7 +196,6 @@ def compute_camera_distances(poses: torch.Tensor) -> torch.Tensor:
     
     return distances
 
-
 def get_nearest_cameras(
     query_pose: torch.Tensor, reference_poses: torch.Tensor, k: int = 5
 ) -> tuple[torch.Tensor, torch.Tensor]:
@@ -214,7 +208,7 @@ def get_nearest_cameras(
         k: Number of nearest cameras to find
         
     Returns:
-        Tuple of (nearest_indices, distances)
+        tuple of (nearest_indices, distances)
     """
     query_pos = query_pose[:3, 3]  # [3]
     ref_positions = reference_poses[:, :3, 3]  # [N, 3]
@@ -227,7 +221,6 @@ def get_nearest_cameras(
     nearest_distances = distances[nearest_indices]
     
     return nearest_indices, nearest_distances
-
 
 def interpolate_poses(
     pose1: torch.Tensor, pose2: torch.Tensor, t: float
@@ -266,7 +259,6 @@ def interpolate_poses(
     interp_pose[:3, 3] = interp_trans
     
     return interp_pose
-
 
 def create_spiral_path(
     center: torch.Tensor, radius: float, height: float, num_views: int, device: str = 'cuda'
@@ -321,7 +313,6 @@ def create_spiral_path(
     
     return torch.stack(poses, dim=0)
 
-
 def compute_camera_rays_directions(
     camera_intrinsics: torch.Tensor, image_height: int, image_width: int, device: str = 'cuda'
 ) -> torch.Tensor:
@@ -361,7 +352,6 @@ def compute_camera_rays_directions(
     directions = directions / torch.norm(directions, dim=-1, keepdim=True)
     
     return directions
-
 
 def transform_rays(
     ray_origins: torch.Tensor, ray_directions: torch.Tensor, transform: torch.Tensor

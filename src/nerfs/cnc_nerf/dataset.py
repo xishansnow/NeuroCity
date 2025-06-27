@@ -1,3 +1,4 @@
+from typing import Any, Optional
 """
 CNC-NeRF Dataset Module
 
@@ -10,12 +11,10 @@ import numpy as np
 import json
 import cv2
 from pathlib import Path
-from typing import Dict, List, Optional, Tuple, Any
 from dataclasses import dataclass
 from torch.utils.data import Dataset, DataLoader
 
 from .core import CNCNeRFConfig
-
 
 @dataclass
 class CNCNeRFDatasetConfig:
@@ -62,7 +61,6 @@ class CNCNeRFDatasetConfig:
         
         assert abs(self.train_split + self.val_split + self.test_split - 1.0) < 1e-6, \
             "Train/val/test splits must sum to 1.0"
-
 
 class CNCNeRFDataset(Dataset):
     """Dataset for CNC-NeRF with multi-resolution supervision."""
@@ -318,7 +316,6 @@ class CNCNeRFDataset(Dataset):
         
         return batch
 
-
 class MultiResolutionDataLoader:
     """Multi-resolution data loader for progressive training."""
     
@@ -347,7 +344,6 @@ class MultiResolutionDataLoader:
     def __len__(self):
         """Get number of batches."""
         return len(self.dataloader)
-
 
 def create_synthetic_dataset(
     config: CNCNeRFDatasetConfig,
@@ -439,7 +435,6 @@ def create_synthetic_dataset(
     # Create and return dataset
     return CNCNeRFDataset(config, split='train')
 
-
 def compute_pyramid_loss(
     predictions: list[torch.Tensor],
     targets: list[torch.Tensor],
@@ -455,7 +450,6 @@ def compute_pyramid_loss(
     
     return total_loss
 
-
 def create_cnc_nerf_dataloader(
     config: CNCNeRFDatasetConfig,
     split: str = 'train',
@@ -469,7 +463,6 @@ def create_cnc_nerf_dataloader(
             split == 'train',
         )
     )
-
 
 # Example usage
 if __name__ == "__main__":

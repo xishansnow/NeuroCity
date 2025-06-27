@@ -1,3 +1,4 @@
+from typing import Optional
 """
 合成数据集模块
 
@@ -7,11 +8,9 @@
 import torch
 from torch.utils.data import Dataset
 import numpy as np
-from typing import Dict, List, Optional, Tuple
 import logging
 
 logger = logging.getLogger(__name__)
-
 
 class SyntheticVoxelDataset(Dataset):
     """合成体素数据集"""
@@ -46,7 +45,6 @@ class SyntheticVoxelDataset(Dataset):
         
         return coord, label
 
-
 class SDFDataset(Dataset):
     """SDF数据集"""
     
@@ -80,7 +78,6 @@ class SDFDataset(Dataset):
         
         return coord, sdf
 
-
 class OccupancyDataset(Dataset):
     """占用网格数据集"""
     
@@ -113,7 +110,6 @@ class OccupancyDataset(Dataset):
             coord = self.transform(coord)
         
         return coord, occ
-
 
 class MultiModalDataset(Dataset):
     """多模态数据集"""

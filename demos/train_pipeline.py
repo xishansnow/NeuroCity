@@ -1,3 +1,4 @@
+from typing import Any
 #!/usr/bin/env python3
 """
 完整的训练流水线
@@ -7,7 +8,6 @@
 import os
 import json
 import argparse
-from typing import Dict, Any
 import logging
 
 from sampler import VoxelSampler

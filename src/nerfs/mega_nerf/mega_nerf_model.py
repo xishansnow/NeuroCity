@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 """
 Mega-NeRF Core Model Implementation
 
@@ -5,16 +7,17 @@ This module contains the core Mega-NeRF neural network architecture
 including the main model, submodules, and configuration.
 """
 
+from typing import Optional, Union
+
+
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
 import numpy as np
-from typing import Dict, List, Optional, Tuple, Union
 from dataclasses import dataclass
 import logging
 
 logger = logging.getLogger(__name__)
-
 
 @dataclass
 class MegaNeRFConfig:
@@ -54,7 +57,6 @@ class MegaNeRFConfig:
         if self.skip_connections is None:
             self.skip_connections = [4]
 
-
 class PositionalEncoding(nn.Module):
     """位置编码模块"""
     def __init__(self, input_dim: int, max_freq_log2: int = 10, num_freqs: int = 10):
@@ -78,7 +80,6 @@ class PositionalEncoding(nn.Module):
             encoded.append(torch.sin(freq * x))
             encoded.append(torch.cos(freq * x))
         return torch.cat(encoded, dim=-1)
-
 
 class MegaNeRFSubmodule(nn.Module):
     """Mega-NeRF子模块，处理场景的一个空间区域"""
@@ -190,7 +191,6 @@ class MegaNeRFSubmodule(nn.Module):
     def set_centroid(self, centroid: torch.Tensor):
         """设置子模块的中心点"""
         self.centroid = centroid.clone()
-
 
 class MegaNeRF(nn.Module):
     """Mega-NeRF主模型"""

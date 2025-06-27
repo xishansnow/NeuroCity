@@ -1,3 +1,4 @@
+from typing import Any
 #!/usr/bin/env python3
 """
 PyTorch Lightning NeRF项目最终演示
@@ -11,7 +12,6 @@ import pytorch_lightning as pl
 from pytorch_lightning.callbacks import ModelCheckpoint, EarlyStopping, LearningRateMonitor
 from pytorch_lightning.loggers import TensorBoardLogger
 import torchmetrics
-from typing import Dict, Any
 from dataclasses import dataclass
 import numpy as np
 import sys
@@ -19,7 +19,6 @@ import os
 
 # 添加项目根目录到Python路径
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-
 
 @dataclass
 class NeRFLightningConfig:
@@ -31,7 +30,6 @@ class NeRFLightningConfig:
     scheduler_type: str = "cosine"
     use_ema: bool = True
     ema_decay: float = 0.999
-
 
 class NeRFLightningModule(pl.LightningModule):
     """PyTorch Lightning NeRF模块"""
@@ -188,7 +186,6 @@ class NeRFLightningModule(pl.LightningModule):
         else:
             return optimizer
 
-
 class MockNeRFDataset(torch.utils.data.Dataset):
     """模拟NeRF数据集"""
     
@@ -208,7 +205,6 @@ class MockNeRFDataset(torch.utils.data.Dataset):
         return {
             'positions': position, 'colors': color
         }
-
 
 def demonstrate_complete_lightning():
     """演示完整的PyTorch Lightning功能"""
@@ -311,7 +307,6 @@ def demonstrate_complete_lightning():
     print(f"\n📊 查看训练日志: tensorboard --logdir logs")
     
     return model, trainer
-
 
 if __name__ == '__main__':
     print("启动PyTorch Lightning NeRF完整演示...")

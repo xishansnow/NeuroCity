@@ -1,3 +1,4 @@
+from typing import Any, Optional
 """
 CNC-NeRF Core Module
 
@@ -15,7 +16,6 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 import numpy as np
-from typing import Dict, List, Optional, Tuple, Any
 from dataclasses import dataclass
 import math
 
@@ -24,7 +24,6 @@ try:
     TCNN_AVAILABLE = True
 except ImportError:
     TCNN_AVAILABLE = False
-
 
 @dataclass
 class CNCNeRFConfig:
@@ -69,7 +68,6 @@ class CNCNeRFConfig:
         """Post-initialization validation."""
         assert self.num_levels >= self.context_levels, "Context levels cannot exceed total levels"
         assert self.base_resolution < self.max_resolution, "Base resolution must be less than max resolution"
-
 
 class HashEmbeddingEncoder(nn.Module):
     """Multi-resolution hash embedding encoder with binarization support."""
@@ -262,7 +260,6 @@ class HashEmbeddingEncoder(nn.Module):
         features_2d = self.encode_2d(coords)
         return torch.cat([features_3d, features_2d], dim=-1)
 
-
 class ContextModel(nn.Module):
     """Base class for context models."""
     
@@ -279,7 +276,6 @@ class ContextModel(nn.Module):
         else:
             frequency = embeddings.mean()
         return frequency
-
 
 class LevelWiseContextModel(ContextModel):
     """Level-wise context model for multi-resolution embeddings."""
@@ -316,7 +312,6 @@ class LevelWiseContextModel(ContextModel):
             probabilities = probabilities.expand(current_embeddings.shape[0], -1)
         
         return probabilities
-
 
 class DimensionWiseContextModel(ContextModel):
     """Dimension-wise context model for 2D-3D cross-dimension dependencies."""
@@ -366,7 +361,6 @@ class DimensionWiseContextModel(ContextModel):
         
         return probabilities
 
-
 class EntropyEstimator(nn.Module):
     """Entropy estimator for rate-distortion optimization."""
     
@@ -396,7 +390,6 @@ class EntropyEstimator(nn.Module):
         """Calculate total entropy loss."""
         bits = self.bit_estimator(probabilities, embeddings)
         return bits.sum()
-
 
 class ArithmeticCoder(nn.Module):
     """Arithmetic coding for actual compression."""
@@ -437,7 +430,6 @@ class ArithmeticCoder(nn.Module):
         
         quantized = ((embeddings - min_val) / (max_val - min_val) * (2**bits - 1)).int()
         return quantized.cpu().numpy().flatten()
-
 
 class OccupancyGrid(nn.Module):
     """Occupancy grid for spatial pruning and hash fusion."""
@@ -497,7 +489,6 @@ class OccupancyGrid(nn.Module):
         
         return torch.tensor(aoe_values, device=coords.device)
 
-
 class CNCRenderer(nn.Module):
     """CNC renderer combining all compression components."""
     
@@ -554,7 +545,6 @@ class CNCRenderer(nn.Module):
         return {
             'density': density.squeeze(-1), 'color': color, 'features': features
         }
-
 
 class CNCNeRF(nn.Module):
     """Main CNC-NeRF model."""

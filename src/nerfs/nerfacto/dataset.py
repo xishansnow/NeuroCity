@@ -1,3 +1,4 @@
+from typing import Any, Optional
 """
 Nerfacto Dataset Module
 
@@ -14,13 +15,11 @@ import numpy as np
 import json
 import os
 from pathlib import Path
-from typing import Dict, List, Optional, Tuple, Any
 from dataclasses import dataclass
 import cv2
 from PIL import Image
 import glob
 from scipy.spatial.transform import Rotation
-
 
 @dataclass
 class NerfactoDatasetConfig:
@@ -67,7 +66,6 @@ class NerfactoDatasetConfig:
     # Memory optimization
     cache_images: bool = False
     use_cached_dataset: bool = False
-
 
 class CameraModel:
     """Camera model for handling different projection types."""
@@ -120,7 +118,6 @@ class CameraModel:
         
         return torch.stack([u, v], dim=-1)
 
-
 class ImageProcessor:
     """Image processing utilities for Nerfacto dataset."""
     
@@ -163,7 +160,6 @@ class ImageProcessor:
         jittered = jitter(pil_image)
         
         return transforms.ToTensor()(jittered).permute(1, 2, 0)
-
 
 class COLMAPDataParser:
     """Parser for COLMAP data format."""
@@ -233,7 +229,6 @@ class COLMAPDataParser:
             'cameras': cameras, 'images': images
         }
 
-
 class BlenderDataParser:
     """Parser for Blender NeRF data format."""
     
@@ -254,7 +249,6 @@ class BlenderDataParser:
                 all_data[split_name] = data
         
         return all_data
-
 
 class NerfactoDataset(Dataset):
     """Main Nerfacto dataset class."""
@@ -537,7 +531,6 @@ class NerfactoDataset(Dataset):
         
         return rays_o, rays_d, colors
 
-
 def create_nerfacto_dataloader(
     config: NerfactoDatasetConfig,
     split: str = "train",
@@ -551,7 +544,6 @@ def create_nerfacto_dataloader(
     return DataLoader(
         dataset, batch_size=batch_size, shuffle=shuffle, num_workers=num_workers, pin_memory=True
     )
-
 
 def create_nerfacto_dataset(
     data_dir: str,

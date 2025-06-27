@@ -1,3 +1,4 @@
+from typing import Optional
 """
 Ray utility functions for Mip-NeRF
 
@@ -7,9 +8,7 @@ This module contains utilities for ray casting, conical frustum operations, and 
 import torch
 import torch.nn.functional as F
 import numpy as np
-from typing import Dict, List, Optional, Tuple
 import math
-
 
 def cast_rays(
     origins: torch.Tensor,
@@ -38,7 +37,6 @@ def cast_rays(
         'origins': origins, 'directions': directions, 'radii': radii, 'near': near, 'far': far
     }
 
-
 def conical_frustum_to_gaussian(
     origins: torch.Tensor,
     directions: torch.Tensor,
@@ -55,7 +53,7 @@ def conical_frustum_to_gaussian(
         radii: [...] pixel radii
         
     Returns:
-        Tuple of (means, covariances) representing Gaussians
+        tuple of (means, covariances) representing Gaussians
     """
     # Compute frustum centers
     mu = origins[..., None, :] + directions[..., None, :] * t_vals[..., :, None]
@@ -104,7 +102,6 @@ def conical_frustum_to_gaussian(
             )
     
     return mu, cov
-
 
 def sample_along_rays(
     origins: torch.Tensor,
@@ -159,7 +156,6 @@ def sample_along_rays(
     return {
         't_vals': t_vals, 'means': means, 'covs': covs
     }
-
 
 def hierarchical_sample(
     origins: torch.Tensor,
@@ -223,7 +219,6 @@ def hierarchical_sample(
         't_vals': t_fine, 'means': means, 'covs': covs
     }
 
-
 def volumetric_rendering(
     densities: torch.Tensor,
     colors: torch.Tensor,
@@ -279,7 +274,6 @@ def volumetric_rendering(
         'rgb': rgb, 'depth': depth, 'acc_alpha': acc_alpha, 'weights': weights, 'depth_var': depth_var
     }
 
-
 def compute_pixel_radii(focal_length: float, image_width: int, image_height: int) -> torch.Tensor:
     """
     Compute pixel radii for anti-aliasing
@@ -300,7 +294,6 @@ def compute_pixel_radii(focal_length: float, image_width: int, image_height: int
     
     return torch.tensor(pixel_radius)
 
-
 def generate_rays(
     camera_matrix: torch.Tensor,
     image_width: int,
@@ -317,7 +310,7 @@ def generate_rays(
         c2w: [4, 4] camera-to-world transformation matrix
         
     Returns:
-        Tuple of (origins, directions, radii)
+        tuple of (origins, directions, radii)
     """
     # Extract focal lengths
     fx = camera_matrix[0, 0]
@@ -348,7 +341,6 @@ def generate_rays(
     
     return origins, dirs, radii
 
-
 def compute_multiscale_weights(
     t_vals: torch.Tensor,
     weights: torch.Tensor,
@@ -363,7 +355,7 @@ def compute_multiscale_weights(
         num_levels: Number of levels for multiscale
         
     Returns:
-        List of weights at different scales
+        list of weights at different scales
     """
     multiscale_weights = []
     
@@ -385,7 +377,6 @@ def compute_multiscale_weights(
             multiscale_weights.append(weights_downsampled)
     
     return multiscale_weights
-
 
 def resample_along_rays(
     origins: torch.Tensor,

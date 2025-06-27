@@ -1,3 +1,4 @@
+from typing import Any, Optional
 """
 Dataset components for Mega-NeRF++
 
@@ -14,7 +15,6 @@ import numpy as np
 import json
 import os
 from pathlib import Path
-from typing import Dict, List, Optional, Tuple, Any
 import cv2
 from PIL import Image, ImageFile
 import imageio
@@ -25,7 +25,6 @@ import tifffile
 
 # Allow loading of truncated images
 ImageFile.LOAD_TRUNCATED_IMAGES = True
-
 
 class MegaNeRFPlusDataset(data.Dataset):
     """
@@ -107,7 +106,6 @@ class MegaNeRFPlusDataset(data.Dataset):
                 self.image_paths[idx],
             )
         }
-
 
 class PhotogrammetricDataset(MegaNeRFPlusDataset):
     """
@@ -480,7 +478,6 @@ class PhotogrammetricDataset(MegaNeRFPlusDataset):
         self.rays = torch.cat(all_rays, dim=0)
         self.rgbs = torch.cat(all_rgbs, dim=0)
 
-
 class LargeSceneDataset(PhotogrammetricDataset):
     """
     Dataset optimized for very large scenes with streaming capabilities
@@ -490,7 +487,7 @@ class LargeSceneDataset(PhotogrammetricDataset):
         self,
         data_dir: str,
         split: str = 'train',
-        partition_config: Optional[Dict] = None,
+        partition_config: Optional[dict] = None,
         streaming_mode: bool = True,
         **kwargs,
     ) -> None:
@@ -572,7 +569,7 @@ class LargeSceneDataset(PhotogrammetricDataset):
                 'image_indices': partition_images, 'loaded': False, 'rays': None, 'rgbs': None
             }
     
-    def _get_partition_images(self, partition: Dict) -> list[int]:
+    def _get_partition_images(self, partition: dict) -> list[int]:
         """Get image indices that belong to a partition"""
         
         partition_bounds = partition['bounds']
@@ -669,7 +666,6 @@ class LargeSceneDataset(PhotogrammetricDataset):
         
         partition_info['loaded'] = True
 
-
 def create_meganerf_plus_dataset(
     data_dir: str,
     dataset_type: str = 'photogrammetric',
@@ -696,7 +692,6 @@ def create_meganerf_plus_dataset(
     else:
         raise ValueError(f"Unknown dataset type: {dataset_type}")
 
-
 def create_photogrammetric_dataloader(
     dataset: MegaNeRFPlusDataset,
     batch_size: int = 4096,
@@ -722,13 +717,12 @@ def create_photogrammetric_dataloader(
         dataset, batch_size=batch_size, shuffle=shuffle, num_workers=num_workers, pin_memory=pin_memory, collate_fn=photogrammetric_collate_fn, persistent_workers=True if num_workers > 0 else False
     )
 
-
-def photogrammetric_collate_fn(batch: list[Dict]) -> dict[str, torch.Tensor]:
+def photogrammetric_collate_fn(batch: list[dict]) -> dict[str, torch.Tensor]:
     """
     Custom collate function for photogrammetric data
     
     Args:
-        batch: List of data samples
+        batch: list of data samples
         
     Returns:
         Batched data

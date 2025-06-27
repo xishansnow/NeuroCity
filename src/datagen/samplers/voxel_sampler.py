@@ -1,3 +1,4 @@
+from typing import Any, Optional
 """
 体素采样器模块
 
@@ -8,13 +9,11 @@
 import numpy as np
 import json
 import os
-from typing import Dict, List, Optional, Tuple, Any
 import random
 from scipy.spatial import cKDTree
 import logging
 
 logger = logging.getLogger(__name__)
-
 
 class VoxelSampler:
     """体素采样器类"""

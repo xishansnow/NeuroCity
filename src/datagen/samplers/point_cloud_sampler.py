@@ -1,3 +1,4 @@
+from typing import Any, Optional
 """
 点云采样器模块
 
@@ -5,11 +6,9 @@
 """
 
 import numpy as np
-from typing import Dict, List, Optional, Tuple, Any
 import logging
 
 logger = logging.getLogger(__name__)
-
 
 class PointCloudSampler:
     """点云采样器类"""

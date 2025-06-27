@@ -1,3 +1,4 @@
+from typing import Any, Optional
 #!/usr/bin/env python3
 """
 NeuralVDB Training Script
@@ -12,7 +13,6 @@ import sys
 import json
 import logging
 from pathlib import Path
-from typing import Dict, Any, Optional
 
 import torch
 import numpy as np
@@ -30,7 +30,6 @@ logging.basicConfig(
     level=logging.INFO, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
 )
 logger = logging.getLogger(__name__)
-
 
 def parse_args() -> argparse.Namespace:
     """Parse command line arguments"""
@@ -138,13 +137,11 @@ def parse_args() -> argparse.Namespace:
     
     return parser.parse_args()
 
-
 def load_config_from_file(config_path: str) -> dict[str, Any]:
     """Load configuration from JSON file"""
     with open(config_path, 'r') as f:
         config = json.load(f)
     return config
-
 
 def create_model_config(args) -> NeuralVDBConfig | AdvancedNeuralVDBConfig:
     """Create model configuration from arguments"""
@@ -160,7 +157,6 @@ def create_model_config(args) -> NeuralVDBConfig | AdvancedNeuralVDBConfig:
             'adaptive_resolution': True, 'multi_scale_features': True, 'progressive_training': True, 'feature_compression': True
         }
         return AdvancedNeuralVDBConfig(**common_params, **advanced_params)
-
 
 def load_data(args) -> tuple[DataLoader, DataLoader, Optional[np.ndarray], Optional[np.ndarray]]:
 def load_data(args):
@@ -207,7 +203,6 @@ def load_data(args):
     else:
         raise ValueError(f"Unknown data type: {args.data_type}")
 
-
 def train_model(model, train_loader, val_loader, args, config):
     """Train the NeuralVDB model"""
     logger.info("Starting model training...")
@@ -230,7 +225,6 @@ def train_model(model, train_loader, val_loader, args, config):
     logger.info(f"Training completed. Model saved to: {model_path}")
     return training_stats
 
-
 def save_config(config, args):
     """Save configuration to file"""
     config_dict = {
@@ -242,7 +236,6 @@ def save_config(config, args):
         json.dump(config_dict, f, indent=2, default=str)
     
     logger.info(f"Configuration saved to: {config_path}")
-
 
 def main():
     """Main training function"""
@@ -310,7 +303,6 @@ def main():
         logger.info(f"Best validation loss: {training_stats['best_val_loss']:.6f}")
     
     logger.info("Training completed successfully!")
-
 
 if __name__ == '__main__':
     main() 

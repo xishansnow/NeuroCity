@@ -1,3 +1,4 @@
+from typing import Any, Optional
 """
 Trainer module for Mip-NeRF
 
@@ -14,13 +15,11 @@ import numpy as np
 import os
 import time
 from pathlib import Path
-from typing import Dict, List, Optional, Tuple, Any
 import json
 from tqdm import tqdm
 
 from .core import MipNeRF, MipNeRFConfig, MipNeRFLoss, ConicalFrustum
 from .dataset import MipNeRFDataset, MipNeRFRayDataset, MipNeRFImageDataset
-
 
 class MipNeRFTrainer:
     """

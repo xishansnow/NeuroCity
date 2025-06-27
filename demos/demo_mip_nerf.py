@@ -1,3 +1,4 @@
+from typing import Optional
 #!/usr/bin/env python3
 """
 MIP NeRF 演示脚本
@@ -13,7 +14,6 @@ import sys
 import os
 import torch
 import numpy as np
-from typing import Dict, List, Optional
 
 # 添加项目根目录到Python路径
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))

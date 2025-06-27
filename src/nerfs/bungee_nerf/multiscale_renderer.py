@@ -1,3 +1,4 @@
+from typing import Optional
 """
 Multi-scale Renderer Module
 Implements level-of-detail rendering for BungeeNeRF
@@ -6,12 +7,10 @@ Implements level-of-detail rendering for BungeeNeRF
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-from typing import Dict, List, Optional, Tuple
 import numpy as np
 import logging
 
 logger = logging.getLogger(__name__)
-
 
 class MultiScaleRenderer(nn.Module):
     """
@@ -95,8 +94,8 @@ class MultiScaleRenderer(nn.Module):
         Render with multiple scales based on distance
         
         Args:
-            rgb_scales: List of RGB values for different scales
-            sigma_scales: List of density values for different scales
+            rgb_scales: list of RGB values for different scales
+            sigma_scales: list of density values for different scales
             z_vals: Sample depths [N_rays, N_samples]
             rays_d: Ray directions [N_rays, 3]
             distances: Distance to camera [N_rays]
@@ -138,7 +137,6 @@ class MultiScaleRenderer(nn.Module):
         
         # Perform volume rendering
         return self.render(rgb_combined, sigma_combined, z_vals, rays_d)
-
 
 class LevelOfDetailRenderer(nn.Module):
     """
@@ -195,7 +193,7 @@ class LevelOfDetailRenderer(nn.Module):
             distances: Distance to camera [N]
             
         Returns:
-            Tuple of (sample_points, z_vals)
+            tuple of (sample_points, z_vals)
         """
         device = rays_o.device
         batch_size = rays_o.shape[0]
@@ -267,7 +265,6 @@ class LevelOfDetailRenderer(nn.Module):
         
         return outputs
 
-
 class ProgressiveRenderer(nn.Module):
     """
     Progressive renderer that adapts to training stage
@@ -332,7 +329,6 @@ class ProgressiveRenderer(nn.Module):
         
         # Apply progressive rendering
         return self.base_renderer.render(rgb, sigma, z_vals, rays_d, noise_std=noise_level)
-
 
 class HierarchicalRenderer(nn.Module):
     """

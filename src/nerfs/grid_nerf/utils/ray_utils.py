@@ -1,3 +1,4 @@
+from typing import Optional, Union
 """
 Ray utilities for Grid-NeRF.
 
@@ -7,9 +8,7 @@ This module provides utility functions for ray operations, sampling strategies, 
 import torch
 import torch.nn.functional as F
 import numpy as np
-from typing import List, Optional, Tuple, Union 
 import math
-
 
 def generate_rays_from_camera(
     camera_poses: torch.Tensor,
@@ -29,7 +28,7 @@ def generate_rays_from_camera(
         device: Device to use
         
     Returns:
-        Tuple of (ray_origins, ray_directions) each [N, H, W, 3]
+        tuple of (ray_origins, ray_directions) each [N, H, W, 3]
     """
     N = camera_poses.shape[0]
     
@@ -78,7 +77,6 @@ def generate_rays_from_camera(
     
     return ray_origins, ray_directions
 
-
 def sample_points_along_rays(
     ray_origins: torch.Tensor,
     ray_directions: torch.Tensor,
@@ -101,7 +99,7 @@ def sample_points_along_rays(
         perturb: Whether to add random perturbation
         
     Returns:
-        Tuple of (sample_points, t_vals) where:
+        tuple of (sample_points, t_vals) where:
         - sample_points: [..., num_samples, 3]
         - t_vals: [..., num_samples]
     """
@@ -132,7 +130,6 @@ def sample_points_along_rays(
     
     return sample_points, t_vals
 
-
 def hierarchical_sampling(
     ray_origins: torch.Tensor,
     ray_directions: torch.Tensor,
@@ -153,7 +150,7 @@ def hierarchical_sampling(
         perturb: Whether to add perturbation
         
     Returns:
-        Tuple of (fine_points, t_vals_fine)
+        tuple of (fine_points, t_vals_fine)
     """
     batch_shape = ray_origins.shape[:-1]
     device = ray_origins.device
@@ -199,7 +196,6 @@ def hierarchical_sampling(
     
     return fine_points, t_vals_combined
 
-
 def ray_aabb_intersection(
     ray_origins: torch.Tensor,
     ray_directions: torch.Tensor,
@@ -216,7 +212,7 @@ def ray_aabb_intersection(
         aabb_max: AABB maximum bounds [3]
         
     Returns:
-        Tuple of (t_near, t_far) for intersection points
+        tuple of (t_near, t_far) for intersection points
     """
     # Compute intersection with each slab
     t_min = (aabb_min - ray_origins) / (ray_directions + 1e-8)
@@ -231,7 +227,6 @@ def ray_aabb_intersection(
     t_far = torch.minimum(torch.minimum(t2[..., 0], t2[..., 1]), t2[..., 2])
     
     return t_near, t_far
-
 
 def compute_ray_grid_intersections(
     ray_origins: torch.Tensor,
@@ -249,7 +244,7 @@ def compute_ray_grid_intersections(
         grid_resolution: Grid resolution
         
     Returns:
-        Tuple of (cell_indices, t_starts, t_ends) where:
+        tuple of (cell_indices, t_starts, t_ends) where:
         - cell_indices: [..., num_cells, 3] indices of intersected cells
         - t_starts: [..., num_cells] start distances along rays
         - t_ends: [..., num_cells] end distances along rays
@@ -283,7 +278,6 @@ def compute_ray_grid_intersections(
     
     return cell_indices, t_near, next_t
 
-
 def voxel_traversal_3d(
     ray_origins: torch.Tensor,
     ray_directions: torch.Tensor,
@@ -302,7 +296,7 @@ def voxel_traversal_3d(
         max_steps: Maximum number of steps
         
     Returns:
-        Tuple of (voxel_indices, t_starts, t_ends) where:
+        tuple of (voxel_indices, t_starts, t_ends) where:
         - voxel_indices: [..., num_steps, 3] indices of traversed voxels
         - t_starts: [..., num_steps] start distances along rays
         - t_ends: [..., num_steps] end distances along rays
@@ -367,7 +361,6 @@ def voxel_traversal_3d(
     
     return voxel_indices, t_starts, t_ends
 
-
 def importance_sampling_from_grid(
     ray_origins: torch.Tensor,
     ray_directions: torch.Tensor,
@@ -390,7 +383,7 @@ def importance_sampling_from_grid(
         far: Far plane distance
         
     Returns:
-        Tuple of (sample_points, t_vals)
+        tuple of (sample_points, t_vals)
     """
     # Get grid resolution
     D, H, W = grid.shape
@@ -430,7 +423,6 @@ def importance_sampling_from_grid(
     
     return sample_points, t_vals
 
-
 def compute_ray_weights(
     densities: torch.Tensor,
     t_vals: torch.Tensor,
@@ -445,7 +437,7 @@ def compute_ray_weights(
         ray_directions: Ray directions [..., 3]
         
     Returns:
-        Tuple of (weights, transmittance)
+        tuple of (weights, transmittance)
     """
     # Compute delta distances
     dists = t_vals[..., 1:] - t_vals[..., :-1]
@@ -464,7 +456,6 @@ def compute_ray_weights(
     
     return weights, transmittance
 
-
 def sample_stratified_rays(
     num_rays: int,
     image_height: int,
@@ -481,7 +472,7 @@ def sample_stratified_rays(
         device: Device to use
         
     Returns:
-        Tuple of (pixel_x, pixel_y) coordinates
+        tuple of (pixel_x, pixel_y) coordinates
     """
     # Create stratified grid
     num_h = int(math.sqrt(num_rays * image_height / image_width))

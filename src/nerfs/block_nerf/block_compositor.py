@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 """
 Block Compositor for Block-NeRF
 
@@ -5,12 +7,13 @@ This module handles the composition of multiple Block-NeRF renderings
 into seamless final images with appearance matching and smooth transitions.
 """
 
+from typing import Optional, Union
+
+
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
 import numpy as np
-from typing import Dict, List, Optional, Tuple, Union
-
 
 class AppearanceMatcher:
     """
@@ -99,7 +102,6 @@ class AppearanceMatcher:
         
         return best_embedding.detach()
 
-
 class BlockCompositor:
     """
     Composes multiple Block-NeRF renderings into final images
@@ -142,7 +144,7 @@ class BlockCompositor:
         
         Args:
             camera_position: Camera position (3, )
-            block_centers: List of block center positions
+            block_centers: list of block center positions
             method: Override interpolation method
             
         Returns:
@@ -185,7 +187,7 @@ class BlockCompositor:
     
     def render_blocks(
         self,
-        blocks: List,
+        blocks: list,
         block_names: list[str],
         ray_origins: torch.Tensor,
         ray_directions: torch.Tensor,
@@ -199,8 +201,8 @@ class BlockCompositor:
         Render all blocks for given rays
         
         Args:
-            blocks: List of Block-NeRF instances
-            block_names: List of block names
+            blocks: list of Block-NeRF instances
+            block_names: list of block names
             ray_origins: Ray origins (N, 3)
             ray_directions: Ray directions (N, 3)
             appearance_ids: Appearance IDs (N, )
@@ -210,7 +212,7 @@ class BlockCompositor:
             num_samples: Number of samples per ray
             
         Returns:
-            List of rendering outputs for each block
+            list of rendering outputs for each block
         """
         device = ray_origins.device
         num_rays = ray_origins.shape[0]
@@ -312,7 +314,7 @@ class BlockCompositor:
         Composite multiple block renderings
         
         Args:
-            block_outputs: List of rendering outputs from each block
+            block_outputs: list of rendering outputs from each block
             interpolation_weights: Weights for combining blocks (num_blocks, )
             camera_position: Camera position for distance-based weighting
             
@@ -348,7 +350,7 @@ class BlockCompositor:
     
     def render_with_blocks(
         self,
-        blocks: List,
+        blocks: list,
         block_names: list[str],
         block_centers: list[torch.Tensor],
         camera_position: torch.Tensor,
@@ -362,9 +364,9 @@ class BlockCompositor:
         Complete rendering pipeline with multiple blocks
         
         Args:
-            blocks: List of Block-NeRF instances
-            block_names: List of block names
-            block_centers: List of block centers
+            blocks: list of Block-NeRF instances
+            block_names: list of block names
+            block_centers: list of block centers
             camera_position: Camera position
             ray_origins: Ray origins
             ray_directions: Ray directions
@@ -396,7 +398,7 @@ class BlockCompositor:
         """Clear the appearance matching cache"""
         self.appearance_cache.clear()
     
-    def get_cache_stats(self) -> Dict:
+    def get_cache_stats(self) -> dict:
         """Get statistics about the appearance cache"""
         return {
             'cache_size': len(

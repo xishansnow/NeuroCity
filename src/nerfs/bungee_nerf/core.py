@@ -1,3 +1,4 @@
+from typing import Any, Optional, Union
 """
 BungeeNeRF Core Module
 Implements the main BungeeNeRF model with progressive training blocks
@@ -6,7 +7,6 @@ Implements the main BungeeNeRF model with progressive training blocks
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-from typing import Dict, List, Optional, Tuple, Any, Union
 from dataclasses import dataclass
 import numpy as np
 import logging
@@ -15,7 +15,6 @@ from .progressive_encoder import ProgressivePositionalEncoder
 from .multiscale_renderer import MultiScaleRenderer
 
 logger = logging.getLogger(__name__)
-
 
 @dataclass
 class BungeeNeRFConfig:
@@ -67,7 +66,6 @@ class BungeeNeRFConfig:
             self.scale_weights = [1.0, 0.8, 0.6, 0.4]
         if self.distance_thresholds is None:
             self.distance_thresholds = [100.0, 50.0, 25.0, 10.0]
-
 
 class ProgressiveBlock(nn.Module):
     """
@@ -129,7 +127,6 @@ class ProgressiveBlock(nn.Module):
             Output features [N, output_dim]
         """
         return self.layers(x)
-
 
 class BungeeNeRF(nn.Module):
     """
@@ -353,7 +350,6 @@ class BungeeNeRF(nn.Module):
                 self.progressive_blocks
             )
         }
-
 
 class BungeeNeRFLoss(nn.Module):
     """

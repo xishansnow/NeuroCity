@@ -1,3 +1,4 @@
+from typing import Optional, import logging
 """
 Neural Networks for NeuralVDB
 
@@ -8,11 +9,9 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 import numpy as np
-from typing import Dict, List, Optional, Tuple, import logging
 from sklearn.cluster import KMeans
 
 logger = logging.getLogger(__name__)
-
 
 class PositionalEncoding(nn.Module):
     """位置编码 - Fourier特征编码"""
@@ -59,7 +58,6 @@ class PositionalEncoding(nn.Module):
                 encoded.append(torch.cos(freq * torch.pi * x[:, i:i+1]))
         
         return torch.cat(encoded, dim=-1)
-
 
 class MLP(nn.Module):
     """多层感知机网络"""
@@ -137,7 +135,6 @@ class MLP(nn.Module):
         """前向传播"""
         return self.network(x)
 
-
 class FeatureNetwork(nn.Module):
     """特征网络 - 将3D坐标映射到特征向量"""
     
@@ -197,7 +194,6 @@ class FeatureNetwork(nn.Module):
         
         return self.mlp(x)
 
-
 class OccupancyNetwork(nn.Module):
     """占用网络 - 将特征向量映射到占用概率"""
     
@@ -237,7 +233,6 @@ class OccupancyNetwork(nn.Module):
         """
         logits = self.mlp(features)
         return torch.sigmoid(logits)
-
 
 class MultiScaleFeatureNetwork(nn.Module):
     """多尺度特征网络"""
@@ -331,7 +326,6 @@ class MultiScaleFeatureNetwork(nn.Module):
         
         return fused_features
 
-
 class AdvancedOccupancyNetwork(nn.Module):
     """高级占用网络"""
     
@@ -397,7 +391,6 @@ class AdvancedOccupancyNetwork(nn.Module):
         return {
             'occupancy': occupancy, 'uncertainty': uncertainty, 'gradient': gradient, 'occupancy_logits': occupancy_logits
         }
-
 
 class AdvancedLossFunction(nn.Module):
     """高级损失函数"""
@@ -505,7 +498,6 @@ class AdvancedLossFunction(nn.Module):
         consistency_loss = F.mse_loss(uncertainty, errors)
         
         return consistency_loss
-
 
 class FeatureCompressor:
     """特征压缩器 - 用于减少内存使用"""

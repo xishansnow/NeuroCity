@@ -1,3 +1,5 @@
+from typing import Any, Optional
+from dataclasses import dataclass
 """
 PyTorch Lightning trainer for Grid-NeRF.
 
@@ -11,7 +13,6 @@ from pytorch_lightning.callbacks import ModelCheckpoint, LearningRateMonitor, Ea
 from pytorch_lightning.loggers import TensorBoardLogger, WandbLogger
 from pytorch_lightning.strategies import DDPStrategy
 import torchmetrics
-from typing import List, Optional, Tuple, Any, from dataclasses import dataclass
 import numpy as np
 import logging
 import torch.nn as nn
@@ -20,7 +21,6 @@ from .core import GridNeRF, GridNeRFConfig, GridNeRFLoss
 from .dataset import GridNeRFDataset, create_dataloader
 
 logger = logging.getLogger(__name__)
-
 
 @dataclass
 class GridNeRFLightningConfig:
@@ -68,7 +68,6 @@ class GridNeRFLightningConfig:
     # Rendering settings
     render_test_freq: int = 20      # Render test images every N epochs
 
-
 class GridNeRFLightningModule(pl.LightningModule):
     """PyTorch Lightning module for Grid-NeRF training."""
     
@@ -107,7 +106,7 @@ class GridNeRFLightningModule(pl.LightningModule):
         ray_origins: torch.Tensor,
         ray_directions: torch.Tensor,
         background_color: Optional[torch.Tensor] = None,
-    )
+    ):
         """Forward pass through the model."""
         return self.model(ray_origins, ray_directions, background_color)
     
@@ -181,7 +180,7 @@ class GridNeRFLightningModule(pl.LightningModule):
         batch: dict[str,
         torch.Tensor],
         batch_idx: int,
-    )
+    ):
         """Validation step."""
         # Use EMA model if available
         model = self.ema_model if self.ema_model is not None else self.model
@@ -425,7 +424,6 @@ class GridNeRFLightningModule(pl.LightningModule):
         self.log('grid/pruning_ratio', pruning_ratio)
         logger.info(f"Pruned {pruning_ratio:.2%} of grid features")
 
-
 def create_grid_nerf_lightning_trainer(
     config: GridNeRFLightningConfig, train_dataset: GridNeRFDataset, val_dataset: Optional[GridNeRFDataset] = None, max_epochs: int = 100, gpus: int | list[int] = 1, logger_type: str = "tensorboard", project_name: str = "grid_nerf", experiment_name: str = "default", checkpoint_dir: str = "checkpoints", **trainer_kwargs
 ) -> tuple[GridNeRFLightningModule, pl.Trainer]:
@@ -445,7 +443,7 @@ def create_grid_nerf_lightning_trainer(
         **trainer_kwargs: Additional trainer arguments
         
     Returns:
-        Tuple of (lightning_module, trainer)
+        tuple of (lightning_module, trainer)
     """
     # Create Lightning module
     lightning_module = GridNeRFLightningModule(config)
@@ -465,10 +463,11 @@ def create_grid_nerf_lightning_trainer(
     # Setup callbacks
     callbacks = [
         ModelCheckpoint(
-            dirpath=checkpoint_dir, filename=f"{
-                experiment_name,
-            }
-        ), LearningRateMonitor(logging_interval="step"), EarlyStopping(
+            dirpath=checkpoint_dir, 
+            filename=f"{experiment_name}"
+        ), 
+        LearningRateMonitor(logging_interval="step"), 
+        EarlyStopping(
             monitor="val/psnr", mode="max", patience=30, verbose=True
         )
     ]
@@ -486,7 +485,6 @@ def create_grid_nerf_lightning_trainer(
     )
     
     return lightning_module, trainer
-
 
 def train_grid_nerf_lightning(
     model_config: GridNeRFConfig, lightning_config: GridNeRFLightningConfig, train_dataset: GridNeRFDataset, val_dataset: Optional[GridNeRFDataset] = None, **trainer_kwargs

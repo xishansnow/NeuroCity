@@ -1,8 +1,13 @@
+from __future__ import annotations
+
 """
 Dataset for Block-NeRF
 
 This module handles data loading and preprocessing for Block-NeRF training, including multi-view images, camera poses, and metadata.
 """
+
+from typing import Any, Optional
+
 
 import torch
 from torch.utils.data import Dataset, DataLoader
@@ -11,11 +16,9 @@ import cv2
 import json
 import os
 from pathlib import Path
-from typing import Dict, List, Optional, Tuple, Any
 import random
 from PIL import Image
 import h5py
-
 
 class BlockNeRFDataset(Dataset):
     """

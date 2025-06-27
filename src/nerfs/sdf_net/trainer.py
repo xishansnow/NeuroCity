@@ -1,3 +1,4 @@
+from typing import Any, Optional, Union
 """
 SDF Network Trainer Implementation
 SDF网络训练器
@@ -11,12 +12,10 @@ from torch.utils.tensorboard import SummaryWriter
 import numpy as np
 import os
 import time
-from typing import Dict, List, Optional, Tuple, Any, Union
 import json
 
 from .core import SDFNetwork, LatentSDFNetwork, MultiScaleSDFNetwork
 from .dataset import SDFDataset, create_sdf_dataloader
-
 
 class SDFTrainer:
     """SDF网络训练器
@@ -452,7 +451,7 @@ class SDFTrainer:
             'mesh_extraction_success_rate': success_rate, 'avg_vertices': avg_vertices, 'avg_faces': avg_faces
         }
     
-    def get_training_summary(self) -> Dict:
+    def get_training_summary(self) -> dict:
         """获取训练总结"""
         model_info = self.model.get_model_size() if hasattr(self.model, 'get_model_size') else {}
         
@@ -472,8 +471,7 @@ class SDFTrainer:
         
         print(f'Training summary saved: {filepath}')
 
-
-def create_sdf_trainer_from_config(config: Dict) -> SDFTrainer:
+def create_sdf_trainer_from_config(config: dict) -> SDFTrainer:
     """从配置创建SDF训练器"""
     
     # 创建模型

@@ -11,8 +11,6 @@ The functions are used to:
 
 import torch
 import numpy as np
-from typing import Tuple
-
 
 def contract_to_unisphere(x: torch.Tensor) -> torch.Tensor:
     """Contract infinite space to unit sphere."""
@@ -23,7 +21,6 @@ def contract_to_unisphere(x: torch.Tensor) -> torch.Tensor:
     )
     return x_contracted
 
-
 def uncontract_from_unisphere(x: torch.Tensor) -> torch.Tensor:
     """Uncontract from unit sphere to infinite space."""
     mag = torch.norm(x, dim=-1, keepdim=True)
@@ -32,7 +29,6 @@ def uncontract_from_unisphere(x: torch.Tensor) -> torch.Tensor:
         mask, x / (2 - mag), x
     )
     return x_uncontracted
-
 
 def morton_encode_3d(x: torch.Tensor, y: torch.Tensor, z: torch.Tensor) -> torch.Tensor:
     """3D Morton encoding for spatial hashing."""
@@ -49,7 +45,6 @@ def morton_encode_3d(x: torch.Tensor, y: torch.Tensor, z: torch.Tensor) -> torch
     z_expanded = expand_bits(z.long())
     
     return x_expanded | (y_expanded << 1) | (z_expanded << 2)
-
 
 def compute_tv_loss(hash_grids: list, grid_coords: torch.Tensor) -> torch.Tensor:
     """Compute total variation loss on hash grids."""
@@ -77,20 +72,19 @@ def compute_tv_loss(hash_grids: list, grid_coords: torch.Tensor) -> torch.Tensor
     
     return tv_loss
 
-
 def adaptive_sampling(
     density: torch.Tensor,
     z_vals: torch.Tensor,
     rays_d: torch.Tensor,
     num_importance_samples: int = 64,
-)
+):
     """Adaptive sampling based on density."""
     # Compute weights
     dists = z_vals[..., 1:] - z_vals[..., :-1]
-    dists = torch.cat(
-        [dists,
-        torch.tensor,
-    )
+    dists = torch.cat([
+        dists,
+        torch.tensor([1e10], device=dists.device).expand(dists[..., :1].shape)
+    ], -1)
     dists = dists * torch.norm(rays_d[..., None, :], dim=-1)
     
     alpha = 1. - torch.exp(-density.squeeze(-1) * dists)
@@ -124,7 +118,6 @@ def adaptive_sampling(
     
     return samples
 
-
 def estimate_normals(model, positions: torch.Tensor, epsilon: float = 1e-3) -> torch.Tensor:
     """Estimate surface normals using finite differences."""
     positions.requires_grad_(True)
@@ -143,17 +136,14 @@ def estimate_normals(model, positions: torch.Tensor, epsilon: float = 1e-3) -> t
     
     return normals
 
-
 def compute_hash_grid_size(resolution: int, max_entries: int) -> int:
     """Compute optimal hash grid size."""
     full_size = resolution ** 3
     return min(full_size, max_entries)
 
-
 def to8b(x: np.ndarray) -> np.ndarray:
     """Convert to 8-bit image."""
     return (255 * np.clip(x, 0, 1)).astype(np.uint8)
-
 
 def create_spherical_poses(radius: float = 3.0, n_poses: int = 40) -> np.ndarray:
     """Create spherical camera poses."""
@@ -190,20 +180,17 @@ def create_spherical_poses(radius: float = 3.0, n_poses: int = 40) -> np.ndarray
     
     return np.array(poses)
 
-
 def compute_psnr(pred: torch.Tensor, target: torch.Tensor) -> float:
     """Compute PSNR between predictions and targets."""
     mse = torch.mean((pred - target) ** 2)
     psnr = -10. * torch.log10(mse + 1e-8)
     return psnr.item()
 
-
 def linear_to_srgb(linear: torch.Tensor) -> torch.Tensor:
     """Convert linear RGB to sRGB."""
     return torch.where(
         linear <= 0.0031308, 12.92 * linear, 1.055 * torch.pow(linear, 1.0/2.4) - 0.055
     )
-
 
 def srgb_to_linear(srgb: torch.Tensor) -> torch.Tensor:
     """Convert sRGB to linear RGB."""

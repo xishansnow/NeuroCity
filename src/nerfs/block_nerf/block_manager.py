@@ -1,21 +1,24 @@
+from __future__ import annotations
+
 """
 Block Manager for Block-NeRF
 
 This module manages multiple Block-NeRF instances, handles block placement, and coordinates training and inference across blocks.
 """
 
+from typing import Optional, Union
+
+
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
 import numpy as np
-from typing import Dict, List, Optional, Tuple, Union 
 import json
 import os
 from pathlib import Path
 
 from .block_nerf_model import BlockNeRF
 from .visibility_network import VisibilityNetwork
-
 
 class BlockManager:
     """
@@ -51,7 +54,7 @@ class BlockManager:
         # Storage for blocks
         self.blocks: dict[str, BlockNeRF] = {}
         self.block_centers: dict[str, torch.Tensor] = {}
-        self.block_metadata: dict[str, Dict] = {}
+        self.block_metadata: dict[str, dict] = {}
         
         # Visibility network (shared across blocks)
         self.visibility_network = VisibilityNetwork().to(device)
@@ -91,7 +94,7 @@ class BlockManager:
     def create_block(
         self,
         block_name: str,
-        network_config: Dict,
+        network_config: dict,
         num_appearance_embeddings: int = 1000
     ):
         """
@@ -132,7 +135,7 @@ class BlockManager:
             max_distance: Maximum distance to consider (default: block_size * 2)
             
         Returns:
-            List of block names
+            list of block names
         """
         if max_distance is None:
             max_distance = self.block_size * 2
@@ -163,7 +166,7 @@ class BlockManager:
             use_visibility: Whether to use visibility filtering
             
         Returns:
-            List of relevant block names
+            list of relevant block names
         """
         relevant_blocks = []
         
@@ -200,7 +203,7 @@ class BlockManager:
             image_bounds: Optional bounds of what's visible in the image
             
         Returns:
-            List of block names for training
+            list of block names for training
         """
         # For training, use a larger radius to ensure good coverage
         training_radius = self.block_size * 1.5
@@ -227,7 +230,7 @@ class BlockManager:
         
         Args:
             camera_position: Camera position (3, )
-            block_names: List of block names
+            block_names: list of block names
             power: Power for inverse distance weighting
             
         Returns:
@@ -301,7 +304,7 @@ class BlockManager:
         
         print(f"Saved {len(self.blocks)} blocks to {save_dir}")
     
-    def load_blocks(self, load_dir: str, network_config: Dict):
+    def load_blocks(self, load_dir: str, network_config: dict):
         """Load blocks from directory"""
         load_dir = Path(load_dir)
         
@@ -329,7 +332,7 @@ class BlockManager:
         
         print(f"Loaded {len(self.blocks)} blocks from {load_dir}")
     
-    def get_scene_statistics(self) -> Dict:
+    def get_scene_statistics(self) -> dict:
         """Get statistics about the scene and blocks"""
         total_blocks = len(self.block_centers)
         active_blocks = sum(1 for meta in self.block_metadata.values() if meta['active'])
@@ -343,7 +346,7 @@ class BlockManager:
             'total_blocks': total_blocks, 'active_blocks': active_blocks, 'trained_blocks': trained_blocks, 'scene_bounds': self.scene_bounds, 'scene_volume': scene_volume, 'block_size': self.block_size, 'overlap_ratio': self.overlap_ratio
         }
     
-    def optimize_block_layout(self, camera_positions: torch.Tensor) -> Dict:
+    def optimize_block_layout(self, camera_positions: torch.Tensor) -> dict:
         """
         Optimize block layout based on camera distribution
         

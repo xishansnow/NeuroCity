@@ -1,3 +1,4 @@
+from typing import Any, Optional, Union
 """
 Multi-resolution rendering components for Mega-NeRF++
 
@@ -8,10 +9,8 @@ high-resolution photogrammetric images and large-scale scenes.
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-from typing import Dict, List, Optional, Tuple, Any, Union
 import numpy as np
 import math
-
 
 class MultiResolutionRenderer(nn.Module):
     """
@@ -168,7 +167,6 @@ class MultiResolutionRenderer(nn.Module):
         
         return t_vals.expand(*rays_o.shape[:-1], num_samples)
 
-
 class AdaptiveLODRenderer(nn.Module):
     """
     Adaptive Level-of-Detail renderer with progressive refinement
@@ -234,7 +232,7 @@ class AdaptiveLODRenderer(nn.Module):
     def _render_lod_groups(
         self,
         model: nn.Module,
-        sampling_results: Dict,
+        sampling_results: dict,
         rays_o: torch.Tensor,
         rays_d: torch.Tensor,
         lod_levels: torch.Tensor,
@@ -284,7 +282,7 @@ class AdaptiveLODRenderer(nn.Module):
     def _progressive_refinement(
         self,
         model: nn.Module,
-        initial_results: Dict,
+        initial_results: dict,
         rays_o: torch.Tensor,
         rays_d: torch.Tensor,
         near: float,
@@ -398,7 +396,6 @@ class AdaptiveLODRenderer(nn.Module):
             'rgb': rgb, 'depth': depth, 'acc_alpha': acc_alpha, 'weights': weights
         }
 
-
 class PhotogrammetricVolumetricRenderer(nn.Module):
     """
     Specialized volumetric renderer optimized for photogrammetric data
@@ -465,7 +462,7 @@ class PhotogrammetricVolumetricRenderer(nn.Module):
     
     def _add_depth_regularization(
         self,
-        results: Dict,
+        results: dict,
         rays_o: torch.Tensor,
         rays_d: torch.Tensor,
     ) -> dict[str, torch.Tensor]:   
@@ -496,7 +493,7 @@ class PhotogrammetricVolumetricRenderer(nn.Module):
     def _add_semantic_rendering(
         self,
         model: nn.Module,
-        results: Dict,
+        results: dict,
         rays_o: torch.Tensor,
         rays_d: torch.Tensor,
     ) -> dict[str, torch.Tensor]:
@@ -513,7 +510,7 @@ class PhotogrammetricVolumetricRenderer(nn.Module):
     
     def _compute_photogrammetric_metrics(
         self,
-        results: Dict,
+        results: dict,
         camera_intrinsics: torch.Tensor,
     ) -> dict[str, torch.Tensor]:
         """Compute photogrammetric quality metrics"""

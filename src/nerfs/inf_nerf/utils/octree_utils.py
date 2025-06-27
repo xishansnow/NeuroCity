@@ -1,3 +1,4 @@
+from typing import Any, Optional
 """
 Octree utilities for InfNeRF.
 
@@ -10,14 +11,12 @@ This module provides tools for:
 
 import numpy as np
 import torch
-from typing import Dict, List, Optional, Tuple, Any
 import matplotlib.pyplot as plt
 from mpl_toolkits.mplot3d import Axes3D
 import json
 from pathlib import Path
 
 from ..core import OctreeNode, InfNeRFConfig
-
 
 class OctreeBuilder:
     """
@@ -146,7 +145,6 @@ class OctreeBuilder:
         
         return False
 
-
 class OctreePruner:
     """
     Pruner for removing unnecessary octree nodes.
@@ -264,7 +262,6 @@ class OctreePruner:
         
         return count
 
-
 def calculate_gsd(node_size: float, grid_size: int) -> float:
     """
     Calculate Ground Sampling Distance for a node.
@@ -277,7 +274,6 @@ def calculate_gsd(node_size: float, grid_size: int) -> float:
         Ground Sampling Distance in meters
     """
     return node_size / grid_size
-
 
 def visualize_octree(
     root_node: OctreeNode,
@@ -345,7 +341,6 @@ def visualize_octree(
     
     plt.close()
 
-
 def _collect_nodes_recursive(
     node: OctreeNode,
     nodes_list: list[OctreeNode],
@@ -361,7 +356,6 @@ def _collect_nodes_recursive(
         for child in node.children:
             if child is not None:
                 _collect_nodes_recursive(child, nodes_list, max_depth)
-
 
 def _plot_cube_wireframe(
     ax,
@@ -398,7 +392,6 @@ def _plot_cube_wireframe(
             alpha=alpha,
             linewidth=linewidth,
         )
-
 
 def analyze_octree_memory(root_node: OctreeNode) -> dict[str, Any]:
     """
@@ -456,7 +449,6 @@ def analyze_octree_memory(root_node: OctreeNode) -> dict[str, Any]:
         )
     
     return analysis
-
 
 def export_octree_structure(root_node: OctreeNode, export_path: str):
     """

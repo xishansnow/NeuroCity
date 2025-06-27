@@ -1,3 +1,6 @@
+from __future__ import annotations
+
+from typing import Any, Optional
 #!/usr/bin/env python3
 """
 Mega-NeRF Trainer Module
@@ -10,7 +13,6 @@ import torch.nn as nn
 import torch.optim as optim
 from torch.utils.data import DataLoader
 import numpy as np
-from typing import Dict, List, Optional, Tuple, Any
 import logging
 import os
 import time
@@ -24,7 +26,6 @@ from .volumetric_renderer import VolumetricRenderer, BatchRenderer
 from .mega_nerf_dataset import MegaNeRFDataset
 
 logger = logging.getLogger(__name__)
-
 
 class MegaNeRFTrainer:
     """Main trainer for Mega-NeRF models"""
@@ -422,7 +423,6 @@ class MegaNeRFTrainer:
         
         logger.info(f"Loaded model from {path}")
 
-
 class ParallelTrainer:
     """Parallel trainer for training multiple submodules simultaneously"""
     
@@ -539,7 +539,6 @@ class ParallelTrainer:
         
         logger.info("Merged all trained submodules to main model")
 
-
 def create_sample_camera_path(
 center: np.ndarray = np.array,
 ):
@@ -553,7 +552,7 @@ center: np.ndarray = np.array,
         height_variation: Variation in height
         
     Returns:
-        List of camera transform matrices
+        list of camera transform matrices
     """
     camera_path = []
     
