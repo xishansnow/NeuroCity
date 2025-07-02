@@ -11,6 +11,10 @@ def morton_encode_3d(coords: torch.Tensor) -> torch.Tensor:
     """
     Morton (Z-order) encoding for 3D coordinates.
     
+    改进的 Morton 编码实现，支持更高的分辨率：
+    - 每个坐标分量使用 21 位，总共支持 2097151³ 个位置
+    - 完全满足高分辨率需求
+    
     Args:
         coords: [N, 3] integer coordinates
         
@@ -19,21 +23,24 @@ def morton_encode_3d(coords: torch.Tensor) -> torch.Tensor:
     """
     def expand_bits(v):
         """Expand bits for Morton encoding."""
-        v = v & 0x3ff
-        v = (v | (v << 16)) & 0x30000ff
-        v = (v | (v << 8)) & 0x300f00f
-        v = (v | (v << 4)) & 0x30c30c3
-        v = (v | (v << 2)) & 0x9249249
+        # 支持更大的坐标值，使用更高效的位交错
+        # 将 21 位输入扩展为 63 位输出（3 * 21 = 63）
+        v = v & 0x1fffff  # 21 位掩码，支持 0-2097151
+        v = (v | (v << 32)) & 0x1f00000000ffff
+        v = (v | (v << 16)) & 0x1f0000ff0000ff
+        v = (v | (v << 8)) & 0x100f00f00f00f00f
+        v = (v | (v << 4)) & 0x10c30c30c30c30c3
+        v = (v | (v << 2)) & 0x1249249249249249
         return v
     
     x = coords[:, 0].long()
     y = coords[:, 1].long()
     z = coords[:, 2].long()
     
-    # Clamp to valid range
-    x = torch.clamp(x, 0, 1023)
-    y = torch.clamp(y, 0, 1023)
-    z = torch.clamp(z, 0, 1023)
+    # Clamp to valid range (21-bit)
+    x = torch.clamp(x, 0, 0x1fffff)
+    y = torch.clamp(y, 0, 0x1fffff)
+    z = torch.clamp(z, 0, 0x1fffff)
     
     # Expand bits and interleave
     xx = expand_bits(x.cpu().numpy())
@@ -56,11 +63,12 @@ def morton_decode_3d(morton_codes: torch.Tensor) -> torch.Tensor:
     """
     def compact_bits(v):
         """Compact bits for Morton decoding."""
-        v = v & 0x9249249
-        v = (v | (v >> 2)) & 0x30c30c3
-        v = (v | (v >> 4)) & 0x300f00f
-        v = (v | (v >> 8)) & 0x30000ff
-        v = (v | (v >> 16)) & 0x3ff
+        v = v & 0x1249249249249249
+        v = (v | (v >> 2)) & 0x10c30c30c30c30c3
+        v = (v | (v >> 4)) & 0x100f00f00f00f00f
+        v = (v | (v >> 8)) & 0x1f0000ff0000ff
+        v = (v | (v >> 16)) & 0x1f00000000ffff
+        v = (v | (v >> 32)) & 0x1fffff
         return v
     
     morton_np = morton_codes.cpu().numpy()

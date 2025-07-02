@@ -12,6 +12,10 @@ def morton_encode_3d(x: int, y: int, z: int) -> int:
     """
     Encode 3D coordinates into Morton code.
     
+    改进的 Morton 编码实现，支持更高的分辨率：
+    - 每个坐标分量使用 21 位，总共支持 2097151³ 个位置
+    - 完全满足 SVRaster 的 65536³ 分辨率需求
+    
     Args:
         x, y, z: 3D coordinates
         
@@ -20,12 +24,20 @@ def morton_encode_3d(x: int, y: int, z: int) -> int:
     """
     def part1by2(n):
         """Separate bits by inserting two zeros between each bit."""
-        n &= 0x000003ff  # Mask to 10 bits
-        n = (n ^ (n << 16)) & 0xff0000ff
-        n = (n ^ (n << 8)) & 0x0300f00f
-        n = (n ^ (n << 4)) & 0x030c30c3
-        n = (n ^ (n << 2)) & 0x09249249
+        # 支持更大的坐标值，使用更高效的位交错
+        # 将 21 位输入扩展为 63 位输出（3 * 21 = 63）
+        n &= 0x1fffff  # 21 位掩码，支持 0-2097151
+        n = (n ^ (n << 32)) & 0x1f00000000ffff
+        n = (n ^ (n << 16)) & 0x1f0000ff0000ff
+        n = (n ^ (n << 8)) & 0x100f00f00f00f00f
+        n = (n ^ (n << 4)) & 0x10c30c30c30c30c3
+        n = (n ^ (n << 2)) & 0x1249249249249249
         return n
+    
+    # 确保输入在合理范围内
+    x = max(0, min(x, 0x1fffff))
+    y = max(0, min(y, 0x1fffff))
+    z = max(0, min(z, 0x1fffff))
     
     return (part1by2(z) << 2) + (part1by2(y) << 1) + part1by2(x)
 
@@ -41,11 +53,12 @@ def morton_decode_3d(morton_code: int) -> tuple[int, int, int]:
     """
     def compact1by2(n):
         """Compact bits by removing two zeros between each bit."""
-        n &= 0x09249249
-        n = (n ^ (n >> 2)) & 0x030c30c3
-        n = (n ^ (n >> 4)) & 0x0300f00f
-        n = (n ^ (n >> 8)) & 0x0300f00f
-        n = (n ^ (n >> 16)) & 0x000003ff
+        n &= 0x1249249249249249
+        n = (n ^ (n >> 2)) & 0x10c30c30c30c30c3
+        n = (n ^ (n >> 4)) & 0x100f00f00f00f00f
+        n = (n ^ (n >> 8)) & 0x1f0000ff0000ff
+        n = (n ^ (n >> 16)) & 0x1f00000000ffff
+        n = (n ^ (n >> 32)) & 0x1fffff
         return n
     
     x = compact1by2(morton_code)
@@ -58,6 +71,8 @@ def morton_encode_batch(coords: torch.Tensor) -> torch.Tensor:
     """
     Encode batch of 3D coordinates into Morton codes.
     
+    使用向量化操作进行批量 Morton 码计算，提高性能。
+    
     Args:
         coords: Tensor of shape [N, 3] with integer coordinates
         
@@ -67,13 +82,28 @@ def morton_encode_batch(coords: torch.Tensor) -> torch.Tensor:
     coords = coords.long()
     x, y, z = coords[:, 0], coords[:, 1], coords[:, 2]
     
-    # Vectorized Morton encoding
-    morton_codes = torch.zeros_like(x, dtype=torch.long)
+    # 确保坐标在合理范围内
+    max_coord = 0x1fffff  # 21 位最大值
+    x = torch.clamp(x, 0, max_coord)
+    y = torch.clamp(y, 0, max_coord)
+    z = torch.clamp(z, 0, max_coord)
     
-    for i in range(coords.shape[0]):
-        morton_codes[i] = morton_encode_3d(x[i].item(), y[i].item(), z[i].item())
+    # 向量化的位交错函数
+    def part1by2_vectorized(n):
+        n = n & 0x1fffff
+        n = (n ^ (n << 32)) & 0x1f00000000ffff
+        n = (n ^ (n << 16)) & 0x1f0000ff0000ff
+        n = (n ^ (n << 8)) & 0x100f00f00f00f00f
+        n = (n ^ (n << 4)) & 0x10c30c30c30c30c3
+        n = (n ^ (n << 2)) & 0x1249249249249249
+        return n
     
-    return morton_codes
+    # 计算 Morton 码
+    morton_x = part1by2_vectorized(x)
+    morton_y = part1by2_vectorized(y)
+    morton_z = part1by2_vectorized(z)
+    
+    return (morton_z << 2) + (morton_y << 1) + morton_x
 
 def morton_decode_batch(morton_codes: torch.Tensor) -> torch.Tensor:
     """
@@ -88,7 +118,7 @@ def morton_decode_batch(morton_codes: torch.Tensor) -> torch.Tensor:
     coords = torch.zeros(morton_codes.shape[0], 3, dtype=torch.long, device=morton_codes.device)
     
     for i in range(morton_codes.shape[0]):
-        x, y, z = morton_decode_3d(morton_codes[i].item())
+        x, y, z = morton_decode_3d(int(morton_codes[i].item()))
         coords[i] = torch.tensor([x, y, z])
     
     return coords
@@ -125,7 +155,7 @@ def compute_morton_order(
     grid_coords = (normalized_pos * grid_resolution).long()
     grid_coords = torch.clamp(grid_coords, 0, grid_resolution - 1)
     
-    # Compute Morton codes
+    # Compute Morton codes using vectorized implementation
     return morton_encode_batch(grid_coords)
 
 def sort_by_morton_order(

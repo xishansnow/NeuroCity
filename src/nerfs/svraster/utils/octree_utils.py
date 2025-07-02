@@ -23,11 +23,9 @@ def octree_subdivision(
         tuple of (child_positions, child_sizes)
     """
     if not subdivision_mask.any():
-        return torch.empty(
-            0,
-            3,
-            device=voxel_positions.device,
-        )
+        empty_positions = torch.empty(0, 3, device=voxel_positions.device)
+        empty_sizes = torch.empty(0, device=voxel_positions.device)
+        return empty_positions, empty_sizes
     
     # Get voxels to subdivide
     parent_positions = voxel_positions[subdivision_mask]

@@ -1,10 +1,10 @@
-from typing import Optional
 """
 Mesh processing utilities for DNMP.
 
 This module provides functions for mesh manipulation, topology operations, and mesh quality metrics.
 """
 
+from typing import Optional
 import torch
 import numpy as np
 import open3d as o3d
@@ -320,7 +320,7 @@ def compute_mesh_volume(vertices: torch.Tensor, faces: torch.Tensor) -> float:
         # Compute signed volume of tetrahedron formed by origin and triangle
         volume += torch.dot(v0, torch.cross(v1, v2)) / 6.0
     
-    return abs(volume.item())
+    return abs(float(volume))
 
 def mesh_to_open3d(vertices: torch.Tensor, faces: torch.Tensor) -> o3d.geometry.TriangleMesh:
     """

@@ -14,6 +14,7 @@ import numpy as np
 from dataclasses import dataclass
 import logging
 from tqdm import tqdm
+import torch.nn.functional as F
 
 from .core import SVRasterModel, SVRasterConfig, SVRasterLoss
 from .dataset import SVRasterDataset, SVRasterDatasetConfig
@@ -33,7 +34,7 @@ class SVRasterTrainerConfig:
     # Optimizer settings
     optimizer_type: str = "adam"
     scheduler_type: str = "cosine"
-    scheduler_params: dict[str, Any] = None
+    scheduler_params: Optional[dict[str, Any]] = None
     
     # Loss weights
     rgb_loss_weight: float = 1.0
@@ -70,6 +71,11 @@ class SVRasterTrainerConfig:
     # Rendering settings
     render_batch_size: int = 4096
     render_chunk_size: int = 1024
+    
+    def __post_init__(self):
+        """Set default values after initialization."""
+        if self.scheduler_params is None:
+            self.scheduler_params = {}
 
 class SVRasterTrainer:
     """Main trainer class for SVRaster model."""
@@ -104,8 +110,7 @@ class SVRasterTrainer:
         
         # Mixed precision training
         if self.config.use_mixed_precision:
-            # self.scaler = torch.cuda.amp.GradScaler()
-            self.scaler = torch.amp.GradScaler('cuda')
+            self.scaler = torch.cuda.amp.GradScaler()
         
         # Training state
         self.current_epoch = 0
@@ -192,6 +197,18 @@ class SVRasterTrainer:
                 if val_metrics.get('psnr', 0) > self.best_val_psnr:
                     self.best_val_psnr = val_metrics['psnr']
                     self._save_checkpoint('best_model.pth')
+            
+            # Adaptive subdivision
+            if (self.config.enable_subdivision and 
+                epoch >= self.config.subdivision_start_epoch and
+                epoch % self.config.subdivision_interval == 0):
+                self._perform_subdivision()
+            
+            # Voxel pruning
+            if (self.config.enable_pruning and 
+                epoch >= self.config.pruning_start_epoch and
+                epoch % self.config.pruning_interval == 0):
+                self._perform_pruning()
             
             # Scheduler step
             if self.scheduler is not None:
@@ -316,6 +333,100 @@ class SVRasterTrainer:
         self.best_val_psnr = checkpoint['best_val_psnr']
         
         logger.info(f"Loaded checkpoint from epoch {self.current_epoch}")
+    
+    def _perform_subdivision(self):
+        """Perform adaptive voxel subdivision based on training gradients."""
+        logger.info(f"Performing voxel subdivision at epoch {self.current_epoch}")
+        
+        # Compute subdivision criteria based on gradient magnitude
+        subdivision_criteria = self._compute_subdivision_criteria()
+        
+        # Perform adaptive subdivision
+        initial_stats = self.model.get_voxel_statistics()
+        self.model.adaptive_subdivision(subdivision_criteria)
+        final_stats = self.model.get_voxel_statistics()
+        
+        # Log subdivision results
+        total_subdivided = final_stats['total_voxels'] - initial_stats['total_voxels']
+        logger.info(f"Subdivided {total_subdivided} voxels")
+        
+        # Log level-wise statistics
+        for level_idx in range(min(len(initial_stats), len(final_stats))):
+            level_key = f'level_{level_idx}_voxels'
+            if level_key in initial_stats and level_key in final_stats:
+                level_change = final_stats[level_key] - initial_stats[level_key]
+                if level_change > 0:
+                    logger.info(f"Level {level_idx}: +{level_change} voxels")
+    
+    def _compute_subdivision_criteria(self) -> torch.Tensor:
+        """Compute subdivision criteria based on gradient magnitude and reconstruction error."""
+        self.model.eval()
+        
+        # Get a sample batch for gradient computation
+        sample_batch = next(iter(self.train_loader))
+        rays_o = sample_batch['rays_o'].to(self.device)
+        rays_d = sample_batch['rays_d'].to(self.device)
+        target_colors = sample_batch['colors'].to(self.device)
+        
+        # Compute gradients with respect to voxel parameters
+        rays_o.requires_grad_(True)
+        rays_d.requires_grad_(True)
+        
+        outputs = self.model(rays_o, rays_d)
+        loss = F.mse_loss(outputs['rgb'], target_colors)
+        
+        # Backward pass to compute gradients
+        loss.backward()
+        
+        # Extract gradient magnitudes for voxel parameters
+        criteria = []
+        for level_idx in range(len(self.model.sparse_voxels.voxel_positions)):
+            if self.model.sparse_voxels.voxel_positions[level_idx].grad is not None:
+                # Compute gradient magnitude for each voxel
+                grad_magnitude = torch.norm(
+                    self.model.sparse_voxels.voxel_positions[level_idx].grad, 
+                    dim=1
+                )
+                criteria.append(grad_magnitude)
+            else:
+                # If no gradients, use density-based criteria
+                densities = self.model.sparse_voxels.voxel_densities[level_idx]
+                if self.model_config.density_activation == "exp":
+                    density_values = torch.exp(densities)
+                else:
+                    density_values = F.relu(densities)
+                criteria.append(density_values)
+        
+        # Combine criteria from all levels
+        if criteria:
+            combined_criteria = torch.cat(criteria)
+        else:
+            # Fallback: random criteria
+            total_voxels = self.model.get_voxel_statistics()['total_voxels']
+            combined_criteria = torch.randn(total_voxels, device=self.device)
+        
+        # Normalize criteria
+        if combined_criteria.numel() > 0:
+            combined_criteria = (combined_criteria - combined_criteria.mean()) / (combined_criteria.std() + 1e-8)
+        
+        return combined_criteria
+    
+    def _perform_pruning(self):
+        """Perform voxel pruning based on density threshold."""
+        logger.info(f"Performing voxel pruning at epoch {self.current_epoch}")
+        
+        initial_count = self.model.sparse_voxels.get_total_voxel_count()
+        self.model.sparse_voxels.prune_voxels(self.config.pruning_threshold)
+        final_count = self.model.sparse_voxels.get_total_voxel_count()
+        
+        pruned_count = initial_count - final_count
+        logger.info(f"Pruned {pruned_count} voxels ({pruned_count/initial_count*100:.1f}%)")
+        
+        # Log pruning statistics
+        if self.writer:
+            self.writer.add_scalar('pruning/pruned_voxels', pruned_count, self.current_epoch)
+            self.writer.add_scalar('pruning/pruning_ratio', pruned_count/initial_count, self.current_epoch)
+            self.writer.add_scalar('pruning/total_voxels', final_count, self.current_epoch)
 
 def create_svraster_trainer(
     model_config: SVRasterConfig,

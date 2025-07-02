@@ -48,12 +48,32 @@ class MockSVRaster(torch.nn.Module):
         )
     
     def morton_encode(self, positions: torch.Tensor) -> torch.Tensor:
-        """Morton编码（简化）"""
+        """Morton编码（改进版本）"""
         # 将位置转换为Morton码
         x, y, z = positions[..., 0], positions[..., 1], positions[..., 2]
         
-        # 简化的Morton编码
-        morton = torch.stack([x, y, z], dim=-1)
+        # 改进的Morton编码实现，支持更高分辨率
+        def part1by2_vectorized(n):
+            n = n & 0x1fffff  # 21 位掩码
+            n = (n ^ (n << 32)) & 0x1f00000000ffff
+            n = (n ^ (n << 16)) & 0x1f0000ff0000ff
+            n = (n ^ (n << 8)) & 0x100f00f00f00f00f
+            n = (n ^ (n << 4)) & 0x10c30c30c30c30c3
+            n = (n ^ (n << 2)) & 0x1249249249249249
+            return n
+        
+        # 确保坐标在合理范围内
+        max_coord = 0x1fffff
+        x = torch.clamp(x, 0, max_coord)
+        y = torch.clamp(y, 0, max_coord)
+        z = torch.clamp(z, 0, max_coord)
+        
+        # 计算Morton码
+        morton_x = part1by2_vectorized(x)
+        morton_y = part1by2_vectorized(y)
+        morton_z = part1by2_vectorized(z)
+        
+        morton = (morton_z << 2) + (morton_y << 1) + morton_x
         return morton.view(morton.shape[0], -1)
     
     def forward(self, positions: torch.Tensor) -> dict[str, torch.Tensor]:
@@ -65,7 +85,7 @@ class MockSVRaster(torch.nn.Module):
         color = torch.sigmoid(output[..., 1:])
         
         return {
-            'density': density, 'color': color, 'voxel_count': len(self.octree_features)
+            'density': density, 'color': color, 'voxel_count': torch.tensor(len(self.octree_features))
         }
 
 def demonstrate_svraster():

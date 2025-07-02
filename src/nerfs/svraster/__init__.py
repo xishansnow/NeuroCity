@@ -28,6 +28,15 @@ from .utils import (
     morton_encode_3d, morton_decode_3d, ray_direction_dependent_ordering, octree_subdivision, voxel_pruning, depth_peeling
 )
 
+# Try to import CUDA modules (optional)
+try:
+    from .cuda import SVRasterGPU, SVRasterGPUTrainer
+    CUDA_AVAILABLE = True
+except ImportError:
+    CUDA_AVAILABLE = False
+    SVRasterGPU = None
+    SVRasterGPUTrainer = None
+
 __version__ = "1.0.0"
 __author__ = "NeuroCity Team"
 
@@ -37,4 +46,8 @@ __all__ = [
     'SVRasterDataset', 'SVRasterDatasetConfig', 'create_svraster_dataloader', 'create_svraster_dataset', # Training components
     'SVRasterTrainer', 'SVRasterTrainerConfig', 'create_svraster_trainer', # Utility functions
     'morton_encode_3d', 'morton_decode_3d', 'ray_direction_dependent_ordering', 'octree_subdivision', 'voxel_pruning', 'depth_peeling'
-] 
+]
+
+# Add CUDA modules if available
+if CUDA_AVAILABLE:
+    __all__.extend(['SVRasterGPU', 'SVRasterGPUTrainer']) 

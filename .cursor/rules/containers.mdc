@@ -1,6 +1,6 @@
 ---
 description: 
 globs: 
-alwaysApply: false
+alwaysApply: true
 ---
- 将 python 代码中，不再使用 typing 模块导入类型，全部替换为 python 3.10 中的现代内置类型。
+使用用 python 3.10 中的现代内置 container 类，尽量不使用用 typing 模块的过时类型。已经使用的地方，请自动帮我进行转换。

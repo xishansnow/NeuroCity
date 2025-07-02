@@ -293,13 +293,21 @@ class SVRasterDataset(Dataset):
             colors = torch.from_numpy(self.target_colors[image_idx]).float()
             
             return {
-                'rays_o': rays_o, 'rays_d': rays_d, 'colors': colors, 'image_idx': image_idx, 'pose': torch.from_numpy(
-                    self.poses[image_idx],
-                )
+                'rays_o': rays_o, 
+                'rays_d': rays_d, 
+                'colors': colors, 
+                'image_idx': torch.tensor(image_idx, dtype=torch.int32), 
+                'pose': torch.from_numpy(self.poses[image_idx]).float(),
             }
 
     def get_dataset_info(self) -> dict[str, Any]:
         """Get dataset information."""
+        return {
+            'num_images': len(self.images),
+            'image_size': (self.config.image_height, self.config.image_width),
+            'num_train_rays': len(self.all_rays_o) // self.config.num_rays_train,
+            'num_val_rays': len(self.all_rays_o) // self.config.num_rays_val,
+        }
 
 def create_svraster_dataloader(
     config: SVRasterDatasetConfig,
@@ -312,9 +320,7 @@ def create_svraster_dataloader(
     dataset = SVRasterDataset(config, split)
     
     return DataLoader(
-        dataset, batch_size=batch_size, shuffle=shuffle, num_workers=num_workers, pin_memory=True, drop_last=(
-            split == "train",
-        )
+        dataset, batch_size=batch_size, shuffle=shuffle, num_workers=num_workers, pin_memory=True, drop_last=split == "train"
     )
 
 def create_svraster_dataset(config: SVRasterDatasetConfig, split: str = "train") -> SVRasterDataset:

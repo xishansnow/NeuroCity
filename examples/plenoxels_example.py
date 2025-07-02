@@ -18,7 +18,8 @@ if str(project_root) not in sys.path:
 
 try:
     from src.nerfs.plenoxels import (
-        PlenoxelConfig, PlenoxelModel, PlenoxelTrainer, create_plenoxels_dataloader
+        PlenoxelConfig, PlenoxelModel, PlenoxelTrainer, PlenoxelTrainerConfig,
+        PlenoxelDatasetConfig, create_plenoxel_dataloader, create_plenoxel_dataset
     )
 except ImportError as e:
     print(f"Import error: {e}")
@@ -32,23 +33,21 @@ def basic_example():
     
     # Create configuration with correct parameters
     config = PlenoxelConfig(
-        # Voxel grid settings
-        grid_resolution=(
-            256,
-            256,
-            256,
-        ),
-        sh_degree=2, # Coarse-to-fine training
-        use_coarse_to_fine=True, coarse_resolutions=[(            
-            64,
-            64,
-            64,
-        )], 
-        sparsity_threshold=0.01, tv_lambda=1e-6, l1_lambda=1e-8, # Rendering settings
-        step_size=0.01, sigma_thresh=1e-8, stop_thresh=1e-4, # Optimization
-        learning_rate=0.1, weight_decay=0.0, # Near and far planes
-        near_plane=0.1, far_plane=10.0,
-    ),
+        grid_resolution=(256, 256, 256), # Voxel grid resolution
+        sh_degree=2,  # Spherical harmonics degree
+        use_coarse_to_fine=True, # Coarse-to-fine training
+        coarse_resolutions=[(64, 64, 64)],  # Coarse resolution for coarse-to-fine training
+        sparsity_threshold=0.01,  # Sparsity threshold for voxel grid
+        tv_lambda=1e-6,  # Total variation regularization
+        l1_lambda=1e-8,  # L1 regularization
+        step_size=0.01, # Step size for rendering
+        sigma_thresh=1e-8, # Sigma threshold for rendering
+        stop_thresh=1e-4,  # Optimization
+        learning_rate=0.1, # Learning rate
+        weight_decay=0.0,  # Weight decay
+        near_plane=0.1, # Near plane
+        far_plane=10.0, # Far plane
+    )
     
     print(f"Configuration: {config}")
     
@@ -85,22 +84,21 @@ def advanced_example():
     # Create configuration with custom parameters
     config = PlenoxelConfig(
         # Higher resolution voxel grid
-        grid_resolution=(
-            512,
-            512,
-            512,
-        ),
-        sh_degree=3, # More aggressive coarse-to-fine
-        use_coarse_to_fine=True, coarse_resolutions=[(
-            32,
-            32,
-            32,
-        )],
-        sparsity_threshold=0.005, tv_lambda=1e-5, l1_lambda=1e-7, # Finer rendering
-        step_size=0.005, sigma_thresh=1e-9, stop_thresh=1e-5, # Different optimization
-        learning_rate=0.05, weight_decay=1e-6, # Extended scene bounds
-        near_plane=0.05, far_plane=20.0,
-    ),
+        grid_resolution=(512, 512, 512),
+        sh_degree=3,  # More aggressive coarse-to-fine
+        use_coarse_to_fine=True,
+        coarse_resolutions=[(32, 32, 32)],
+        sparsity_threshold=0.005,
+        tv_lambda=1e-5,
+        l1_lambda=1e-7,  # Finer rendering
+        step_size=0.005,
+        sigma_thresh=1e-9,
+        stop_thresh=1e-5,  # Different optimization
+        learning_rate=0.05,
+        weight_decay=1e-6,  # Extended scene bounds
+        near_plane=0.05,
+        far_plane=20.0,
+    )
     
     print(f"Advanced configuration: {config}")
     
@@ -121,23 +119,36 @@ def training_example(data_path=None):
         print("No data path provided, using synthetic data")
         return
     
-    # Create configuration
-    config = PlenoxelConfig(
-        learning_rate=0.1, use_coarse_to_fine=True,
-    ),
+    # Create configurations
+    model_config = PlenoxelConfig(
+        learning_rate=0.1,
+        use_coarse_to_fine=True,
+    )
+    
+    trainer_config = PlenoxelTrainerConfig(
+        max_epochs=100,
+        learning_rate=0.1,
+        experiment_name="plenoxel_training_example",
+        output_dir="outputs/plenoxels",
+    )
+    
+    dataset_config = PlenoxelDatasetConfig(
+        data_dir=data_path,
+        dataset_type='blender',
+        num_rays_train=1024,
+    )
     
     try:
-        # Create data loader
-        train_loader = create_plenoxels_dataloader(
-            data_path, split='train', batch_size=4096, num_workers=4,
-        ),
-        
         # Create trainer
-        trainer = PlenoxelTrainer(config)
+        trainer = PlenoxelTrainer(
+            model_config=model_config,
+            trainer_config=trainer_config,
+            dataset_config=dataset_config,
+        )
         
         # Train for a few steps
         print("Starting training...")
-        trainer.train(train_loader, num_epochs=1, max_steps=10, val_loader=None, test_loader=None)
+        trainer.train()
         print("Training completed!")
         
     except Exception as e:
