@@ -1,7 +1,11 @@
 """Geometry utilities for Instant NGP."""
 
+from __future__ import annotations
+
 import torch
 import numpy as np
+from typing import Tuple
+
 
 
 def estimate_normals(positions: torch.Tensor, density_fn, eps: float = 1e-3) -> torch.Tensor:
@@ -37,7 +41,7 @@ def compute_surface_points(
     return positions[surface_mask]
 
 
-def mesh_extraction(positions: torch.Tensor, density: torch.Tensor, threshold: float = 0.5) -> tuple[torch.Tensor, torch.Tensor]:
+def mesh_extraction(positions: torch.Tensor, density: torch.Tensor, threshold: float = 0.5) -> Tuple[torch.Tensor, torch.Tensor]:
     """Simple mesh extraction (placeholder)."""
     surface_points = compute_surface_points(positions, density, threshold)
     return surface_points, None  # vertices, faces 

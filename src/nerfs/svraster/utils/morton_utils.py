@@ -1,4 +1,6 @@
 """
+from __future__ import annotations
+
 Morton code utilities for SVRaster.
 
 This module provides functions for encoding and decoding 3D coordinates
@@ -7,6 +9,8 @@ using Morton codes (Z-order curves) for spatial ordering.
 
 import torch
 import numpy as np
+from typing import Tuple
+
 
 def morton_encode_3d(x: int, y: int, z: int) -> int:
     """
@@ -41,7 +45,7 @@ def morton_encode_3d(x: int, y: int, z: int) -> int:
     
     return (part1by2(z) << 2) + (part1by2(y) << 1) + part1by2(x)
 
-def morton_decode_3d(morton_code: int) -> tuple[int, int, int]:
+def morton_decode_3d(morton_code: int) -> Tuple[int, int, int]:
     """
     Decode Morton code back to 3D coordinates.
     
@@ -125,7 +129,7 @@ def morton_decode_batch(morton_codes: torch.Tensor) -> torch.Tensor:
 
 def compute_morton_order(
     positions: torch.Tensor,
-    scene_bounds: tuple[float,
+    scene_bounds: Tuple[float,
     float,
     float,
     float,
@@ -160,14 +164,14 @@ def compute_morton_order(
 
 def sort_by_morton_order(
     positions: torch.Tensor,
-    scene_bounds: tuple[float,
+    scene_bounds: Tuple[float,
     float,
     float,
     float,
     float,
     float],
     grid_resolution: int,
-) -> tuple[torch.Tensor, torch.Tensor]:
+) -> Tuple[torch.Tensor, torch.Tensor]:
     """
     Sort positions by Morton order.
     

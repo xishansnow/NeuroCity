@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from typing import Optional
 """
 Pyramid Renderer Module
@@ -24,7 +26,7 @@ class PyramidRenderer(nn.Module):
         
     def render(
         self, rgb: torch.Tensor, sigma: torch.Tensor, z_vals: torch.Tensor, rays_d: torch.Tensor, noise_std: float = 0.0
-    ) -> dict[str, torch.Tensor]:
+    ) -> Dict[str, torch.Tensor]:
         """
         Volume rendering with alpha compositing
         
@@ -88,8 +90,8 @@ class PyramidRenderer(nn.Module):
         }
     
     def render_path(
-        self, model: nn.Module, render_poses: torch.Tensor, hwf: tuple[int, int, float], chunk: int = 1024, **kwargs
-    ) -> list[dict[str, torch.Tensor]]:
+        self, model: nn.Module, render_poses: torch.Tensor, hwf: Tuple[int, int, float], chunk: int = 1024, **kwargs
+    ) -> List[Dict[str, torch.Tensor]]:
         """
         Render a path of poses
         
@@ -148,7 +150,7 @@ class PyramidRenderer(nn.Module):
     @staticmethod
     def get_rays(
         H: int, W: int, focal: float, c2w: torch.Tensor
-    ) -> tuple[torch.Tensor, torch.Tensor]:
+    ) -> Tuple[torch.Tensor, torch.Tensor]:
         """
         Generate rays for a camera
         
@@ -207,7 +209,7 @@ class VolumetricRenderer(nn.Module):
         
     def sample_along_rays(
         self, rays_o: torch.Tensor, rays_d: torch.Tensor, near: torch.Tensor, far: torch.Tensor, num_samples: int, perturb: bool = True
-    ) -> tuple[torch.Tensor, torch.Tensor]:
+    ) -> Tuple[torch.Tensor, torch.Tensor]:
         """
         Sample points along rays
         
@@ -301,7 +303,7 @@ class VolumetricRenderer(nn.Module):
     
     def forward(
         self, model: nn.Module, rays_o: torch.Tensor, rays_d: torch.Tensor, bounds: torch.Tensor, **kwargs
-    ) -> dict[str, torch.Tensor]:
+    ) -> Dict[str, torch.Tensor]:
         """
         Forward pass through volumetric renderer
         
@@ -407,7 +409,7 @@ class AntiAliasingRenderer(nn.Module):
     
     def forward(
         self, model: nn.Module, rays_o: torch.Tensor, rays_d: torch.Tensor, bounds: torch.Tensor, **kwargs
-    ) -> dict[str, torch.Tensor]:
+    ) -> Dict[str, torch.Tensor]:
         """
         Forward pass with anti-aliasing
         

@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from typing import Any, Optional
 """
 Octree utilities for InfNeRF.
@@ -35,7 +37,7 @@ class OctreeBuilder:
     def build_from_sparse_points(
         self,
         sparse_points: np.ndarray,
-        scene_bounds: Optional[tuple[np.ndarray,
+        scene_bounds: Optional[Tuple[np.ndarray,
         np.ndarray]] = None,
     ) -> OctreeNode:
         """
@@ -101,7 +103,7 @@ class OctreeBuilder:
             for child in children:
                 self._build_recursive(child, sparse_points, current_depth + 1)
     
-    def _find_points_in_node(self, node: OctreeNode, points: np.ndarray) -> list[np.ndarray]:
+    def _find_points_in_node(self, node: OctreeNode, points: np.ndarray) -> List[np.ndarray]:
         """Find points within a node's bounding box."""
         if len(points) == 0:
             return []
@@ -114,7 +116,7 @@ class OctreeBuilder:
         
         return points_in_node
     
-    def _should_subdivide(self, node: OctreeNode, points_in_node: list[np.ndarray]) -> bool:
+    def _should_subdivide(self, node: OctreeNode, points_in_node: List[np.ndarray]) -> bool:
         """
         Determine if a node should be subdivided.
         
@@ -159,7 +161,7 @@ class OctreePruner:
         """
         self.config = config
     
-    def prune_octree(self, root_node: OctreeNode) -> dict[str, Any]:
+    def prune_octree(self, root_node: OctreeNode) -> Dict[str, Any]:
         """
         Prune octree by removing nodes with insufficient data.
         
@@ -343,7 +345,7 @@ def visualize_octree(
 
 def _collect_nodes_recursive(
     node: OctreeNode,
-    nodes_list: list[OctreeNode],
+    nodes_list: List[OctreeNode],
     max_depth: Optional[int],
 ) -> None:
     """Recursively collect nodes for visualization."""
@@ -393,7 +395,7 @@ def _plot_cube_wireframe(
             linewidth=linewidth,
         )
 
-def analyze_octree_memory(root_node: OctreeNode) -> dict[str, Any]:
+def analyze_octree_memory(root_node: OctreeNode) -> Dict[str, Any]:
     """
     Analyze memory usage of octree structure.
     
@@ -458,7 +460,7 @@ def export_octree_structure(root_node: OctreeNode, export_path: str):
         root_node: Root node of the octree
         export_path: Path to save the JSON file
     """
-    def node_to_dict(node: OctreeNode) -> dict[str, Any]:
+    def node_to_dict(node: OctreeNode) -> Dict[str, Any]:
         node_dict = {
             'center': node.center.tolist(
             )

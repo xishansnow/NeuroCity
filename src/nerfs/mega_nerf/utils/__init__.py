@@ -33,7 +33,7 @@ try:
 
 except ImportError:
     # Fallback functions if nerfacto utils are not available
-    def generate_rays(*args: Any, **kwargs: Any) -> tuple[Tensor, Tensor]:
+    def generate_rays(*args: Any, **kwargs: Any) -> Tuple[Tensor, Tensor]:
         raise NotImplementedError("generate_rays not available - nerfacto utils not found")
     
     def create_camera_path(*args: Any, **kwargs: Any) -> Tensor:

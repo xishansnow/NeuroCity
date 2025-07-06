@@ -1,4 +1,6 @@
 """
+from __future__ import annotations
+
 Coordinate transformation utilities for Instant NGP.
 
 This module provides coordinate transformation functions including
@@ -7,6 +9,8 @@ unisphere contraction, spherical coordinates, and other spatial operations.
 
 import torch
 import numpy as np
+from typing import Tuple
+
 
 def contract_to_unisphere(positions: torch.Tensor, scene_radius: float = 1.0) -> torch.Tensor:
     """
@@ -200,7 +204,7 @@ def rotate_points(points: torch.Tensor, rotation_matrix: torch.Tensor) -> torch.
 def compute_scene_bounds(
     positions: torch.Tensor,
     percentile: float = 95.0,
-) -> tuple[torch.Tensor, torch.Tensor]:
+) -> Tuple[torch.Tensor, torch.Tensor]:
     """
     Compute scene bounds from positions.
     

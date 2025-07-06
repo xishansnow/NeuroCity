@@ -1,4 +1,7 @@
+from __future__ import annotations
+
 from typing import Any, Optional, Union
+
 """
 DeepSDF Network Core Implementation
 基于论文: "DeepSDF: Learning Continuous Signed Distance Functions for Shape Representation"
@@ -11,332 +14,408 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 import numpy as np
+from dataclasses import dataclass
+from torch.amp.autocast_mode import autocast
+from torch.amp.grad_scaler import GradScaler
+from pathlib import Path
+from typing import TypeAlias
+
+# Type aliases for modern Python 3.10
+Tensor: TypeAlias = torch.Tensor
+Device: TypeAlias = torch.device | str
+DType: TypeAlias = torch.dtype
+TensorDict: TypeAlias = Dict[str, Tensor]
+
+
+@dataclass
+class SDFNetConfig:
+    """Configuration for SDF-Net model with modern features."""
+
+    # Network architecture
+    hidden_dim: int = 256
+    num_layers: int = 8
+    skip_connections: List[int] = (4,)
+    activation: str = "relu"
+    output_activation: str = "sigmoid"
+
+    # SDF settings
+    sdf_scale: float = 1.0
+    use_sphere_init: bool = True
+    sphere_radius: float = 1.0
+
+    # Positional encoding
+    pos_encoding_levels: int = 10
+    dir_encoding_levels: int = 4
+
+    # Rendering settings
+    num_samples: int = 192
+    num_importance_samples: int = 96
+    background_color: str = "white"
+    near_plane: float = 0.1
+    far_plane: float = 1000.0
+
+    # Training settings
+    learning_rate: float = 5e-4
+    learning_rate_decay_steps: int = 50000
+    learning_rate_decay_mult: float = 0.1
+    weight_decay: float = 1e-6
+
+    # Training optimization
+    use_amp: bool = True  # Automatic mixed precision
+    grad_scaler_init_scale: float = 65536.0
+    grad_scaler_growth_factor: float = 2.0
+    grad_scaler_backoff_factor: float = 0.5
+    grad_scaler_growth_interval: int = 2000
+
+    # Memory optimization
+    use_non_blocking: bool = True  # Non-blocking memory transfers
+    set_grad_to_none: bool = True  # More efficient gradient clearing
+    chunk_size: int = 8192  # Processing chunk size
+
+    # Device settings
+    default_device: str = "cuda"
+    pin_memory: bool = True
+
+    # Batch processing
+    batch_size: int = 4096
+    num_workers: int = 4
+
+    # Checkpointing
+    checkpoint_dir: str = "checkpoints"
+    save_every_n_steps: int = 1000
+    keep_last_n_checkpoints: int = 5
+
+    def __post_init__(self):
+        """Post-initialization validation and initialization."""
+        # Validate settings
+        assert self.num_samples > 0, "Number of samples must be positive"
+        assert self.num_importance_samples > 0, "Number of importance samples must be positive"
+        assert self.near_plane < self.far_plane, "Near plane must be less than far plane"
+
+        # Initialize device
+        self.device = torch.device(self.default_device if torch.cuda.is_available() else "cpu")
+
+        # Initialize grad scaler for AMP
+        if self.use_amp:
+            self.grad_scaler = GradScaler(
+                init_scale=self.grad_scaler_init_scale,
+                growth_factor=self.grad_scaler_growth_factor,
+                backoff_factor=self.grad_scaler_backoff_factor,
+                growth_interval=self.grad_scaler_growth_interval,
+            )
+
+        # Create checkpoint directory
+        self.checkpoint_dir = Path(self.checkpoint_dir)
+        self.checkpoint_dir.mkdir(parents=True, exist_ok=True)
+
 
 class SDFNetwork(nn.Module):
-    """SDF网络模型
-    
-    学习一个函数 f: (R^3, Z) -> R 来预测有符号距离值
-    其中Z是形状的潜在编码
-    
-    Args:
-        dim_input: 输入维度（通常为3，表示3D坐标）
-        dim_latent: 潜在编码维度
-        dim_hidden: 隐藏层维度
-        num_layers: 网络层数
-        skip_connections: 跳跃连接层索引
-        geometric_init: 是否使用几何初始化
-        beta: 几何初始化参数
-        bias: 输出层偏置初始值
-        weight_norm: 是否使用权重归一化
-    """
-    
+    """Network for predicting SDF values and gradients."""
+
     def __init__(
-        self, dim_input: int = 3, dim_latent: int = 256, dim_hidden: int = 512, num_layers: int = 8, skip_connections: list[int] = [4], geometric_init: bool = True, beta: float = 100, bias: float = 0.5, weight_norm: bool = True, **kwargs
+        self,
+        hidden_dim: int,
+        num_layers: int,
+        skip_connections: List[int],
+        use_sphere_init: bool = True,
+        sphere_radius: float = 1.0,
     ):
         super().__init__()
-        
-        self.dim_input = dim_input
-        self.dim_latent = dim_latent
-        self.dim_hidden = dim_hidden
-        self.num_layers = num_layers
+        self.hidden_dim = hidden_dim
         self.skip_connections = skip_connections
-        self.geometric_init = geometric_init
-        self.beta = beta
-        self.bias = bias
-        self.weight_norm = weight_norm
-        
-        # 构建网络层
-        dims = [dim_input + dim_latent] + [dim_hidden] * (num_layers - 1) + [1]
-        
-        self.num_layers = len(dims)
-        self.skip_in = skip_connections
-        
-        for layer_idx in range(0, self.num_layers - 1):
-            # 检查是否有跳跃连接
-            if layer_idx + 1 in skip_connections:
-                out_dim = dims[layer_idx + 1] - dims[0]
-            else:
-                out_dim = dims[layer_idx + 1]
-            
-            # 创建线性层
-            lin = nn.Linear(dims[layer_idx], out_dim)
-            
-            # 几何初始化
-            if geometric_init:
-                self._geometric_init(lin, layer_idx == self.num_layers - 2)
-            
-            # 权重归一化
-            if weight_norm:
-                lin = nn.utils.weight_norm(lin)
-            
-            setattr(self, "lin" + str(layer_idx), lin)
-        
-        # 激活函数
-        self.activation = nn.Softplus(beta=100)
-    
-    def _geometric_init(self, layer: nn.Module, is_output: bool = False):
-        """几何初始化"""
-        if is_output:
-            # 输出层初始化
-            torch.nn.init.normal_(
-                layer.weight,
-                mean=np.sqrt,
-            )
-            torch.nn.init.constant_(layer.bias, -self.bias)
-        else:
-            # 隐藏层初始化
-            torch.nn.init.constant_(layer.bias, 0.0)
-            torch.nn.init.normal_(layer.weight, 0.0, np.sqrt(2) / np.sqrt(layer.out_features))
-    
-    def forward(
-        self, points: torch.Tensor, latent_code: torch.Tensor
-    ) -> torch.Tensor:
-        """前向传播
-        
-        Args:
-            points: 输入点坐标 [B, N, 3] 或 [B*N, 3]
-            latent_code: 潜在编码 [B, dim_latent] 或 [B*N, dim_latent]
-            
-        Returns:
-            sdf: 有符号距离值 [B, N, 1] 或 [B*N, 1]
-        """
-        batch_size = points.shape[0]
-        
-        # 展平输入
-        if points.dim() == 3:
-            B, N, _ = points.shape
-            points = points.reshape(B * N, -1)
-            # 扩展潜在编码
-            if latent_code.dim() == 2:
-                latent_code = latent_code.unsqueeze(1).expand(-1, N, -1)
-                latent_code = latent_code.reshape(B * N, -1)
-            reshape_output = True
-        else:
-            B, N = batch_size, 1
-            reshape_output = False
-        
-        # 连接输入和潜在编码
-        inputs = torch.cat([points, latent_code], dim=-1)
-        
-        x = inputs
-        for layer_idx in range(0, self.num_layers - 1):
-            lin = getattr(self, "lin" + str(layer_idx))
-            
-            # 跳跃连接
-            if layer_idx in self.skip_in:
-                x = torch.cat([x, inputs], dim=-1) / np.sqrt(2)
-            
-            x = lin(x)
-            
-            # 最后一层不使用激活函数
-            if layer_idx < self.num_layers - 2:
-                x = self.activation(x)
-        
-        sdf = x
-        
-        # 重塑输出
-        if reshape_output:
-            sdf = sdf.reshape(B, N, 1)
-        
-        return sdf
-    
-    def predict_sdf(
-        self, points: torch.Tensor, latent_code: torch.Tensor, chunk_size: int = 100000
-    ) -> torch.Tensor:
-        """预测SDF值（支持大批量推理）
-        
-        Args:
-            points: 查询点 [N, 3]
-            latent_code: 潜在编码 [1, dim_latent]
-            chunk_size: 分块大小
-            
-        Returns:
-            sdf: 有符号距离值 [N, 1]
-        """
-        self.eval()
-        
-        num_points = points.shape[0]
-        sdf_list = []
-        
+        self.use_sphere_init = use_sphere_init
+        self.sphere_radius = sphere_radius
+
+        # Initialize network layers
+        self.layers = nn.ModuleList()
+
+        # First layer
+        self.layers.append(nn.Linear(3, hidden_dim))
+
+        # Hidden layers
+        for i in range(num_layers - 1):
+            input_dim = hidden_dim + 3 if i in skip_connections else hidden_dim
+            self.layers.append(nn.Linear(input_dim, hidden_dim))
+
+        # Output layer
+        self.sdf_head = nn.Linear(hidden_dim, 1)
+
+        # Initialize weights for sphere SDF
+        if use_sphere_init:
+            self._init_sphere_weights()
+
+    def _init_sphere_weights(self):
+        """Initialize weights to approximate a sphere SDF."""
         with torch.no_grad():
-            for i in range(0, num_points, chunk_size):
-                end_idx = min(i + chunk_size, num_points)
-                points_chunk = points[i:end_idx]
-                
-                # 扩展潜在编码
-                latent_chunk = latent_code.expand(points_chunk.shape[0], -1)
-                
-                sdf_chunk = self.forward(points_chunk, latent_chunk)
-                sdf_list.append(sdf_chunk)
-        
-        return torch.cat(sdf_list, dim=0)
-    
-    def extract_mesh(
-        self, latent_code: torch.Tensor, resolution: int = 256, threshold: float = 0.0, bbox: Optional[tuple[float, float]] = None, use_marching_cubes: bool = True
-    ) -> dict[str, torch.Tensor]:
-        """提取网格表面
-        
-        Args:
-            latent_code: 潜在编码
-            resolution: 网格分辨率
-            threshold: SDF阈值（通常为0）
-            bbox: 边界框 (min_val, max_val)
-            use_marching_cubes: 是否使用marching cubes
-            
-        Returns:
-            mesh_data: 包含顶点和面的字典
-        """
-        if bbox is None:
-            bbox = (-1.0, 1.0)
-        
-        # 创建网格点
-        x = np.linspace(bbox[0], bbox[1], resolution)
-        y = np.linspace(bbox[0], bbox[1], resolution)
-        z = np.linspace(bbox[0], bbox[1], resolution)
-        
-        xx, yy, zz = np.meshgrid(x, y, z, indexing='ij')
-        points = np.stack([xx.ravel(), yy.ravel(), zz.ravel()], axis=1)
-        points = torch.from_numpy(points).float()
-        
-        if torch.cuda.is_available():
-            points = points.cuda()
-            latent_code = latent_code.cuda()
-        
-        # 预测SDF值
-        sdf = self.predict_sdf(points, latent_code)
-        sdf = sdf.reshape(resolution, resolution, resolution)
-        
-        if use_marching_cubes:
-            # 使用marching cubes提取表面
-            try:
-                from skimage import measure
-                
-                sdf_np = sdf.cpu().numpy()
-                vertices, faces, _, _ = measure.marching_cubes(
-                    sdf_np, level=threshold, spacing=(
-                        (
-                            bbox[1] - bbox[0],
-                        )
-                    )
-                )
-                
-                # 调整顶点位置
-                vertices = vertices + bbox[0]
-                
-                return {
-                    'vertices': vertices, 'faces': faces, 'sdf_grid': sdf_np
-                }
-                
-            except ImportError:
-                print("Warning: scikit-image not found, returning SDF grid only")
-        
-        return {
-            'sdf_grid': sdf.cpu().numpy()
-        }
-    
-    def compute_sdf_loss(
-        self, pred_sdf: torch.Tensor, gt_sdf: torch.Tensor, loss_type: str = 'l1', reduction: str = 'mean'
-    ) -> torch.Tensor:
-        """计算SDF预测损失
-        
-        Args:
-            pred_sdf: 预测SDF值 [B, N, 1]
-            gt_sdf: 真实SDF值 [B, N, 1]
-            loss_type: 损失类型 ('l1', 'l2', 'huber')
-            reduction: 损失聚合方式
-            
-        Returns:
-            loss: SDF损失
-        """
-        pred_sdf = pred_sdf.squeeze(-1)
-        gt_sdf = gt_sdf.squeeze(-1)
-        
-        if loss_type == 'l1':
-            loss = F.l1_loss(pred_sdf, gt_sdf, reduction=reduction)
-        elif loss_type == 'l2':
-            loss = F.mse_loss(pred_sdf, gt_sdf, reduction=reduction)
-        elif loss_type == 'huber':
-            loss = F.smooth_l1_loss(pred_sdf, gt_sdf, reduction=reduction)
-        else:
-            raise ValueError(f"Unsupported loss type: {loss_type}")
-        
-        return loss
-    
-    def compute_gradient_penalty(
-        self, points: torch.Tensor, latent_code: torch.Tensor, lambda_gp: float = 0.1
-    ) -> torch.Tensor:
-        """计算梯度惩罚项（Eikonal约束）
-        
-        Args:
-            points: 输入点 [B, N, 3]
-            latent_code: 潜在编码 [B, dim_latent]
-            lambda_gp: 梯度惩罚权重
-            
-        Returns:
-            gradient_penalty: 梯度惩罚损失
-        """
-        points.requires_grad_(True)
-        
-        sdf = self.forward(points, latent_code)
-        
-        # 计算梯度
+            # Initialize first layer to compute radius
+            self.layers[0].weight.data[0, :3] = 1.0  # Compute radius
+            self.layers[0].bias.data[0] = 0.0
+
+            # Initialize output layer to compute sphere SDF
+            self.sdf_head.weight.data[0, 0] = 1.0
+            self.sdf_head.bias.data[0] = -self.sphere_radius
+
+    def forward(self, coords: Tensor) -> TensorDict:
+        """Forward pass with gradient computation."""
+        # Enable gradient computation for SDF
+        coords.requires_grad_(True)
+
+        # Initial layer
+        x = F.relu(self.layers[0](coords))
+
+        # Hidden layers with skip connections
+        for i, layer in enumerate(self.layers[1:], 1):
+            if i in self.skip_connections:
+                x = torch.cat([x, coords], dim=-1)
+            x = F.relu(layer(x))
+
+        # SDF prediction
+        sdf = self.sdf_head(x)
+
+        # Compute gradients
         gradients = torch.autograd.grad(
-            outputs=sdf, inputs=points, grad_outputs=torch.ones_like(
-                sdf,
-            )
+            sdf, coords, grad_outputs=torch.ones_like(sdf), create_graph=True
         )[0]
-        
-        # Eikonal约束：||∇f|| = 1
-        gradient_norm = gradients.norm(2, dim=-1)
-        gradient_penalty = lambda_gp * ((gradient_norm - 1) ** 2).mean()
-        
-        return gradient_penalty
-    
-    def get_model_size(self) -> dict[str, int | float]:
-        """获取模型大小信息"""
-        total_params = sum(p.numel() for p in self.parameters())
-        trainable_params = sum(p.numel() for p in self.parameters() if p.requires_grad)
-        
-        # 估计模型大小（MB）
-        model_size_mb = total_params * 4 / (1024 * 1024)  # 假设float32
-        
-        return {
-            'total_parameters': total_params, 'trainable_parameters': trainable_params, 'model_size_mb': model_size_mb
+
+        return {"sdf": sdf, "gradients": gradients}
+
+
+class ColorNetwork(nn.Module):
+    """Network for predicting colors based on position, normals, and view direction."""
+
+    def __init__(self, hidden_dim: int, num_layers: int, skip_connections: List[int]):
+        super().__init__()
+        self.hidden_dim = hidden_dim
+        self.skip_connections = skip_connections
+
+        # Input is position (3) + normal (3) + view direction (3)
+        input_dim = 9
+
+        # Initialize network layers
+        self.layers = nn.ModuleList()
+
+        # First layer
+        self.layers.append(nn.Linear(input_dim, hidden_dim))
+
+        # Hidden layers
+        for i in range(num_layers - 1):
+            input_dim = hidden_dim + 9 if i in skip_connections else hidden_dim
+            self.layers.append(nn.Linear(input_dim, hidden_dim))
+
+        # Output layer
+        self.rgb_head = nn.Linear(hidden_dim, 3)
+
+    def forward(self, x: Tensor) -> Tensor:
+        """Forward pass through the network."""
+        input_features = x
+
+        # Initial layer
+        x = F.relu(self.layers[0](x))
+
+        # Hidden layers with skip connections
+        for i, layer in enumerate(self.layers[1:], 1):
+            if i in self.skip_connections:
+                x = torch.cat([x, input_features], dim=-1)
+            x = F.relu(layer(x))
+
+        # RGB prediction
+        rgb = torch.sigmoid(self.rgb_head(x))
+
+        return rgb
+
+
+class SDFNet(nn.Module):
+    """SDF-Net model with modern optimizations."""
+
+    def __init__(self, config: SDFNetConfig):
+        super().__init__()
+        self.config = config
+
+        # Initialize SDF network
+        self.sdf_network = SDFNetwork(
+            hidden_dim=config.hidden_dim,
+            num_layers=config.num_layers,
+            skip_connections=config.skip_connections,
+            use_sphere_init=config.use_sphere_init,
+            sphere_radius=config.sphere_radius,
+        )
+
+        # Initialize color network
+        self.color_network = ColorNetwork(
+            hidden_dim=config.hidden_dim,
+            num_layers=config.num_layers // 2,
+            skip_connections=config.skip_connections,
+        )
+
+        # Initialize AMP grad scaler
+        self.grad_scaler = config.grad_scaler if config.use_amp else None
+
+        # Move model to device
+        self.to(config.device)
+
+        # Initialize weights
+        self._init_weights()
+
+    def _init_weights(self):
+        """Initialize network weights."""
+        for m in self.modules():
+            if isinstance(m, nn.Linear):
+                nn.init.kaiming_normal_(m.weight, nonlinearity=self.config.activation)
+                if m.bias is not None:
+                    nn.init.zeros_(m.bias)
+
+    def forward(self, coords: Tensor, view_dirs: Tensor | None = None) -> TensorDict:
+        """Forward pass with automatic mixed precision support."""
+        # Move inputs to device efficiently
+        coords = coords.to(self.config.device, non_blocking=self.config.use_non_blocking)
+        if view_dirs is not None:
+            view_dirs = view_dirs.to(self.config.device, non_blocking=self.config.use_non_blocking)
+
+        # Process points in chunks for memory efficiency
+        outputs_list = []
+        for i in range(0, coords.shape[0], self.config.chunk_size):
+            chunk_coords = coords[i : i + self.config.chunk_size]
+            chunk_view_dirs = (
+                view_dirs[i : i + self.config.chunk_size] if view_dirs is not None else None
+            )
+
+            # Use AMP for forward pass
+            with autocast(enabled=self.config.use_amp):
+                # Get SDF values and gradients
+                sdf_output = self.sdf_network(chunk_coords)
+                sdf = sdf_output["sdf"]
+                sdf_gradients = sdf_output["gradients"]
+
+                # Get colors
+                if chunk_view_dirs is not None:
+                    color_input = torch.cat([chunk_coords, sdf_gradients, chunk_view_dirs], dim=-1)
+                    rgb = self.color_network(color_input)
+                else:
+                    rgb = torch.zeros_like(chunk_coords)
+
+                chunk_outputs = {"sdf": sdf, "gradients": sdf_gradients, "rgb": rgb}
+
+            outputs_list.append(chunk_outputs)
+
+        # Combine chunk outputs
+        outputs = {
+            k: torch.cat([out[k] for out in outputs_list], dim=0) for k in outputs_list[0].keys()
         }
+
+        return outputs
+
+    def training_step(
+        self, batch: TensorDict, optimizer: torch.optim.Optimizer
+    ) -> Tuple[Tensor, TensorDict]:
+        """Optimized training step with AMP support."""
+        # Zero gradients efficiently
+        optimizer.zero_grad(set_to_none=self.config.set_grad_to_none)
+
+        # Move batch to device efficiently
+        batch = {
+            k: v.to(self.config.device, non_blocking=self.config.use_non_blocking)
+            for k, v in batch.items()
+        }
+
+        # Forward pass with AMP
+        with autocast(enabled=self.config.use_amp):
+            outputs = self(batch["coords"], batch.get("view_dirs"))
+            loss = self.compute_loss(outputs, batch)
+
+        # Backward pass with grad scaling
+        if self.config.use_amp:
+            self.grad_scaler.scale(loss["total_loss"]).backward()
+            self.grad_scaler.step(optimizer)
+            self.grad_scaler.update()
+        else:
+            loss["total_loss"].backward()
+            optimizer.step()
+
+        return loss["total_loss"], loss
+
+    @torch.inference_mode()
+    def validation_step(self, batch: TensorDict) -> TensorDict:
+        """Efficient validation step."""
+        batch = {
+            k: v.to(self.config.device, non_blocking=self.config.use_non_blocking)
+            for k, v in batch.items()
+        }
+
+        outputs = self(batch["coords"], batch.get("view_dirs"))
+        loss = self.compute_loss(outputs, batch)
+
+        return loss
+
+    def compute_loss(self, predictions: TensorDict, targets: TensorDict) -> TensorDict:
+        """Compute training losses."""
+        losses = {}
+
+        # SDF loss
+        if "sdf" in targets:
+            losses["sdf"] = F.mse_loss(predictions["sdf"], targets["sdf"])
+
+        # Gradient loss
+        if "gradients" in targets:
+            losses["gradients"] = F.mse_loss(predictions["gradients"], targets["gradients"])
+
+        # RGB loss
+        if "rgb" in targets:
+            losses["rgb"] = F.mse_loss(predictions["rgb"], targets["rgb"])
+
+        # Eikonal loss (gradient norm should be 1)
+        if "gradients" in predictions:
+            gradient_norm = torch.norm(predictions["gradients"], dim=-1)
+            losses["eikonal"] = F.mse_loss(gradient_norm, torch.ones_like(gradient_norm))
+
+        # Total loss
+        losses["total_loss"] = sum(losses.values())
+
+        return losses
+
+    def update_learning_rate(self, optimizer: torch.optim.Optimizer, step: int):
+        """Update learning rate with decay."""
+        decay_steps = step // self.config.learning_rate_decay_steps
+        decay_factor = self.config.learning_rate_decay_mult**decay_steps
+
+        # Update optimizer learning rate
+        for param_group in optimizer.param_groups:
+            param_group["lr"] = self.config.learning_rate * decay_factor
+
 
 class LatentSDFNetwork(nn.Module):
     """潜在SDF网络
-    
+
     包含形状编码器和SDF解码器的完整模型
     """
-    
-    def __init__(
-        self, dim_latent: int = 256, num_shapes: Optional[int] = None, **sdf_kwargs
-    ):
+
+    def __init__(self, dim_latent: int = 256, num_shapes: Optional[int] = None, **sdf_kwargs):
         super().__init__()
-        
+
         self.dim_latent = dim_latent
         self.num_shapes = num_shapes
-        
+
         # SDF解码器
         self.sdf_decoder = SDFNetwork(dim_latent=dim_latent, **sdf_kwargs)
-        
+
         # 潜在编码（如果指定了形状数量）
         if num_shapes is not None:
             self.latent_codes = nn.Embedding(num_shapes, dim_latent)
             # 初始化潜在编码
             nn.init.normal_(self.latent_codes.weight, 0.0, 1e-4)
-    
+
     def forward(
-        self, points: torch.Tensor, shape_ids: Optional[torch.Tensor] = None, latent_code: Optional[torch.Tensor] = None
+        self,
+        points: torch.Tensor,
+        shape_ids: Optional[torch.Tensor] = None,
+        latent_code: Optional[torch.Tensor] = None,
     ) -> torch.Tensor:
         """前向传播
-        
+
         Args:
             points: 输入点 [B, N, 3]
             shape_ids: 形状ID [B] (可选)
             latent_code: 直接提供的潜在编码 [B, dim_latent] (可选)
-            
+
         Returns:
             sdf: 有符号距离值 [B, N, 1]
         """
@@ -345,72 +424,71 @@ class LatentSDFNetwork(nn.Module):
             if shape_ids is None:
                 raise ValueError("Either shape_ids or latent_code must be provided")
             latent_code = self.latent_codes(shape_ids)
-        
+
         return self.sdf_decoder(points, latent_code)
-    
+
     def encode_shape(self, points: torch.Tensor, sdf: torch.Tensor) -> torch.Tensor:
         """编码形状（简单版本，实际应用中可能需要更复杂的编码器）
-        
+
         Args:
             points: 输入点 [B, N, 3]
             sdf: SDF值 [B, N, 1]
-            
+
         Returns:
             latent_code: 潜在编码 [B, dim_latent]
         """
         # 简单的平均池化编码
         features = torch.cat([points, sdf], dim=-1)  # [B, N, 4]
         shape_code = features.mean(dim=1)  # [B, 4]
-        
+
         # 通过全连接层映射到潜在空间
-        if not hasattr(self, 'shape_encoder'):
+        if not hasattr(self, "shape_encoder"):
             self.shape_encoder = nn.Linear(4, self.dim_latent)
             if torch.cuda.is_available():
                 self.shape_encoder = self.shape_encoder.cuda()
-        
+
         latent_code = self.shape_encoder(shape_code)
         return latent_code
-    
+
     def get_latent_code(self, shape_id: int) -> torch.Tensor:
         """获取指定形状的潜在编码"""
         if self.num_shapes is None:
             raise ValueError("num_shapes must be specified to use shape IDs")
-        
+
         shape_id_tensor = torch.tensor([shape_id], dtype=torch.long)
         if torch.cuda.is_available():
             shape_id_tensor = shape_id_tensor.cuda()
-        
+
         return self.latent_codes(shape_id_tensor)
+
 
 class MultiScaleSDFNetwork(SDFNetwork):
     """多尺度SDF网络
-    
+
     在不同分辨率下进行SDF预测
     """
-    
-    def __init__(
-        self, scales: list[float] = [1.0, 0.5, 0.25], **kwargs
-    ):
+
+    def __init__(self, scales: List[float] = [1.0, 0.5, 0.25], **kwargs):
         super().__init__(**kwargs)
         self.scales = scales
-    
+
     def forward_multiscale(
         self, points: torch.Tensor, latent_code: torch.Tensor
-    ) -> dict[str, torch.Tensor]:
+    ) -> Dict[str, torch.Tensor]:
         """多尺度前向传播
-        
+
         Args:
             points: 输入点 [B, N, 3]
             latent_code: 潜在编码 [B, dim_latent]
-            
+
         Returns:
             multi_sdf: 不同尺度的SDF预测
         """
         results = {}
-        
+
         for scale in self.scales:
             scaled_points = points * scale
             sdf = self.forward(scaled_points, latent_code)
-            results[f'scale_{scale}'] = sdf
-        
-        return results 
+            results[f"scale_{scale}"] = sdf
+
+        return results

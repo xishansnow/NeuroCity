@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from typing import Any, Optional
 """
 Nerfacto Dataset Module
@@ -39,7 +41,7 @@ class NerfactoDatasetConfig:
     
     # Camera settings
     camera_model: str = "perspective"  # perspective, fisheye, equirectangular
-    distortion_params: Optional[list[float]] = None
+    distortion_params: Optional[List[float]] = None
     
     # Data splitting
     train_split_fraction: float = 0.9
@@ -47,7 +49,7 @@ class NerfactoDatasetConfig:
     test_split_fraction: float = 0.0
     
     # Scene bounds
-    scene_bounds: Optional[tuple[float, float, float, float, float, float]] = None
+    scene_bounds: Optional[Tuple[float, float, float, float, float, float]] = None
     auto_scale: bool = True
     
     # Sampling settings
@@ -122,7 +124,7 @@ class ImageProcessor:
     """Image processing utilities for Nerfacto dataset."""
     
     @staticmethod
-    def load_image(image_path: str, target_size: Optional[tuple[int, int]] = None) -> torch.Tensor:
+    def load_image(image_path: str, target_size: Optional[Tuple[int, int]] = None) -> torch.Tensor:
         """Load and preprocess image."""
         if not os.path.exists(image_path):
             raise FileNotFoundError(f"Image not found: {image_path}")
@@ -165,7 +167,7 @@ class COLMAPDataParser:
     """Parser for COLMAP data format."""
     
     @staticmethod
-    def parse_colmap_data(data_dir: str) -> dict[str, Any]:
+    def parse_colmap_data(data_dir: str) -> Dict[str, Any]:
         """Parse COLMAP reconstruction data."""
         # This is a simplified version - full COLMAP parsing would require
         # reading binary files and handling various camera models
@@ -233,7 +235,7 @@ class BlenderDataParser:
     """Parser for Blender NeRF data format."""
     
     @staticmethod
-    def parse_blender_data(data_dir: str) -> dict[str, Any]:
+    def parse_blender_data(data_dir: str) -> Dict[str, Any]:
         """Parse Blender NeRF format data."""
         transform_files = ['transforms_train.json', 'transforms_val.json', 'transforms_test.json']
         
@@ -423,7 +425,7 @@ class NerfactoDataset(Dataset):
     def __len__(self) -> int:
         return len(self.image_paths)
     
-    def __getitem__(self, idx: int) -> dict[str, torch.Tensor]:
+    def __getitem__(self, idx: int) -> Dict[str, torch.Tensor]:
         """Get dataset item."""
         # Load image
         if self.config.cache_images and idx < len(self.images):
@@ -458,7 +460,7 @@ class NerfactoDataset(Dataset):
         image: torch.Tensor,
         pose: torch.Tensor,
         intrinsics: torch.Tensor,
-    ) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
+    ) -> Tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
         """Generate rays for entire image."""
         H, W = image.shape[:2]
         
@@ -494,7 +496,7 @@ class NerfactoDataset(Dataset):
         image: torch.Tensor,
         pose: torch.Tensor,
         intrinsics: torch.Tensor,
-    ) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
+    ) -> Tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
         """Generate rays for random patch."""
         H, W = image.shape[:2]
         patch_size = self.config.patch_size
@@ -548,10 +550,10 @@ def create_nerfacto_dataloader(
 def create_nerfacto_dataset(
     data_dir: str,
     data_format: str = "colmap",
-    image_size: Optional[tuple[int,
+    image_size: Optional[Tuple[int,
     int]] = None,
     **kwargs,
-) -> dict[str, NerfactoDataset]:
+) -> Dict[str, NerfactoDataset]:
     """Factory function to create Nerfacto datasets."""
     config = NerfactoDatasetConfig(
         data_dir=data_dir, data_format=data_format, **kwargs

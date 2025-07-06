@@ -43,11 +43,11 @@ class CameraInfo:
         """Get camera rotation matrix"""
         return self.transform_matrix[:3, :3]
     
-    def get_focal_length(self) -> tuple[float, float]:
+    def get_focal_length(self) -> Tuple[float, float]:
         """Get focal lengths (fx, fy)"""
         return self.intrinsics[0, 0], self.intrinsics[1, 1]
     
-    def get_principal_point(self) -> tuple[float, float]:
+    def get_principal_point(self) -> Tuple[float, float]:
         """Get principal point (cx, cy)"""
         return self.intrinsics[0, 2], self.intrinsics[1, 2]
 
@@ -85,7 +85,7 @@ class CameraDataset:
         
         logger.info(f"Loaded {len(self.cameras)} cameras for {split} split")
     
-    def _load_cameras(self) -> list[CameraInfo]:
+    def _load_cameras(self) -> List[CameraInfo]:
         """Load camera information from various formats"""
         # Try different data formats
         if (self.data_root / 'transforms.json').exists():
@@ -98,7 +98,7 @@ class CameraDataset:
             # Create synthetic data for demo
             return self._create_synthetic_cameras()
     
-    def _load_nerf_format(self) -> list[CameraInfo]:
+    def _load_nerf_format(self) -> List[CameraInfo]:
         """Load NeRF-style transforms.json format"""
         transforms_file = self.data_root / 'transforms.json'
         
@@ -164,7 +164,7 @@ class CameraDataset:
         
         return cameras
     
-    def _load_colmap_format(self) -> list[CameraInfo]:
+    def _load_colmap_format(self) -> List[CameraInfo]:
         """Load COLMAP format data"""
         try:
             from .utils.colmap_utils import read_cameras_binary, read_images_binary
@@ -243,7 +243,7 @@ class CameraDataset:
         
         return cameras
     
-    def _load_llff_format(self) -> list[CameraInfo]:
+    def _load_llff_format(self) -> List[CameraInfo]:
         """Load LLFF format data"""
         poses_bounds = np.load(self.data_root / 'poses_bounds.npy')
         
@@ -282,7 +282,7 @@ class CameraDataset:
         
         return cameras
     
-    def _create_synthetic_cameras(self) -> list[CameraInfo]:
+    def _create_synthetic_cameras(self) -> List[CameraInfo]:
         """Create synthetic camera data for demo purposes"""
         cameras = []
         
@@ -360,7 +360,7 @@ class CameraDataset:
             positions.append(camera.get_position())
         return np.array(positions)
     
-    def get_scene_bounds(self) -> tuple[np.ndarray, np.ndarray]:
+    def get_scene_bounds(self) -> Tuple[np.ndarray, np.ndarray]:
         """Estimate scene bounds from camera positions"""
         positions = self.get_camera_positions()
         
@@ -434,7 +434,7 @@ class MegaNeRFDataset(Dataset):
         
         logger.info(f"Created {len(self.data_partitions)} data partitions")
     
-    def _create_data_partitions(self) -> list[dict[str, Any]]:
+    def _create_data_partitions(self) -> List[Dict[str, Any]]:
         """Create data partitions based on spatial partitioner"""
         # Get camera positions
         camera_positions = self.camera_dataset.get_camera_positions()
@@ -484,7 +484,7 @@ class MegaNeRFDataset(Dataset):
                 
                 self.rays_cache[partition_idx] = rays_data
     
-    def _compute_partition_rays(self, partition: dict[str, Any]) -> dict[str, np.ndarray]:
+    def _compute_partition_rays(self, partition: Dict[str, Any]) -> Dict[str, np.ndarray]:
         """Compute rays for a specific partition"""
         all_ray_origins = []
         all_ray_directions = []
@@ -514,7 +514,7 @@ class MegaNeRFDataset(Dataset):
             'ray_origins': np.concatenate(all_ray_origins, axis=0)
         }
     
-    def _generate_camera_rays(self, camera: CameraInfo) -> tuple[np.ndarray, np.ndarray]:
+    def _generate_camera_rays(self, camera: CameraInfo) -> Tuple[np.ndarray, np.ndarray]:
         """Generate rays for a camera"""
         H, W = camera.height, camera.width
         
@@ -534,7 +534,7 @@ class MegaNeRFDataset(Dataset):
         
         return ray_origins, ray_directions
     
-    def get_partition_data(self, partition_idx: int) -> dict[str, Any]:
+    def get_partition_data(self, partition_idx: int) -> Dict[str, Any]:
         """Get data for a specific partition"""
         if partition_idx >= len(self.data_partitions):
             raise ValueError(f"Partition {partition_idx} out of range")
@@ -551,7 +551,7 @@ class MegaNeRFDataset(Dataset):
         total_rays = sum(len(rays_data.get('colors', [])) for rays_data in self.rays_cache.values())
         return max(1, total_rays // self.ray_batch_size)
     
-    def __getitem__(self, idx: int) -> dict[str, torch.Tensor]:
+    def __getitem__(self, idx: int) -> Dict[str, torch.Tensor]:
         """Get a batch of rays"""
         # Cycle through partitions
         partition_idx = idx % len(self.data_partitions)

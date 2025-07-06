@@ -80,7 +80,7 @@ class MegaNeRFRenderer:
     
     def render_path(
         self,
-        camera_path: list[np.ndarray],
+        camera_path: List[np.ndarray],
         intrinsics: np.ndarray,
         height: int,
         width: int,
@@ -147,7 +147,7 @@ class MegaNeRFRenderer:
         print(f"Rendered {len(camera_path)} images to {output_dir}")
         return output_files
     
-    def create_video(self, image_paths: list[str], output_path: str, fps: int = 30):
+    def create_video(self, image_paths: List[str], output_path: str, fps: int = 30):
         """Create video from rendered images"""
         if not image_paths:
             print("No images to create video")
@@ -317,7 +317,7 @@ def generate_camera_path(
     center: np.ndarray,
     radius: float,
     height_variation: float,
-    scene_bounds: tuple[float,
+    scene_bounds: Tuple[float,
     ...],
 )
     """Generate camera path based on render type"""

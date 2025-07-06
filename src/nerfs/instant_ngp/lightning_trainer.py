@@ -100,11 +100,11 @@ class InstantNGPLightningModule(pl.LightningModule):
             'total_rays': 0, 'high_error_rays': 0
         }
     
-    def forward(self, positions: torch.Tensor, directions: torch.Tensor) -> dict[str, torch.Tensor]:
+    def forward(self, positions: torch.Tensor, directions: torch.Tensor) -> Dict[str, torch.Tensor]:
         """Forward pass through the model."""
         return self.model(positions, directions)
     
-    def training_step(self, batch: dict[str, torch.Tensor], batch_idx: int) -> torch.Tensor:
+    def training_step(self, batch: Dict[str, torch.Tensor], batch_idx: int) -> torch.Tensor:
         """Training step."""
         # Extract batch data
         rays_o = batch['rays_o']  # [N, 3]
@@ -160,10 +160,10 @@ class InstantNGPLightningModule(pl.LightningModule):
 
     def validation_step(
         self,
-        batch: dict[str,
+        batch: Dict[str,
         torch.Tensor],
         batch_idx: int,
-    ) -> dict[str, torch.Tensor]:
+    ) -> Dict[str, torch.Tensor]:
         """Validation step."""
         # Extract batch data
         rays_o = batch['rays_o']
@@ -217,7 +217,7 @@ class InstantNGPLightningModule(pl.LightningModule):
             'target_rgb': target_colors[:100]
         }
     
-    def validation_epoch_end(self, outputs: list[dict[str, torch.Tensor]]) -> None:
+    def validation_epoch_end(self, outputs: List[Dict[str, torch.Tensor]]) -> None:
         """Aggregate validation results."""
         # Average metrics
         avg_loss = torch.stack([x['val_loss'] for x in outputs]).mean()
@@ -236,7 +236,7 @@ class InstantNGPLightningModule(pl.LightningModule):
         if self.config.adaptive_ray_sampling:
             self._log_ray_sampling_stats()
     
-    def configure_optimizers(self) -> dict[str, Any]:
+    def configure_optimizers(self) -> Dict[str, Any]:
         """Configure optimizers and schedulers."""
         # Group parameters with different learning rates
         hash_params = []
@@ -340,8 +340,8 @@ class InstantNGPLightningModule(pl.LightningModule):
                     embedding.weight.data[low_grad_mask.squeeze()] *= self.config.hash_decay_rate
 
 def create_instant_ngp_lightning_trainer(
-    config: InstantNGPLightningConfig, train_dataset: InstantNGPDataset, val_dataset: Optional[InstantNGPDataset] = None, max_epochs: int = 100, gpus: int | list[int] = 1, logger_type: str = "tensorboard", project_name: str = "instant_ngp", experiment_name: str = "default", checkpoint_dir: str = "checkpoints", **trainer_kwargs
-) -> tuple[InstantNGPLightningModule, pl.Trainer]:
+    config: InstantNGPLightningConfig, train_dataset: InstantNGPDataset, val_dataset: Optional[InstantNGPDataset] = None, max_epochs: int = 100, gpus: int | List[int] = 1, logger_type: str = "tensorboard", project_name: str = "instant_ngp", experiment_name: str = "default", checkpoint_dir: str = "checkpoints", **trainer_kwargs
+) -> Tuple[InstantNGPLightningModule, pl.Trainer]:
     """
     Create Instant-NGP Lightning module and trainer.
     

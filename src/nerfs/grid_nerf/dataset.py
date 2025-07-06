@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from typing import Any, Optional, Union
 """
 Dataset module for Grid-NeRF.
@@ -36,7 +38,7 @@ class GridNeRFDataset(Dataset):
         """Get dataset length."""
         return len(self.images)
 
-    def __getitem__(self, idx: int) -> dict[str, Union[torch.Tensor, int, None]]:
+    def __getitem__(self, idx: int) -> Dict[str, Union[torch.Tensor, int, None]]:
         """Get a batch of data."""
         if self.split == "train":
             # Random ray sampling for training
@@ -53,7 +55,7 @@ class GridNeRFDataset(Dataset):
                 "ray_origins": self.ray_origins[idx], "ray_directions": self.ray_directions[idx], "rgb": self.images[idx], "image_idx": idx, "metadata": self.metadata[idx] if hasattr(self, "metadata") else None
             }
 
-    def get_dataset_info(self) -> dict[str, Any]:
+    def get_dataset_info(self) -> Dict[str, Any]:
         """Get dataset information."""
         return {
             "num_images": len(
@@ -83,7 +85,7 @@ class GridNeRFDataset(Dataset):
         depth = cv2.resize(depth, self.image_size, interpolation=cv2.INTER_NEAREST)
         return torch.from_numpy(depth).float()
     
-    def load_camera(self, camera_id: str) -> dict[str, torch.Tensor]:
+    def load_camera(self, camera_id: str) -> Dict[str, torch.Tensor]:
         """Load camera parameters."""
         if camera_id in self.cameras:
             return self.cameras[camera_id]
@@ -92,9 +94,9 @@ class GridNeRFDataset(Dataset):
     
     def generate_rays(
         self,
-        camera: dict[str, torch.Tensor],
-        image_shape: tuple[int, int]
-    ) -> tuple[torch.Tensor, torch.Tensor]:
+        camera: Dict[str, torch.Tensor],
+        image_shape: Tuple[int, int]
+    ) -> Tuple[torch.Tensor, torch.Tensor]:
         """Generate camera rays."""
         height, width = image_shape
         
@@ -246,7 +248,7 @@ class KITTI360GridDataset(GridNeRFDataset):
             # Default calibration
             self.K = np.array([[552.554, 0, 512], [0, 552.554, 384], [0, 0, 1]])
     
-    def load_poses(self, pose_file: Path) -> dict[int, np.ndarray]:
+    def load_poses(self, pose_file: Path) -> Dict[int, np.ndarray]:
         """Load camera poses from KITTI-360."""
         poses = {}
         
@@ -263,7 +265,7 @@ class KITTI360GridDataset(GridNeRFDataset):
         
         return poses
     
-    def _create_camera_params(self, sample: dict) -> dict[str, torch.Tensor]:
+    def _create_camera_params(self, sample: dict) -> Dict[str, torch.Tensor]:
         """Create camera parameters for a sample."""
         pose = sample['pose']
         
@@ -359,7 +361,7 @@ class WaymoGridDataset(GridNeRFDataset):
         for sample in self.samples:
             self.cameras[sample['camera_id']] = self._create_camera_params(sample)
     
-    def _create_camera_params(self, sample: dict) -> dict[str, torch.Tensor]:
+    def _create_camera_params(self, sample: dict) -> Dict[str, torch.Tensor]:
         """Create camera parameters for a sample."""
         pose = sample['pose']
         calib = self.camera_calib
@@ -541,7 +543,7 @@ class RayBatchSampler:
             
             self.ray_info.append(ray_info)
     
-    def sample_batch(self) -> dict[str, torch.Tensor]:
+    def sample_batch(self) -> Dict[str, torch.Tensor]:
         """Sample a batch of rays from random images."""
         # Sample random image
         img_idx = torch.randint(0, len(self.ray_info), (1, )).item()

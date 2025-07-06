@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from typing import Optional
 """
 Multi-scale Renderer Module
@@ -24,7 +26,7 @@ class MultiScaleRenderer(nn.Module):
         
     def render(
         self, rgb: torch.Tensor, sigma: torch.Tensor, z_vals: torch.Tensor, rays_d: torch.Tensor, noise_std: float = 0.0
-    ) -> dict[str, torch.Tensor]:
+    ) -> Dict[str, torch.Tensor]:
         """
         Volume rendering with alpha compositing
         
@@ -88,8 +90,8 @@ class MultiScaleRenderer(nn.Module):
         }
     
     def render_multiscale(
-        self, rgb_scales: list[torch.Tensor], sigma_scales: list[torch.Tensor], z_vals: torch.Tensor, rays_d: torch.Tensor, distances: torch.Tensor, scale_thresholds: list[float]
-    ) -> dict[str, torch.Tensor]:
+        self, rgb_scales: List[torch.Tensor], sigma_scales: List[torch.Tensor], z_vals: torch.Tensor, rays_d: torch.Tensor, distances: torch.Tensor, scale_thresholds: List[float]
+    ) -> Dict[str, torch.Tensor]:
         """
         Render with multiple scales based on distance
         
@@ -144,7 +146,7 @@ class LevelOfDetailRenderer(nn.Module):
     """
     
     def __init__(
-        self, config, num_lod_levels: int = 4, lod_thresholds: list[float] = None
+        self, config, num_lod_levels: int = 4, lod_thresholds: List[float] = None
     ):
         super().__init__()
         
@@ -182,7 +184,7 @@ class LevelOfDetailRenderer(nn.Module):
     
     def adaptive_sampling(
         self, rays_o: torch.Tensor, rays_d: torch.Tensor, bounds: torch.Tensor, distances: torch.Tensor
-    ) -> tuple[torch.Tensor, torch.Tensor]:
+    ) -> Tuple[torch.Tensor, torch.Tensor]:
         """
         Adaptive sampling based on level-of-detail
         
@@ -243,7 +245,7 @@ class LevelOfDetailRenderer(nn.Module):
     
     def forward(
         self, model: nn.Module, rays_o: torch.Tensor, rays_d: torch.Tensor, bounds: torch.Tensor, distances: torch.Tensor
-    ) -> dict[str, torch.Tensor]:
+    ) -> Dict[str, torch.Tensor]:
         """
         Forward pass with level-of-detail rendering
         
@@ -286,7 +288,7 @@ class ProgressiveRenderer(nn.Module):
         """Set current training stage"""
         self.current_stage = stage
     
-    def get_stage_params(self) -> tuple[int, float]:
+    def get_stage_params(self) -> Tuple[int, float]:
         """Get parameters for current stage"""
         stage = min(self.current_stage, len(self.stage_sample_counts) - 1)
         
@@ -297,7 +299,7 @@ class ProgressiveRenderer(nn.Module):
     
     def render(
         self, rgb: torch.Tensor, sigma: torch.Tensor, z_vals: torch.Tensor, rays_d: torch.Tensor
-    ) -> dict[str, torch.Tensor]:
+    ) -> Dict[str, torch.Tensor]:
         """
         Progressive rendering based on current stage
         
@@ -401,7 +403,7 @@ class HierarchicalRenderer(nn.Module):
     
     def forward(
         self, model: nn.Module, rays_o: torch.Tensor, rays_d: torch.Tensor, bounds: torch.Tensor, distances: Optional[torch.Tensor] = None
-    ) -> dict[str, torch.Tensor]:
+    ) -> Dict[str, torch.Tensor]:
         """
         Hierarchical rendering with coarse-to-fine sampling
         

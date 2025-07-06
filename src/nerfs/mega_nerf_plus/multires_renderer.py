@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from typing import Any, Optional, Union
 """
 Multi-resolution rendering components for Mega-NeRF++
@@ -89,7 +91,7 @@ class MultiResolutionRenderer(nn.Module):
         near: float,
         far: float,
         lod_levels: torch.Tensor,
-    ) -> dict[str, torch.Tensor]:
+    ) -> Dict[str, torch.Tensor]:
         """
         Adaptive sampling based on LOD levels
         
@@ -190,7 +192,7 @@ class AdaptiveLODRenderer(nn.Module):
         near: float,
         far: float,
         target_resolution: float = 1.0,
-    ) -> dict[str, torch.Tensor]:
+    ) -> Dict[str, torch.Tensor]:
         """
         Render with adaptive level of detail
         
@@ -236,7 +238,7 @@ class AdaptiveLODRenderer(nn.Module):
         rays_o: torch.Tensor,
         rays_d: torch.Tensor,
         lod_levels: torch.Tensor,
-    ) -> dict[str, torch.Tensor]:
+    ) -> Dict[str, torch.Tensor]:
         """Render each LOD group separately"""
         
         batch_shape = rays_o.shape[:-1]
@@ -288,7 +290,7 @@ class AdaptiveLODRenderer(nn.Module):
         near: float,
         far: float,
         lod_levels: torch.Tensor,
-    ) -> dict[str, torch.Tensor]:
+    ) -> Dict[str, torch.Tensor]:
         """Apply progressive refinement to high-detail areas"""
         
         results = initial_results.copy()
@@ -365,7 +367,7 @@ class AdaptiveLODRenderer(nn.Module):
         colors: torch.Tensor,
         t_vals: torch.Tensor,
         rays_d: torch.Tensor,
-    ) -> dict[str, torch.Tensor]:
+    ) -> Dict[str, torch.Tensor]:
         """Volume rendering computation"""
         
         # Compute distances between samples
@@ -417,11 +419,11 @@ class PhotogrammetricVolumetricRenderer(nn.Module):
         rays_d: torch.Tensor,
         scene_bounds: torch.Tensor,
         camera_intrinsics: torch.Tensor,
-        image_resolution: tuple[int,
+        image_resolution: Tuple[int,
         int],
         near: float,
         far: float,
-    ) -> dict[str, torch.Tensor]:
+    ) -> Dict[str, torch.Tensor]:
         """
         Render with photogrammetric optimizations
         
@@ -465,7 +467,7 @@ class PhotogrammetricVolumetricRenderer(nn.Module):
         results: dict,
         rays_o: torch.Tensor,
         rays_d: torch.Tensor,
-    ) -> dict[str, torch.Tensor]:   
+    ) -> Dict[str, torch.Tensor]:   
         """Add depth regularization for better geometric consistency"""
         
         # Compute depth gradients for smoothness
@@ -496,7 +498,7 @@ class PhotogrammetricVolumetricRenderer(nn.Module):
         results: dict,
         rays_o: torch.Tensor,
         rays_d: torch.Tensor,
-    ) -> dict[str, torch.Tensor]:
+    ) -> Dict[str, torch.Tensor]:
         """Add semantic rendering if supported by the model"""
         
         # Check if model supports semantic output
@@ -512,7 +514,7 @@ class PhotogrammetricVolumetricRenderer(nn.Module):
         self,
         results: dict,
         camera_intrinsics: torch.Tensor,
-    ) -> dict[str, torch.Tensor]:
+    ) -> Dict[str, torch.Tensor]:
         """Compute photogrammetric quality metrics"""
         # cannot import name 'AdaptiveOctree' from 'nerfs.mega_nerf_plus.spatial_partitioner'
         from nerfs.mega_nerf_plus.spatial_partitioner import AdaptiveOctree
@@ -546,11 +548,11 @@ class PhotogrammetricVolumetricRenderer(nn.Module):
     def batch_render(
         self,
         model: nn.Module,
-        rays_batch: dict[str,
+        rays_batch: Dict[str,
         torch.Tensor],
         scene_bounds: torch.Tensor,
         chunk_size: int = 1024,
-    ) -> dict[str, torch.Tensor]:
+    ) -> Dict[str, torch.Tensor]:
         """
         Batch rendering for large numbers of rays
         

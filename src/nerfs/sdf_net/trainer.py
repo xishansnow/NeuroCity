@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from typing import Any, Optional, Union
 """
 SDF Network Trainer Implementation
@@ -76,7 +78,7 @@ class SDFTrainer:
         print(f"Model parameters: {sum(p.numel() for p in model.parameters()):, }")
         print(f"Eikonal constraint weight: {lambda_gp}")
     
-    def train_epoch(self) -> dict[str, float]:
+    def train_epoch(self) -> Dict[str, float]:
         """训练一个epoch"""
         self.model.train()
         
@@ -199,7 +201,7 @@ class SDFTrainer:
             'sdf_loss': avg_sdf_loss, 'eikonal_loss': avg_eikonal_loss, 'total_loss': avg_total_loss
         }
     
-    def validate(self) -> dict[str, float]:
+    def validate(self) -> Dict[str, float]:
         """验证模型"""
         if self.val_dataloader is None:
             return {}
@@ -382,7 +384,7 @@ class SDFTrainer:
     
     def evaluate_mesh_extraction(
         self, test_dataloader: DataLoader, resolution: int = 128, num_samples: int = 10
-    ) -> dict[str, float]:
+    ) -> Dict[str, float]:
         """评估网格提取质量"""
         self.model.eval()
         

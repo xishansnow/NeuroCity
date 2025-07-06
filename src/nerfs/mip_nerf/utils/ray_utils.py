@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from typing import Optional
 """
 Ray utility functions for Mip-NeRF
@@ -16,7 +18,7 @@ def cast_rays(
     radii: torch.Tensor,
     near: float,
     far: float,
-) -> dict[str, torch.Tensor]:
+) -> Dict[str, torch.Tensor]:
     """
     Cast rays and compute pixel radii for Mip-NeRF
     
@@ -42,7 +44,7 @@ def conical_frustum_to_gaussian(
     directions: torch.Tensor,
     t_vals: torch.Tensor,
     radii: torch.Tensor,
-) -> tuple[torch.Tensor, torch.Tensor]:
+) -> Tuple[torch.Tensor, torch.Tensor]:
     """
     Convert conical frustums to Gaussian representation
     
@@ -299,7 +301,7 @@ def generate_rays(
     image_width: int,
     image_height: int,
     c2w: torch.Tensor,
-) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
+) -> Tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
     """
     Generate rays from camera parameters
     

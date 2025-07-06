@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from typing import Optional, Union
 """
 Evaluation utilities for DNMP.
@@ -156,7 +158,7 @@ def create_video_from_images(image_dir: str, output_path: str, fps: int = 30):
     video_writer.release()
     print(f"Video saved to {output_path}")
 
-def visualize_training_progress(log_dict: dict[str, list[float]], save_path: str):
+def visualize_training_progress(log_dict: Dict[str, List[float]], save_path: str):
     """Visualize training progress."""
     fig, axes = plt.subplots(2, 2, figsize=(12, 8))
     
@@ -240,9 +242,9 @@ def render_depth_map(depth: torch.Tensor, near: float = 0.1, far: float = 100.0)
     return torch.from_numpy(depth_colored).float()
 
 def create_comparison_grid(
-    images_dict: dict[str,
+    images_dict: Dict[str,
     torch.Tensor],
-    titles: Optional[list[str]] = None,
+    titles: Optional[List[str]] = None,
     save_path: Optional[str] = None
 ):
     """
@@ -287,7 +289,7 @@ def create_comparison_grid(
 
 def benchmark_rendering_speed(
     model,
-    test_rays: tuple[torch.Tensor,
+    test_rays: Tuple[torch.Tensor,
     torch.Tensor],
     device: torch.device,
     num_runs: int = 10

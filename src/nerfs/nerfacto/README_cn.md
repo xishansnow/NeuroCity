@@ -33,11 +33,11 @@ pip install scipy matplotlib
 ### 1. 基本用法
 
 ```python
-from src.nerfacto import NerfactoModel, NerfactoConfig, NerfactoTrainer
+from src.nerfacto import NerfactoModel, NeRFactoConfig, NerfactoTrainer
 from src.nerfacto.dataset import NerfactoDatasetConfig
 
 # 创建模型配置
-model_config = NerfactoConfig(
+model_config = NeRFactoConfig(
     num_levels=16,
     base_resolution=16,
     max_resolution=2048,
@@ -147,13 +147,13 @@ data/
 
 ### 📊 性能对比
 
-| 指标 | 经典 NeRF | Nerfacto | 改进 |
-|------|----------|----------|------|
-| 训练时间 | 1-2 天 | 30-60 分钟 | **快 25-50 倍** |
-| 推理速度 | 10-30 秒/图像 | 1-3 秒/图像 | **快 5-15 倍** |
-| 模型大小 | 100-500 MB | 20-80 MB | **小 3-8 倍** |
-| GPU 内存 | 8-16 GB | 3-6 GB | **少 2-3 倍** |
-| 质量(PSNR) | 基准 | +1.0-2.0 dB | **质量更好** |
+| 指标       | 经典 NeRF     | Nerfacto    | 改进            |
+| ---------- | ------------- | ----------- | --------------- |
+| 训练时间   | 1-2 天        | 30-60 分钟  | **快 25-50 倍** |
+| 推理速度   | 10-30 秒/图像 | 1-3 秒/图像 | **快 5-15 倍**  |
+| 模型大小   | 100-500 MB    | 20-80 MB    | **小 3-8 倍**   |
+| GPU 内存   | 8-16 GB       | 3-6 GB      | **少 2-3 倍**   |
+| 质量(PSNR) | 基准          | +1.0-2.0 dB | **质量更好**    |
 
 ### 🎯 使用场景
 - **生产渲染**：媒体行业的高质量新视角合成
@@ -185,7 +185,7 @@ Nerfacto 使用现代 NeRF 架构，包括：
 
 ```python
 @dataclass
-class NerfactoConfig:
+class NeRFactoConfig:
     # 哈希编码
     num_levels: int = 16
     base_resolution: int = 16

@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from typing import Any, Optional, Union
 """
 Dataset module for BungeeNeRF
@@ -23,7 +25,7 @@ class BungeeNeRFDataset(data.Dataset):
     """
     
     def __init__(
-        self, data_dir: str, split: str = "train", img_downscale: int = 1, use_cache: bool = True, white_background: bool = False, near_far: Optional[tuple[float, float]] = None, scale_factor: float = 4.0, num_scales: int = 4, **kwargs
+        self, data_dir: str, split: str = "train", img_downscale: int = 1, use_cache: bool = True, white_background: bool = False, near_far: Optional[Tuple[float, float]] = None, scale_factor: float = 4.0, num_scales: int = 4, **kwargs
     ):
         super().__init__()
         
@@ -320,7 +322,7 @@ class BungeeNeRFDataset(data.Dataset):
         
         return pose
     
-    def get_rays(self, idx: int) -> tuple[torch.Tensor, torch.Tensor]:
+    def get_rays(self, idx: int) -> Tuple[torch.Tensor, torch.Tensor]:
         """
         Get rays for a specific image
         
@@ -355,7 +357,7 @@ class BungeeNeRFDataset(data.Dataset):
     def __len__(self):
         return len(self.images)
     
-    def __getitem__(self, idx: int) -> dict[str, torch.Tensor]:
+    def __getitem__(self, idx: int) -> Dict[str, torch.Tensor]:
         """
         Get a single data sample
         
@@ -393,7 +395,7 @@ class MultiScaleDataset(BungeeNeRFDataset):
     """
     
     def __init__(
-        self, data_dir: str, split: str = "train", scale_thresholds: list[float] = None, **kwargs
+        self, data_dir: str, split: str = "train", scale_thresholds: List[float] = None, **kwargs
     ):
         if scale_thresholds is None:
             scale_thresholds = [100.0, 50.0, 25.0, 10.0]
@@ -423,14 +425,14 @@ class MultiScaleDataset(BungeeNeRFDataset):
         
         logger.info(f"Scale distribution: {[len(indices) for indices in self.scale_indices]}")
     
-    def get_scale_data(self, scale: int) -> list[int]:
+    def get_scale_data(self, scale: int) -> List[int]:
         """Get indices for a specific scale"""
         if scale < len(self.scale_indices):
             return self.scale_indices[scale]
         else:
             return []
     
-    def get_progressive_data(self, max_scale: int) -> list[int]:
+    def get_progressive_data(self, max_scale: int) -> List[int]:
         """Get indices for progressive training up to max_scale"""
         indices = []
         for scale in range(max_scale + 1):

@@ -320,3 +320,13 @@ Contributions are welcome! Please feel free to submit issues and pull requests.
 ## Acknowledgments
 
 This implementation is based on the paper "Sparse Voxels Rasterization: Real-time High-fidelity Radiance Field Rendering" by Sun et al. We thank the authors for their excellent work and the research community for advancing neural radiance fields. 
+
+
+## See Also
+
+For more detailed technical documentation:
+
+- [Training Implementation](SVRaster_Training_Implementation_cn.md): Detailed explanation of the training pipeline, loss functions, and optimization strategies
+- [Rasterization Implementation](SVRaster_Rasterization_Implementation_cn.md): In-depth coverage of the sparse voxel rasterization algorithm and implementation details
+
+

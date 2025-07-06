@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from typing import Any, Optional, Union
 """
 SDF Network Dataset Implementation
@@ -56,7 +58,7 @@ class SDFDataset(data.Dataset):
         
         print(f"Loaded {len(self.data_list)} {split} samples")
     
-    def _load_data_list(self) -> list[dict]:
+    def _load_data_list(self) -> List[dict]:
         """加载数据列表"""
         split_file = os.path.join(self.data_root, f'{self.split}.json')
         
@@ -82,7 +84,7 @@ class SDFDataset(data.Dataset):
     def __len__(self) -> int:
         return len(self.data_list)
     
-    def __getitem__(self, idx: int) -> dict[str, torch.Tensor]:
+    def __getitem__(self, idx: int) -> Dict[str, torch.Tensor]:
         """获取数据样本
         
         Returns:
@@ -145,7 +147,7 @@ class SDFDataset(data.Dataset):
     
     def _sample_points(
         self, mesh: trimesh.Trimesh
-    ) -> tuple[np.ndarray, np.ndarray]:
+    ) -> Tuple[np.ndarray, np.ndarray]:
         """采样点和SDF标签
         
         Args:
@@ -276,7 +278,7 @@ class SyntheticSDFDataset(data.Dataset):
     """
     
     def __init__(
-        self, num_samples: int = 1000, num_points: int = 10000, shape_types: list[str] = ['sphere', 'cube', 'cylinder'], **kwargs
+        self, num_samples: int = 1000, num_points: int = 10000, shape_types: List[str] = ['sphere', 'cube', 'cylinder'], **kwargs
     ):
         self.num_samples = num_samples
         self.num_points = num_points
@@ -287,7 +289,7 @@ class SyntheticSDFDataset(data.Dataset):
     def __len__(self) -> int:
         return self.num_samples
     
-    def __getitem__(self, idx: int) -> dict[str, torch.Tensor]:
+    def __getitem__(self, idx: int) -> Dict[str, torch.Tensor]:
         """生成合成数据样本"""
         # 随机选择形状类型
         shape_type = np.random.choice(self.shape_types)
@@ -368,7 +370,7 @@ class LatentSDFDataset(data.Dataset):
     def __len__(self) -> int:
         return len(self.base_dataset)
     
-    def __getitem__(self, idx: int) -> dict[str, torch.Tensor]:
+    def __getitem__(self, idx: int) -> Dict[str, torch.Tensor]:
         """获取带潜在编码的数据样本"""
         sample = self.base_dataset[idx]
         
@@ -477,7 +479,7 @@ class RandomNoiseSDF(SDFTransform):
 class ComposeSDF(SDFTransform):
     """组合多个变换"""
     
-    def __init__(self, transforms: list[SDFTransform]):
+    def __init__(self, transforms: List[SDFTransform]):
         self.transforms = transforms
     
     def __call__(self, sample: dict) -> dict:

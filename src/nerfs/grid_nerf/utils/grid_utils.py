@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from typing import Any, Optional, Union
 """
 Grid utilities for Grid-NeRF.
@@ -13,7 +15,7 @@ import math
 def compute_grid_bounds(
     points: torch.Tensor,
     margin: float = 0.1
-) -> tuple[float, float, float, float, float, float]:
+) -> Tuple[float, float, float, float, float, float]:
     """
     Compute scene bounds from point cloud.
     
@@ -130,7 +132,7 @@ def create_voxel_grid(
     points: torch.Tensor,
     features: Optional[torch.Tensor] = None,
     grid_resolution: int = 64,
-    scene_bounds: Optional[tuple[float, float, float, float, float, float]] = None
+    scene_bounds: Optional[Tuple[float, float, float, float, float, float]] = None
 ) -> torch.Tensor:
     """
     Create voxel grid from point cloud.
@@ -259,7 +261,7 @@ def adaptive_grid_subdivision(
     grid: torch.Tensor,
     occupancy_threshold: float = 0.01,
     subdivision_threshold: float = 0.8
-) -> tuple[torch.Tensor, torch.Tensor]:
+) -> Tuple[torch.Tensor, torch.Tensor]:
     """
     Adaptively subdivide grid based on occupancy.
     
@@ -364,7 +366,7 @@ def smooth_grid(grid: torch.Tensor, sigma: float = 1.0) -> torch.Tensor:
     
     return smoothed_grid
 
-def compute_grid_statistics(grid: torch.Tensor) -> dict[str, Union[float, int]]:
+def compute_grid_statistics(grid: torch.Tensor) -> Dict[str, Union[float, int]]:
     """
     Compute statistics of grid values.
     

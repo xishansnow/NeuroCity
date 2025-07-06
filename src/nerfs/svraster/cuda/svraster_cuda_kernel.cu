@@ -2,6 +2,52 @@
 #include <cuda_runtime.h>
 #include <device_launch_parameters.h>
 #include <math.h>
+#include <cuda_fp16.h>
+#include <cub/cub.cuh>
+
+__device__ __forceinline__ float3 make_float3_from_scalar(float s) {
+    return make_float3(s, s, s);
+}
+
+__device__ __forceinline__ float3 operator+(const float3& a, const float3& b) {
+    return make_float3(a.x + b.x, a.y + b.y, a.z + b.z);
+}
+
+__device__ __forceinline__ float3 operator-(const float3& a, const float3& b) {
+    return make_float3(a.x - b.x, a.y - b.y, a.z - b.z);
+}
+
+__device__ __forceinline__ float3 operator*(const float3& a, float s) {
+    return make_float3(a.x * s, a.y * s, a.z * s);
+}
+
+__device__ __forceinline__ float3 operator*(float s, const float3& a) {
+    return make_float3(s * a.x, s * a.y, s * a.z);
+}
+
+__device__ __forceinline__ float3 operator/(const float3& a, const float3& b) {
+    return make_float3(a.x / b.x, a.y / b.y, a.z / b.z);
+}
+
+__device__ __forceinline__ float3 fminf(const float3& a, const float3& b) {
+    return make_float3(fminf(a.x, b.x), fminf(a.y, b.y), fminf(a.z, b.z));
+}
+
+__device__ __forceinline__ float3 fmaxf(const float3& a, const float3& b) {
+    return make_float3(fmaxf(a.x, b.x), fmaxf(a.y, b.y), fmaxf(a.z, b.z));
+}
+
+__device__ __forceinline__ float dot(const float3& a, const float3& b) {
+    return a.x * b.x + a.y * b.y + a.z * b.z;
+}
+
+__device__ __forceinline__ float length(const float3& v) {
+    return sqrtf(v.x * v.x + v.y * v.y + v.z * v.z);
+}
+
+__device__ __forceinline__ void operator+=(float3& a, const float3& b) {
+    a.x += b.x; a.y += b.y; a.z += b.z;
+}
 
 // Device helper functions
 __device__ bool ray_aabb_intersection(
@@ -10,8 +56,8 @@ __device__ bool ray_aabb_intersection(
     float& t_near,
     float& t_far
 ) {
-    float3 box_min = voxel.position - make_float3(voxel.size * 0.5f);
-    float3 box_max = voxel.position + make_float3(voxel.size * 0.5f);
+    float3 box_min = voxel.position - make_float3(voxel.size * 0.5f, voxel.size * 0.5f, voxel.size * 0.5f);
+    float3 box_max = voxel.position + make_float3(voxel.size * 0.5f, voxel.size * 0.5f, voxel.size * 0.5f);
     
     float3 t_min = (box_min - ray.origin) / ray.direction;
     float3 t_max = (box_max - ray.origin) / ray.direction;
@@ -26,37 +72,36 @@ __device__ bool ray_aabb_intersection(
 }
 
 __device__ int morton_encode_3d(int x, int y, int z) {
-    // 改进的 Morton 编码实现，支持更高的分辨率
-    // 每个坐标分量使用 21 位，总共支持 2097151³ 个位置
+    // Simple Morton encoding for 3D coordinates
+    // Using 10 bits per coordinate (max 1024³ resolution)
     
-    // 确保输入在合理范围内
-    x = max(0, min(x, 0x1fffff));
-    y = max(0, min(y, 0x1fffff));
-    z = max(0, min(z, 0x1fffff));
+    // Ensure input in valid range
+    x = max(0, min(x, 1023));
+    y = max(0, min(y, 1023));
+    z = max(0, min(z, 1023));
     
-    // 位交错函数
-    auto part1by2 = [](int n) -> int {
-        n &= 0x1fffff;  // 21 位掩码
-        n = (n ^ (n << 32)) & 0x1f00000000ffff;
-        n = (n ^ (n << 16)) & 0x1f0000ff0000ff;
-        n = (n ^ (n << 8)) & 0x100f00f00f00f00f;
-        n = (n ^ (n << 4)) & 0x10c30c30c30c30c3;
-        n = (n ^ (n << 2)) & 0x1249249249249249;
-        return n;
-    };
+    // Simple bit interleaving
+    int morton = 0;
+    for (int i = 0; i < 10; i++) {
+        morton |= ((x & (1 << i)) << (2 * i)) |
+                  ((y & (1 << i)) << (2 * i + 1)) |
+                  ((z & (1 << i)) << (2 * i + 2));
+    }
     
-    return (part1by2(z) << 2) + (part1by2(y) << 1) + part1by2(x);
+    return morton;
 }
 
 __device__ int compute_morton_code(const Voxel& voxel, const float3& scene_min, const float3& scene_size) {
     // Normalize voxel position to [0, 1]
-    float3 normalized = (voxel.position - scene_min) / scene_size;
+    float3 normalized;
+    normalized.x = (voxel.position.x - scene_min.x) / scene_size.x;
+    normalized.y = (voxel.position.y - scene_min.y) / scene_size.y;
+    normalized.z = (voxel.position.z - scene_min.z) / scene_size.z;
     
-    // Convert to integer grid coordinates with higher precision
-    // 使用 21 位精度，支持 0-2097151
-    int x = (int)(normalized.x * 2097151.0f);  // 21-bit precision
-    int y = (int)(normalized.y * 2097151.0f);
-    int z = (int)(normalized.z * 2097151.0f);
+    // Convert to integer grid coordinates (10-bit precision)
+    int x = (int)(normalized.x * 1023.0f);
+    int y = (int)(normalized.y * 1023.0f);
+    int z = (int)(normalized.z * 1023.0f);
     
     return morton_encode_3d(x, y, z);
 }
@@ -421,30 +466,71 @@ __global__ void copy_back_kernel(
     voxels[idx] = temp_voxels[idx];
 }
 
-// Utility functions
-void radix_sort_voxels(Voxel* voxels, int num_voxels) {
-    Voxel* temp_voxels;
-    cudaMalloc(&temp_voxels, num_voxels * sizeof(Voxel));
-    
-    int* histograms;
-    cudaMalloc(&histograms, 2 * sizeof(int));
-    
-    int block_size = 256;
-    int grid_size = (num_voxels + block_size - 1) / block_size;
-    
-    // Sort by each bit of Morton code (32 bits)
-    for (int bit = 0; bit < 32; bit++) {
-        cudaMemset(histograms, 0, 2 * sizeof(int));
-        
-        radix_sort_kernel<<<grid_size, block_size>>>(
-            voxels, temp_voxels, histograms, num_voxels, bit
-        );
-        
-        copy_back_kernel<<<grid_size, block_size>>>(
-            voxels, temp_voxels, num_voxels
-        );
-    }
-    
-    cudaFree(temp_voxels);
-    cudaFree(histograms);
-} 
+// Kernel launch wrapper functions
+void launch_ray_voxel_intersection_kernel(
+    int grid_size, int block_size,
+    const Ray* rays,
+    const Voxel* voxels,
+    int* intersection_counts,
+    int* intersection_indices,
+    float* intersection_t_near,
+    float* intersection_t_far,
+    int num_rays,
+    int num_voxels,
+    int max_intersections_per_ray
+) {
+    ray_voxel_intersection_kernel<<<grid_size, block_size>>>(
+        rays, voxels, intersection_counts, intersection_indices,
+        intersection_t_near, intersection_t_far, num_rays, num_voxels,
+        max_intersections_per_ray
+    );
+}
+
+void launch_voxel_rasterization_kernel(
+    int grid_size, int block_size,
+    const Ray* rays,
+    const Voxel* voxels,
+    const int* intersection_counts,
+    const int* intersection_indices,
+    const float* intersection_t_near,
+    const float* intersection_t_far,
+    float3* output_colors,
+    float* output_depths,
+    int num_rays,
+    int max_intersections_per_ray,
+    float3 background_color
+) {
+    voxel_rasterization_kernel<<<grid_size, block_size>>>(
+        rays, voxels, intersection_counts, intersection_indices,
+        intersection_t_near, intersection_t_far, output_colors, output_depths,
+        num_rays, max_intersections_per_ray, background_color
+    );
+}
+
+void launch_compute_morton_codes_kernel(
+    int grid_size, int block_size,
+    Voxel* voxels,
+    const float3 scene_min,
+    const float3 scene_size,
+    int num_voxels
+) {
+    compute_morton_codes_kernel<<<grid_size, block_size>>>(
+        voxels, scene_min, scene_size, num_voxels
+    );
+}
+
+void launch_adaptive_subdivision_kernel(
+    int grid_size, int block_size,
+    Voxel* voxels,
+    const float* voxel_gradients,
+    int* subdivision_flags,
+    int* new_voxel_count,
+    float subdivision_threshold,
+    int max_level,
+    int num_voxels
+) {
+    adaptive_subdivision_kernel<<<grid_size, block_size>>>(
+        voxels, voxel_gradients, subdivision_flags, new_voxel_count,
+        subdivision_threshold, max_level, num_voxels
+    );
+}

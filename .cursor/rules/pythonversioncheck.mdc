@@ -1,6 +1,0 @@
----
-description: 
-globs: 
-alwaysApply: false
----
-The python version for this project is 3.10, please auto-check the type and syntax, and when generate new code, you must consider this points.

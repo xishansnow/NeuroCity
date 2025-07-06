@@ -1,6 +1,6 @@
 # Block-NeRF: 可扩展的大场景神经视图合成
 
-本包实现了 Block-NeRF，这是一种通过将大场景分解为独立训练的 NeRF 块来实现可扩展神经视图合成的方法。
+本包实现了 Block-NeRF ( Block-NeRF: Scalable large scene neural view synthesis )，这是一种通过将大场景分解为独立训练的 NeRF 块来实现可扩展神经视图合成的方法。
 
 ## 概述
 

@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from typing import Optional, Union
 """
 Dataset module for DNMP-NeRF.
@@ -23,11 +25,11 @@ class DNMPDataset(data.Dataset):
         self,
         data_root: str,
         split: str = 'train',
-        image_size: tuple[int,
+        image_size: Tuple[int,
         int] = (512, 512),
         max_points: int = 100000,
         voxel_size: float = 0.1,
-        scene_bounds: tuple[float, float, float, float, float, float] = (-50, 50, -50, 50, -5, 5)
+        scene_bounds: Tuple[float, float, float, float, float, float] = (-50, 50, -50, 50, -5, 5)
     ):
         
         self.data_root = Path(data_root)
@@ -45,7 +47,7 @@ class DNMPDataset(data.Dataset):
     def __len__(self) -> int:
         return len(self.samples)
     
-    def __getitem__(self, idx: int) -> dict[str, torch.Tensor]:
+    def __getitem__(self, idx: int) -> Dict[str, torch.Tensor]:
         """Get a training sample."""
         sample = self.samples[idx]
         
@@ -81,7 +83,7 @@ class DNMPDataset(data.Dataset):
         depth = depth.astype(np.float32) / 1000.0  # Convert to meters
         return torch.from_numpy(depth).float()
     
-    def load_camera(self, camera_id: str) -> dict[str, torch.Tensor]:
+    def load_camera(self, camera_id: str) -> Dict[str, torch.Tensor]:
         """Load camera parameters."""
         if camera_id in self.cameras:
             return self.cameras[camera_id]
@@ -90,9 +92,9 @@ class DNMPDataset(data.Dataset):
     
     def generate_rays(
         self,
-        camera: dict[str,
+        camera: Dict[str,
         torch.Tensor],
-        image_shape: tuple[int,
+        image_shape: Tuple[int,
         int]
     ):
         """Generate camera rays."""
@@ -150,7 +152,7 @@ class DNMPDataset(data.Dataset):
         
         return torch.from_numpy(points).float()
     
-    def voxelize_point_cloud(self, points: torch.Tensor) -> dict[str, torch.Tensor]:
+    def voxelize_point_cloud(self, points: torch.Tensor) -> Dict[str, torch.Tensor]:
         """Voxelize point cloud for DNMP initialization."""
         # Convert to numpy for processing
         points_np = points.numpy()
@@ -199,7 +201,7 @@ class UrbanSceneDataset(DNMPDataset):
         else:
             raise FileNotFoundError(f"Metadata file not found: {metadata_path}")
     
-    def _parse_camera(self, camera_data: dict) -> dict[str, torch.Tensor]:
+    def _parse_camera(self, camera_data: dict) -> Dict[str, torch.Tensor]:
         """Parse camera parameters from metadata."""
         return {
             'K': torch.tensor(
@@ -273,7 +275,7 @@ class KITTI360Dataset(DNMPDataset):
                         'K': torch.from_numpy(K).float(), 'P': torch.from_numpy(P).float()
                     }
     
-    def load_poses(self, poses_path: Path) -> list[torch.Tensor]:
+    def load_poses(self, poses_path: Path) -> List[torch.Tensor]:
         """Load camera poses."""
         poses = []
         
@@ -313,7 +315,7 @@ class KITTI360Dataset(DNMPDataset):
         if all_points:
             self.point_cloud = torch.from_numpy(np.concatenate(all_points)).float()
     
-    def __getitem__(self, idx: int) -> dict[str, torch.Tensor]:
+    def __getitem__(self, idx: int) -> Dict[str, torch.Tensor]:
         """Get KITTI-360 sample with pose information."""
         sample = super().__getitem__(idx)
         
@@ -398,7 +400,7 @@ def create_dataloader(
         dataset, batch_size=batch_size, shuffle=shuffle, num_workers=num_workers, pin_memory=True, collate_fn=dnmp_collate_fn
     )
 
-def dnmp_collate_fn(batch: list[dict]) -> dict[str, torch.Tensor]:
+def dnmp_collate_fn(batch: List[dict]) -> Dict[str, torch.Tensor]:
     """Custom collate function for DNMP datasets."""
     # Handle variable-sized data
     collated = {}

@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from typing import Any, Optional, Union
 """
 Camera utilities for Nerfacto.
@@ -12,7 +14,7 @@ import math
 
 def generate_rays(
     camera_poses: torch.Tensor, camera_intrinsics: torch.Tensor, image_height: int, image_width: int, device: str = 'cuda'
-) -> tuple[torch.Tensor, torch.Tensor]:
+) -> Tuple[torch.Tensor, torch.Tensor]:
     """
     Generate rays from camera parameters.
     
@@ -77,7 +79,7 @@ def generate_rays(
 
 def sample_rays_uniform(
     ray_origins: torch.Tensor, ray_directions: torch.Tensor, num_rays: int, device: str = 'cuda'
-) -> tuple[torch.Tensor, torch.Tensor]:
+) -> Tuple[torch.Tensor, torch.Tensor]:
     """
     Uniformly sample rays from the given ray batch.
     
@@ -198,7 +200,7 @@ def compute_camera_distances(poses: torch.Tensor) -> torch.Tensor:
 
 def get_nearest_cameras(
     query_pose: torch.Tensor, reference_poses: torch.Tensor, k: int = 5
-) -> tuple[torch.Tensor, torch.Tensor]:
+) -> Tuple[torch.Tensor, torch.Tensor]:
     """
     Find k nearest cameras to a query camera.
     
@@ -355,7 +357,7 @@ def compute_camera_rays_directions(
 
 def transform_rays(
     ray_origins: torch.Tensor, ray_directions: torch.Tensor, transform: torch.Tensor
-) -> tuple[torch.Tensor, torch.Tensor]:
+) -> Tuple[torch.Tensor, torch.Tensor]:
     """
     Transform rays by a transformation matrix.
     

@@ -1,4 +1,6 @@
 """
+from __future__ import annotations
+
 Spatial partitioning components for Mega-NeRF++
 
 This module implements various spatial partitioning strategies for large-scale scenes:
@@ -36,16 +38,16 @@ class OctreePartitionDict(TypedDict):
     bounds: torch.Tensor
     depth: int
     parent_idx: int | None
-    children: list[int]
+    children: List[int]
 
 
 class PartitionDict(TypedDict):
-    bounds: tuple[float, ...]
-    bounds_with_overlap: tuple[float, ...]
+    bounds: Tuple[float, ...]
+    bounds_with_overlap: Tuple[float, ...]
     centroid: np.ndarray
-    size: tuple[int, int, int]
-    data: dict[str, Any]
-    children: Optional[list["PartitionDict"]]  # For hierarchical partitioning
+    size: Tuple[int, int, int]
+    data: Dict[str, Any]
+    children: Optional[List["PartitionDict"]]  # For hierarchical partitioning
     coverage_score: Optional[float]  # For photogrammetric partitioning
     has_overlap: Optional[bool]  # For overlap tracking
     photogrammetric: Optional[bool]  # For photogrammetric metadata
@@ -59,25 +61,25 @@ class SpatialPartitioner:
     Base class for spatial partitioning strategies
     """
 
-    def __init__(self, scene_bounds: tuple[float, ...], config: PartitionConfig):
+    def __init__(self, scene_bounds: Tuple[float, ...], config: PartitionConfig):
         self.scene_bounds = scene_bounds
         self.config = config
-        self.partitions: list[PartitionDict] = []
-        self._partition_bounds: list[torch.Tensor] = []  # Use protected name
+        self.partitions: List[PartitionDict] = []
+        self._partition_bounds: List[torch.Tensor] = []  # Use protected name
 
     @property
-    def partition_bounds(self) -> list[torch.Tensor]:
+    def partition_bounds(self) -> List[torch.Tensor]:
         return self._partition_bounds
 
     @partition_bounds.setter
-    def partition_bounds(self, value: list[torch.Tensor]) -> None:
+    def partition_bounds(self, value: List[torch.Tensor]) -> None:
         self._partition_bounds = value
 
     def partition_scene(
         self,
         scene_bounds: torch.Tensor,
         camera_positions: torch.Tensor,
-    ) -> list[PartitionDict]:
+    ) -> List[PartitionDict]:
         """
         Partition the scene into manageable chunks
 
@@ -108,16 +110,16 @@ class AdaptiveOctreePartitioner(SpatialPartitioner):
     Adaptive octree partitioning based on scene complexity
     """
 
-    def __init__(self, scene_bounds: tuple[float, ...], config: PartitionConfig):
+    def __init__(self, scene_bounds: Tuple[float, ...], config: PartitionConfig):
         super().__init__(scene_bounds, config)
         self.density_grid: torch.Tensor | None = None
-        self.octree_partitions: list[OctreePartitionDict] = []
+        self.octree_partitions: List[OctreePartitionDict] = []
 
     def partition_scene(
         self,
         scene_bounds: torch.Tensor,
         camera_positions: torch.Tensor,
-    ) -> list[PartitionDict]:
+    ) -> List[PartitionDict]:
         """
         Create adaptive octree partitioning
 
@@ -148,9 +150,9 @@ class AdaptiveOctreePartitioner(SpatialPartitioner):
         self.partitions = self._convert_to_standard_partitions()
         return self.partitions
 
-    def _convert_to_standard_partitions(self) -> list[PartitionDict]:
+    def _convert_to_standard_partitions(self) -> List[PartitionDict]:
         """Convert octree partitions to standard format"""
-        standard_partitions: list[PartitionDict] = []
+        standard_partitions: List[PartitionDict] = []
 
         for octree_part in self.octree_partitions:
             bounds = octree_part["bounds"]
@@ -228,7 +230,7 @@ class AdaptiveOctreePartitioner(SpatialPartitioner):
 
         return camera_count > self.config.min_samples_per_partition
 
-    def _create_child_bounds(self, bounds: torch.Tensor) -> list[torch.Tensor]:
+    def _create_child_bounds(self, bounds: torch.Tensor) -> List[torch.Tensor]:
         """Create bounds for child partitions"""
         center = (bounds[0] + bounds[1]) / 2
         child_bounds = []
@@ -257,16 +259,16 @@ class HierarchicalGridPartitioner(SpatialPartitioner):
     Hierarchical grid partitioning with adaptive resolution
     """
 
-    def __init__(self, scene_bounds: tuple[float, ...], config: PartitionConfig):
+    def __init__(self, scene_bounds: Tuple[float, ...], config: PartitionConfig):
         super().__init__(scene_bounds, config)
-        self.grid_hierarchy: list[list[PartitionDict]] = []
+        self.grid_hierarchy: List[List[PartitionDict]] = []
 
     def partition_scene(
         self,
         scene_bounds: torch.Tensor,
         camera_positions: torch.Tensor,
         target_partition_count: Optional[int] = None,
-    ) -> list[PartitionDict]:
+    ) -> List[PartitionDict]:
         """
         Create hierarchical grid partitioning
 
@@ -311,7 +313,7 @@ class HierarchicalGridPartitioner(SpatialPartitioner):
         scene_bounds: torch.Tensor,
         resolution: int,
         camera_positions: torch.Tensor,
-    ) -> list[PartitionDict]:
+    ) -> List[PartitionDict]:
         """Create grid level with given resolution"""
         partitions = []
 
@@ -385,9 +387,9 @@ class HierarchicalGridPartitioner(SpatialPartitioner):
 
     def _add_partition_overlap(
         self,
-        partitions: list[PartitionDict],
+        partitions: List[PartitionDict],
         scene_bounds: torch.Tensor,
-    ) -> list[PartitionDict]:
+    ) -> List[PartitionDict]:
         """Add overlap between adjacent partitions"""
         if not partitions:
             return partitions
@@ -435,7 +437,7 @@ class PhotogrammetricPartitioner(SpatialPartitioner):
         camera_orientations: torch.Tensor,
         image_resolutions: torch.Tensor,
         intrinsics: torch.Tensor,
-    ) -> list[PartitionDict]:
+    ) -> List[PartitionDict]:
         """
         Create photogrammetric-aware partitioning
 
@@ -556,7 +558,7 @@ class PhotogrammetricPartitioner(SpatialPartitioner):
         camera_orientations: torch.Tensor,
         image_resolutions: torch.Tensor,
         intrinsics: torch.Tensor,
-    ) -> list[PartitionDict]:
+    ) -> List[PartitionDict]:
         """Partition scene based on coverage analysis"""
 
         partitions = []
@@ -611,7 +613,7 @@ class PhotogrammetricPartitioner(SpatialPartitioner):
         image_resolutions: torch.Tensor,
         intrinsics: torch.Tensor,
         depth: int,
-    ) -> list[PartitionDict]:
+    ) -> List[PartitionDict]:
         """Recursively subdivide high-coverage cells"""
 
         if depth > 2:  # Limit subdivision depth
@@ -719,8 +721,8 @@ class PhotogrammetricPartitioner(SpatialPartitioner):
         return total_coverage / len(sample_points)
 
     def _add_photogrammetric_metadata(
-        self, partitions: list[PartitionDict]
-    ) -> list[PartitionDict]:
+        self, partitions: List[PartitionDict]
+    ) -> List[PartitionDict]:
         """Add photogrammetric metadata to partitions"""
 
         for partition in partitions:
@@ -765,7 +767,7 @@ class PhotogrammetricPartitioner(SpatialPartitioner):
         camera_positions: torch.Tensor,
         depth: int = 0,
         max_depth: int = 4,
-    ) -> list[torch.Tensor]:
+    ) -> List[torch.Tensor]:
         """
         Create adaptive octree structure based on scene complexity.
 

@@ -78,7 +78,7 @@ class MegaNeRFTrainer:
         
         logger.info(f"Initialized trainer with {len(self.model.submodules)} submodules")
     
-    def setup_optimizers(self, submodule_indices: Optional[list[int]] = None):
+    def setup_optimizers(self, submodule_indices: Optional[List[int]] = None):
         """Setup optimizers for specified submodules"""
         if submodule_indices is None:
             submodule_indices = list(range(len(self.model.submodules)))
@@ -223,7 +223,7 @@ class MegaNeRFTrainer:
     
     def _sample_rays_from_partition(
         self,
-        rays_data: dict[str, np.ndarray],
+        rays_data: Dict[str, np.ndarray],
         batch_size: int
     ):
         """Sample rays from partition data"""
@@ -252,7 +252,7 @@ class MegaNeRFTrainer:
     
     def _compute_loss(
         self,
-        outputs: dict[str, torch.Tensor],
+        outputs: Dict[str, torch.Tensor],
         target_rgb: torch.Tensor
     ):
         """Compute training loss"""
@@ -268,7 +268,7 @@ class MegaNeRFTrainer:
         
         return total_loss
     
-    def _validate_submodule(self, submodule_idx: int) -> dict[str, float]:
+    def _validate_submodule(self, submodule_idx: int) -> Dict[str, float]:
         """Validate a single submodule"""
         submodule = self.model.submodules[submodule_idx]
         partition_data = self.dataset.get_partition_data(submodule_idx)
@@ -529,7 +529,7 @@ class ParallelTrainer:
         
         return single_model
     
-    def _merge_submodules(self, trainers: list[tuple[int, MegaNeRFTrainer]]):
+    def _merge_submodules(self, trainers: List[Tuple[int, MegaNeRFTrainer]]):
         """Merge trained submodules back to the main model"""
         for submodule_idx, trainer in trainers:
             # Copy trained weights back to main model

@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from typing import Optional
 """
 Voxel utilities for SVRaster.
@@ -11,7 +13,7 @@ def voxel_pruning(
     voxel_positions: torch.Tensor,
     voxel_sizes: torch.Tensor,
     threshold: float = 0.001,
-) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
+) -> Tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
     """
     Prune voxels with low density.
     
@@ -40,7 +42,7 @@ def voxel_pruning(
 def compute_voxel_bounds(
     voxel_positions: torch.Tensor,
     voxel_sizes: torch.Tensor,
-) -> tuple[torch.Tensor, torch.Tensor]:
+) -> Tuple[torch.Tensor, torch.Tensor]:
     """
     Compute bounding boxes for voxels.
     
@@ -59,7 +61,7 @@ def compute_voxel_bounds(
 
 def voxel_to_world_coords(
     voxel_coords: torch.Tensor,
-    scene_bounds: tuple[float,
+    scene_bounds: Tuple[float,
     float,
     float,
     float,
@@ -92,7 +94,7 @@ def voxel_to_world_coords(
 
 def world_to_voxel_coords(
     world_coords: torch.Tensor,
-    scene_bounds: tuple[float,
+    scene_bounds: Tuple[float,
     float,
     float,
     float,

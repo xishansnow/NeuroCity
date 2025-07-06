@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from typing import Any, Optional, Union
 """
 Dataset module for Instant NGP.
@@ -21,7 +23,7 @@ class InstantNGPDataset(Dataset):
     """Dataset for Instant NGP training."""
     
     def __init__(
-        self, data_root: str, split: str = 'train', img_wh: Optional[tuple[int, int]] = None, spherify: bool = False, val_num: int = 1, use_cache: bool = True, contract_coords: bool = True, **kwargs
+        self, data_root: str, split: str = 'train', img_wh: Optional[Tuple[int, int]] = None, spherify: bool = False, val_num: int = 1, use_cache: bool = True, contract_coords: bool = True, **kwargs
     ):
         """
         Initialize dataset.
@@ -209,7 +211,7 @@ class InstantNGPDataset(Dataset):
         
         return contracted
     
-    def get_rays(self, pose_idx: int) -> tuple[np.ndarray, np.ndarray]:
+    def get_rays(self, pose_idx: int) -> Tuple[np.ndarray, np.ndarray]:
         """Get rays for a specific pose."""
         W, H = self.img_wh
         
@@ -242,7 +244,7 @@ class InstantNGPDataset(Dataset):
         else:
             return len(self.poses)
     
-    def __getitem__(self, idx: int) -> dict[str, torch.Tensor]:
+    def __getitem__(self, idx: int) -> Dict[str, torch.Tensor]:
         if self.split == 'train':
             # Return individual ray
             return {
@@ -264,7 +266,7 @@ def create_instant_ngp_dataloader(
     data_root: str, 
     split: str = 'train', 
     batch_size: int = 8192, 
-    img_wh: Optional[tuple[int, int]] = None, 
+    img_wh: Optional[Tuple[int, int]] = None, 
     num_workers: int = 4, 
     shuffle: Optional[bool] = None, 
     **kwargs: Any
@@ -300,7 +302,7 @@ def create_instant_ngp_dataloader(
     
     return dataloader
 
-def load_blender_data(basedir: str, half_res: bool = False, testskip: int = 1) -> tuple[np.ndarray, np.ndarray, np.ndarray, list[int], list[int]]:
+def load_blender_data(basedir: str, half_res: bool = False, testskip: int = 1) -> Tuple[np.ndarray, np.ndarray, np.ndarray, List[int], List[int]]:
     """
     Load Blender synthetic dataset.
     

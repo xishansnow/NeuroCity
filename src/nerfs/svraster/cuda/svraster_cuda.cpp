@@ -14,7 +14,7 @@
     } while(0)
 
 // Convert torch tensors to CUDA data structures
-torch::Tensor ray_voxel_intersection_cuda(
+std::tuple<torch::Tensor, torch::Tensor, torch::Tensor, torch::Tensor> ray_voxel_intersection_cuda(
     torch::Tensor ray_origins,
     torch::Tensor ray_directions,
     torch::Tensor voxel_positions,
@@ -90,11 +90,12 @@ torch::Tensor ray_voxel_intersection_cuda(
         CUDA_CHECK(cudaMemcpy(d_voxels + i, &voxel, sizeof(Voxel), cudaMemcpyHostToDevice));
     }
     
-    // Launch kernel
+    // Launch kernel using wrapper function
     int block_size = 256;
     int grid_size = (num_rays + block_size - 1) / block_size;
     
-    ray_voxel_intersection_kernel<<<grid_size, block_size>>>(
+    launch_ray_voxel_intersection_kernel(
+        grid_size, block_size,
         d_rays,
         d_voxels,
         (int*)intersection_counts.data_ptr(),
@@ -114,11 +115,11 @@ torch::Tensor ray_voxel_intersection_cuda(
     cudaFree(d_voxels);
     
     // Return results as a tuple
-    return torch::make_tuple(intersection_counts, intersection_indices, 
+    return std::make_tuple(intersection_counts, intersection_indices, 
                            intersection_t_near, intersection_t_far);
 }
 
-torch::Tensor voxel_rasterization_cuda(
+std::tuple<torch::Tensor, torch::Tensor> voxel_rasterization_cuda(
     torch::Tensor ray_origins,
     torch::Tensor ray_directions,
     torch::Tensor voxel_positions,
@@ -197,13 +198,14 @@ torch::Tensor voxel_rasterization_cuda(
         CUDA_CHECK(cudaMemcpy(d_voxels + i, &voxel, sizeof(Voxel), cudaMemcpyHostToDevice));
     }
     
-    // Launch kernel
+    // Launch kernel using wrapper function
     int block_size = 256;
     int grid_size = (num_rays + block_size - 1) / block_size;
     
     float3 background_color = make_float3(0.0f, 0.0f, 0.0f);
     
-    voxel_rasterization_kernel<<<grid_size, block_size>>>(
+    launch_voxel_rasterization_kernel(
+        grid_size, block_size,
         d_rays,
         d_voxels,
         (int*)intersection_counts.data_ptr(),
@@ -224,7 +226,7 @@ torch::Tensor voxel_rasterization_cuda(
     cudaFree(d_rays);
     cudaFree(d_voxels);
     
-    return torch::make_tuple(output_colors, output_depths);
+    return std::make_tuple(output_colors, output_depths);
 }
 
 torch::Tensor compute_morton_codes_cuda(
@@ -269,13 +271,17 @@ torch::Tensor compute_morton_codes_cuda(
         scene_bounds[4].item<float>(),
         scene_bounds[5].item<float>()
     );
-    float3 scene_size = scene_max - scene_min;
+    float3 scene_size;
+    scene_size.x = scene_max.x - scene_min.x;
+    scene_size.y = scene_max.y - scene_min.y;
+    scene_size.z = scene_max.z - scene_min.z;
     
-    // Launch kernel
+    // Launch kernel using wrapper function
     int block_size = 256;
     int grid_size = (num_voxels + block_size - 1) / block_size;
     
-    compute_morton_codes_kernel<<<grid_size, block_size>>>(
+    launch_compute_morton_codes_kernel(
+        grid_size, block_size,
         d_voxels, scene_min, scene_size, num_voxels
     );
     
@@ -298,7 +304,7 @@ torch::Tensor compute_morton_codes_cuda(
     return morton_codes;
 }
 
-torch::Tensor adaptive_subdivision_cuda(
+std::tuple<torch::Tensor, int> adaptive_subdivision_cuda(
     torch::Tensor voxel_positions,
     torch::Tensor voxel_sizes,
     torch::Tensor voxel_densities,
@@ -349,11 +355,12 @@ torch::Tensor adaptive_subdivision_cuda(
     CUDA_CHECK(cudaMalloc(&d_new_voxel_count, sizeof(int)));
     CUDA_CHECK(cudaMemset(d_new_voxel_count, 0, sizeof(int)));
     
-    // Launch kernel
+    // Launch kernel using wrapper function
     int block_size = 256;
     int grid_size = (num_voxels + block_size - 1) / block_size;
     
-    adaptive_subdivision_kernel<<<grid_size, block_size>>>(
+    launch_adaptive_subdivision_kernel(
+        grid_size, block_size,
         d_voxels,
         (float*)voxel_gradients.data_ptr(),
         d_subdivision_flags,
@@ -381,7 +388,7 @@ torch::Tensor adaptive_subdivision_cuda(
     cudaFree(d_subdivision_flags);
     cudaFree(d_new_voxel_count);
     
-    return torch::make_tuple(subdivision_flags, new_voxel_count);
+    return std::make_tuple(subdivision_flags, new_voxel_count);
 }
 
 PYBIND11_MODULE(TORCH_EXTENSION_NAME, m) {

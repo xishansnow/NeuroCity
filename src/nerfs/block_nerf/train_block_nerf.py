@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from typing import Any
 #!/usr/bin/env python3
 """
@@ -226,7 +228,7 @@ def parse_args():
     
     return parser.parse_args()
 
-def setup_config(args) -> dict[str, Any]:
+def setup_config(args) -> Dict[str, Any]:
     """Setup configuration dictionaries"""
     
     # Network configuration

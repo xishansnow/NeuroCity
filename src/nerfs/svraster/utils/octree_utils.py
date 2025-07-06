@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from typing import Optional
 """
 Octree utilities for SVRaster.
@@ -10,7 +12,7 @@ def octree_subdivision(
     voxel_positions: torch.Tensor,
     voxel_sizes: torch.Tensor,
     subdivision_mask: torch.Tensor,
-) -> tuple[torch.Tensor, torch.Tensor]:
+) -> Tuple[torch.Tensor, torch.Tensor]:
     """
     Subdivide voxels into 8 child voxels.
     

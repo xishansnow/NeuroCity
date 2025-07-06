@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from typing import Any, Optional
 """
 Dataset components for Mega-NeRF++
@@ -93,13 +95,13 @@ class MegaNeRFPlusDataset(data.Dataset):
         else:
             return self._get_image_data(idx)
     
-    def _get_metadata(self, idx: int) -> dict[str, Any]:
+    def _get_metadata(self, idx: int) -> Dict[str, Any]:
         """Get metadata for a data sample"""
         return {
             'index': idx, 'split': self.split
         }
     
-    def _get_image_data(self, idx: int) -> dict[str, Any]:
+    def _get_image_data(self, idx: int) -> Dict[str, Any]:
         """Get full image data for validation/testing"""
         return {
             'image': self.images[idx], 'pose': self.poses[idx], 'intrinsics': self.intrinsics[idx], 'image_path': str(
@@ -569,7 +571,7 @@ class LargeSceneDataset(PhotogrammetricDataset):
                 'image_indices': partition_images, 'loaded': False, 'rays': None, 'rgbs': None
             }
     
-    def _get_partition_images(self, partition: dict) -> list[int]:
+    def _get_partition_images(self, partition: dict) -> List[int]:
         """Get image indices that belong to a partition"""
         
         partition_bounds = partition['bounds']
@@ -590,7 +592,7 @@ class LargeSceneDataset(PhotogrammetricDataset):
         
         return partition_images
     
-    def get_partition_data(self, partition_idx: int) -> dict[str, torch.Tensor]:
+    def get_partition_data(self, partition_idx: int) -> Dict[str, torch.Tensor]:
         """Get data for a specific partition"""
         
         if partition_idx not in self.partition_data:
@@ -717,7 +719,7 @@ def create_photogrammetric_dataloader(
         dataset, batch_size=batch_size, shuffle=shuffle, num_workers=num_workers, pin_memory=pin_memory, collate_fn=photogrammetric_collate_fn, persistent_workers=True if num_workers > 0 else False
     )
 
-def photogrammetric_collate_fn(batch: list[dict]) -> dict[str, torch.Tensor]:
+def photogrammetric_collate_fn(batch: List[dict]) -> Dict[str, torch.Tensor]:
     """
     Custom collate function for photogrammetric data
     

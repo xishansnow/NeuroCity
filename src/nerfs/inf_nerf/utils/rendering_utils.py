@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from typing import Any, Callable, Optional
 """
 Rendering utilities for InfNeRF.
@@ -25,7 +27,7 @@ class DistributedRenderer:
     Distributed renderer for InfNeRF across multiple devices.
     """
     
-    def __init__(self, model: InfNeRF, device_ids: list[int], master_device: int = 0):
+    def __init__(self, model: InfNeRF, device_ids: List[int], master_device: int = 0):
         """
         Initialize distributed renderer.
         
@@ -66,7 +68,7 @@ class DistributedRenderer:
         focal_length: float,
         pixel_width: float,
         chunk_size: int = 1024,
-    ) -> dict[str, torch.Tensor]:
+    ) -> Dict[str, torch.Tensor]:
         """
         Render rays using distributed processing.
         
@@ -119,7 +121,7 @@ class DistributedRenderer:
         far: float,
         focal_length: float,
         pixel_width: float,
-    ) -> dict[str, torch.Tensor]:
+    ) -> Dict[str, torch.Tensor]:
         """Render a chunk of rays using distributed nodes."""
         # Sample points along rays
         batch_size = rays_o.shape[0]
@@ -154,7 +156,7 @@ class DistributedRenderer:
         pts: torch.Tensor,
         rays_d: torch.Tensor,
         radii: torch.Tensor,
-    ) -> tuple[torch.Tensor, torch.Tensor]:
+    ) -> Tuple[torch.Tensor, torch.Tensor]:
         """Render points using nodes on a specific device."""
         device = f'cuda:{device_id}'
         nodes = self.device_nodes[device_id]
@@ -192,7 +194,7 @@ class DistributedRenderer:
     
     def _find_node_on_device(
         self,
-        nodes: list[OctreeNode],
+        nodes: List[OctreeNode],
         position: torch.Tensor,
         radius: float,
     ) -> OctreeNode | None:
@@ -302,7 +304,7 @@ class MemoryEfficientRenderer:
         focal_length: float,
         pixel_width: float,
         progress_callback: Optional[Callable] = None,
-    ) -> dict[str, torch.Tensor]:
+    ) -> Dict[str, torch.Tensor]:
         """
         Render rays with memory-efficient chunking.
         
@@ -393,9 +395,9 @@ def distributed_rendering(
     model: InfNeRF,
     rays_o: torch.Tensor,
     rays_d: torch.Tensor,
-    device_ids: list[int],
+    device_ids: List[int],
     **kwargs,
-) -> dict[str, torch.Tensor]:
+) -> Dict[str, torch.Tensor]:
     """
     Perform distributed rendering across multiple devices.
     
@@ -418,7 +420,7 @@ def memory_efficient_rendering(
     rays_d: torch.Tensor,
     max_memory_gb: float = 8.0,
     **kwargs,
-) -> dict[str, torch.Tensor]:
+) -> Dict[str, torch.Tensor]:
     """
     Perform memory-efficient rendering.
     
@@ -436,12 +438,12 @@ def memory_efficient_rendering(
     return renderer.render_memory_efficient(rays_o, rays_d, **kwargs)
 
 def batch_ray_sampling(
-    images: list[torch.Tensor],
-    cameras: list[dict[str,
+    images: List[torch.Tensor],
+    cameras: List[Dict[str,
     torch.Tensor]],
     batch_size: int,
     sampling_strategy: str = 'random',
-) -> dict[str, torch.Tensor]:
+) -> Dict[str, torch.Tensor]:
     """
     Sample rays from multiple images in batches.
     
@@ -484,9 +486,9 @@ def batch_ray_sampling(
 
 def _generate_rays_from_image(
     image: torch.Tensor,
-    camera: dict[str,
+    camera: Dict[str,
     torch.Tensor],
-) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
+) -> Tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
     """Generate rays from a single image."""
     H, W = image.shape[:2]
     device = image.device
@@ -575,7 +577,7 @@ class RenderingProfiler:
         self.timings[name].append(elapsed)
         self.memory_usage[name].append(memory_used)
     
-    def get_stats(self) -> dict[str, dict[str, float]]:
+    def get_stats(self) -> Dict[str, Dict[str, float]]:
         """Get profiling statistics."""
         stats = {}
         

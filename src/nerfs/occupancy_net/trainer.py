@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from typing import Any, Optional, Union
 """
 Occupancy Network Trainer Implementation
@@ -72,7 +74,7 @@ class OccupancyTrainer:
         print(f"Trainer initialized with device: {device}")
         print(f"Model parameters: {sum(p.numel() for p in model.parameters()):, }")
     
-    def train_epoch(self) -> dict[str, float]:
+    def train_epoch(self) -> Dict[str, float]:
         """训练一个epoch"""
         self.model.train()
         
@@ -133,7 +135,7 @@ class OccupancyTrainer:
             'loss': avg_loss, 'accuracy': avg_accuracy
         }
     
-    def validate(self) -> dict[str, float]:
+    def validate(self) -> Dict[str, float]:
         """验证模型"""
         if self.val_dataloader is None:
             return {}
@@ -283,7 +285,7 @@ class OccupancyTrainer:
     
     def evaluate_mesh_extraction(
         self, test_dataloader: DataLoader, resolution: int = 64, num_samples: int = 10
-    ) -> dict[str, float]:
+    ) -> Dict[str, float]:
         """评估网格提取质量"""
         self.model.eval()
         

@@ -1,4 +1,6 @@
 """
+from __future__ import annotations
+
 Logging utilities for Grid-NeRF
 
 Simple logging setup without circular dependencies.

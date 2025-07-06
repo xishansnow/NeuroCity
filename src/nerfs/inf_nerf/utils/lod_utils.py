@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from typing import Any, Optional
 """
 Level of Detail (LoD) utilities for InfNeRF.
@@ -31,7 +33,7 @@ class LoDManager:
         self.config = config
         self.level_thresholds = self._compute_level_thresholds()
     
-    def _compute_level_thresholds(self) -> list[float]:
+    def _compute_level_thresholds(self) -> List[float]:
         """Compute GSD thresholds for each octree level."""
         thresholds = []
         
@@ -116,7 +118,7 @@ def anti_aliasing_sampling(
     positions: torch.Tensor,
     radii: torch.Tensor,
     perturbation_strength: float = 0.5,
-) -> tuple[torch.Tensor, torch.Tensor]:
+) -> Tuple[torch.Tensor, torch.Tensor]:
     """
     Apply anti-aliasing sampling with radius perturbation.
     
@@ -168,10 +170,10 @@ def determine_lod_level(sample_radius: float, root_gsd: float, max_level: int) -
     return max(0, min(level, max_level))
 
 def pyramid_supervision(
-    images: list[torch.Tensor],
+    images: List[torch.Tensor],
     num_levels: int = 4,
     scale_factor: float = 2.0,
-) -> list[list[torch.Tensor]]:
+) -> List[List[torch.Tensor]]:
     """
     Create image pyramids for multi-scale supervision.
     
@@ -220,7 +222,7 @@ def pyramid_supervision(
 
 def compute_level_consistency_loss(
     parent_node: OctreeNode,
-    child_nodes: list[OctreeNode],
+    child_nodes: List[OctreeNode],
     sample_positions: torch.Tensor,
     sample_directions: torch.Tensor,
 ) -> torch.Tensor:
@@ -312,13 +314,13 @@ def compute_sample_radius(
     return radii
 
 def frustum_culling(
-    octree_nodes: list[OctreeNode],
+    octree_nodes: List[OctreeNode],
     camera_origin: np.ndarray,
     view_direction: np.ndarray,
     field_of_view: float,
     near_plane: float,
     far_plane: float,
-) -> list[OctreeNode]:
+) -> List[OctreeNode]:
     """
     Perform frustum culling to select visible octree nodes.
     
@@ -369,10 +371,10 @@ def frustum_culling(
     return visible_nodes
 
 def adaptive_lod_selection(
-    visible_nodes: list[OctreeNode],
+    visible_nodes: List[OctreeNode],
     camera_origin: np.ndarray,
     pixel_size_at_distance: callable,
-) -> list[OctreeNode]:
+) -> List[OctreeNode]:
     """
     Select appropriate LoD level for each visible node.
     
@@ -420,13 +422,13 @@ class MultiScaleRenderer:
     
     def render_with_lod(
         self,
-        nodes: list[OctreeNode],
+        nodes: List[OctreeNode],
         rays_o: torch.Tensor,
         rays_d: torch.Tensor,
         near: float,
         far: float,
         focal_length: float,
-    ) -> dict[str, torch.Tensor]:
+    ) -> Dict[str, torch.Tensor]:
         """
         Render rays using adaptive LoD selection.
         
@@ -497,7 +499,7 @@ class MultiScaleRenderer:
     
     def _select_node_for_sample(
         self,
-        nodes: list[OctreeNode],
+        nodes: List[OctreeNode],
         position: torch.Tensor,
         radius: float,
     ) -> OctreeNode:

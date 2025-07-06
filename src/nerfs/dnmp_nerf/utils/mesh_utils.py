@@ -1,4 +1,6 @@
 """
+from __future__ import annotations
+
 Mesh processing utilities for DNMP.
 
 This module provides functions for mesh manipulation, topology operations, and mesh quality metrics.
@@ -221,7 +223,7 @@ def mesh_decimation(
     
     return decimated_vertices, decimated_faces
 
-def compute_mesh_quality_metrics(vertices: torch.Tensor, faces: torch.Tensor) -> dict[str, float]:
+def compute_mesh_quality_metrics(vertices: torch.Tensor, faces: torch.Tensor) -> Dict[str, float]:
     """
     Compute various mesh quality metrics.
     
@@ -339,7 +341,7 @@ def mesh_to_open3d(vertices: torch.Tensor, faces: torch.Tensor) -> o3d.geometry.
     
     return mesh
 
-def open3d_to_mesh(mesh: o3d.geometry.TriangleMesh) -> tuple[torch.Tensor, torch.Tensor]:
+def open3d_to_mesh(mesh: o3d.geometry.TriangleMesh) -> Tuple[torch.Tensor, torch.Tensor]:
     """
     Convert Open3D mesh to PyTorch tensors.
     
@@ -377,7 +379,7 @@ def save_mesh(
     
     o3d.io.write_triangle_mesh(filename, mesh)
 
-def load_mesh(filename: str) -> tuple[torch.Tensor, torch.Tensor]:
+def load_mesh(filename: str) -> Tuple[torch.Tensor, torch.Tensor]:
     """
     Load mesh from file.
     

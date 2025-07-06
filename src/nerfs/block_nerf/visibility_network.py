@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from typing import Optional
 """
 Visibility Network for Block-NeRF
@@ -289,7 +291,7 @@ class VisibilityGuidedSampler:
 
     def forward(
         self, rays_o: torch.Tensor, rays_d: torch.Tensor, **kwargs
-    ) -> dict[str, torch.Tensor]:
+    ) -> Dict[str, torch.Tensor]:
         # Implementation of the forward method
         pass
 

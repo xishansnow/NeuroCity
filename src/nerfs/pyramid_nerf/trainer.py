@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from typing import Any, Optional
 """
 Training module for PyNeRF
@@ -78,7 +80,7 @@ class PyNeRFTrainer:
         
         logger.info("PyNeRF Trainer initialized")
     
-    def train_step(self, batch: dict[str, torch.Tensor]) -> dict[str, float]:
+    def train_step(self, batch: Dict[str, torch.Tensor]) -> Dict[str, float]:
         """
         Single training step
         
@@ -145,7 +147,7 @@ class PyNeRFTrainer:
         
         return loss_dict
     
-    def validate(self) -> dict[str, float]:
+    def validate(self) -> Dict[str, float]:
         """
         Validation step
         
@@ -310,7 +312,7 @@ class MultiScaleTrainer(PyNeRFTrainer):
     """
     
     def __init__(
-        self, model: PyNeRF, config: PyNeRFConfig, train_dataset: MultiScaleDataset, val_dataset: Optional[MultiScaleDataset] = None, scale_schedule: Optional[dict[int, int]] = None, **kwargs
+        self, model: PyNeRF, config: PyNeRFConfig, train_dataset: MultiScaleDataset, val_dataset: Optional[MultiScaleDataset] = None, scale_schedule: Optional[Dict[int, int]] = None, **kwargs
     ):
         super().__init__(model, config, train_dataset, val_dataset, **kwargs)
         
@@ -337,7 +339,7 @@ class MultiScaleTrainer(PyNeRFTrainer):
                 scale = new_scale
         return scale
     
-    def train_step(self, batch: dict[str, torch.Tensor]) -> dict[str, float]:
+    def train_step(self, batch: Dict[str, torch.Tensor]) -> Dict[str, float]:
         """
         Multi-scale training step
         

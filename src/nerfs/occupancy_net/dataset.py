@@ -1,4 +1,6 @@
 """
+from __future__ import annotations
+
 Occupancy Network Dataset Implementation
 处理占用网络训练所需的数据
 """
@@ -42,7 +44,7 @@ class OccupancyDataset(data.Dataset):
         
         print(f"Loaded {len(self.data_list)} {split} samples")
     
-    def _load_data_list(self) -> list[dict[str, str]]:
+    def _load_data_list(self) -> List[Dict[str, str]]:
         """加载数据列表"""
         split_file = os.path.join(self.data_root, f'{self.split}.json')
         
@@ -68,7 +70,7 @@ class OccupancyDataset(data.Dataset):
     def __len__(self) -> int:
         return len(self.data_list)
     
-    def __getitem__(self, idx: int) -> dict[str, Any]:
+    def __getitem__(self, idx: int) -> Dict[str, Any]:
         """获取数据样本
         
         Returns:
@@ -131,7 +133,7 @@ class OccupancyDataset(data.Dataset):
     
     def _sample_points(
         self, mesh: trimesh.Trimesh
-    ) -> tuple[np.ndarray, np.ndarray]:
+    ) -> Tuple[np.ndarray, np.ndarray]:
         """采样点和占用标签
         
         Args:
@@ -219,7 +221,7 @@ class SyntheticOccupancyDataset(data.Dataset):
     """
     
     def __init__(
-        self, num_samples: int = 1000, num_points: int = 10000, shape_types: list[str] = ['sphere', 'cube', 'cylinder'], **kwargs
+        self, num_samples: int = 1000, num_points: int = 10000, shape_types: List[str] = ['sphere', 'cube', 'cylinder'], **kwargs
     ):
         self.num_samples = num_samples
         self.num_points = num_points
@@ -230,7 +232,7 @@ class SyntheticOccupancyDataset(data.Dataset):
     def __len__(self) -> int:
         return self.num_samples
     
-    def __getitem__(self, idx: int) -> dict[str, Any]:
+    def __getitem__(self, idx: int) -> Dict[str, Any]:
         """生成合成数据样本"""
         # 随机选择形状类型
         shape_type = np.random.choice(self.shape_types)
@@ -285,7 +287,7 @@ def create_occupancy_dataloader(
 ) -> data.DataLoader:
     """创建占用网络数据加载器"""
     
-    def collate_fn(batch: list[dict[str, Any]]) -> dict[str, Any]:
+    def collate_fn(batch: List[Dict[str, Any]]) -> Dict[str, Any]:
         """自定义批处理函数"""
         points = torch.stack([item['points'] for item in batch])
         occupancy = torch.stack([item['occupancy'] for item in batch])
@@ -310,7 +312,7 @@ def create_occupancy_dataloader(
 class OccupancyTransform:
     """占用数据变换基类"""
     
-    def __call__(self, sample: dict[str, Any]) -> dict[str, Any]:
+    def __call__(self, sample: Dict[str, Any]) -> Dict[str, Any]:
         raise NotImplementedError
 
 
@@ -320,7 +322,7 @@ class RandomRotation(OccupancyTransform):
     def __init__(self, max_angle: float = np.pi):
         self.max_angle = max_angle
     
-    def __call__(self, sample: dict[str, Any]) -> dict[str, Any]:
+    def __call__(self, sample: Dict[str, Any]) -> Dict[str, Any]:
         # 生成随机旋转矩阵
         angle = np.random.uniform(-self.max_angle, self.max_angle)
         axis = np.random.randn(3)
@@ -352,7 +354,7 @@ class RandomNoise(OccupancyTransform):
     def __init__(self, noise_std: float = 0.01):
         self.noise_std = noise_std
     
-    def __call__(self, sample: dict[str, Any]) -> dict[str, Any]:
+    def __call__(self, sample: Dict[str, Any]) -> Dict[str, Any]:
         points = sample['points']
         noise = torch.randn_like(points) * self.noise_std
         sample['points'] = points + noise
@@ -362,10 +364,10 @@ class RandomNoise(OccupancyTransform):
 class Compose(OccupancyTransform):
     """组合多个变换"""
     
-    def __init__(self, transforms: list[OccupancyTransform]):
+    def __init__(self, transforms: List[OccupancyTransform]):
         self.transforms = transforms
     
-    def __call__(self, sample: dict[str, Any]) -> dict[str, Any]:
+    def __call__(self, sample: Dict[str, Any]) -> Dict[str, Any]:
         for transform in self.transforms:
             sample = transform(sample)
         return sample 

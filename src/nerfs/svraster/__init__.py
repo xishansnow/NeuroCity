@@ -12,8 +12,18 @@ Key features:
 - Compatibility with grid-based 3D processing techniques
 """
 
+from __future__ import annotations
+
 from .core import (
-    SVRasterConfig, AdaptiveSparseVoxels, VoxelRasterizer, SVRasterModel, SVRasterLoss
+    SVRasterConfig, AdaptiveSparseVoxels, SVRasterModel, SVRasterLoss
+)
+
+from .volume_renderer import (
+    VolumeRenderer
+)
+
+from .true_rasterizer import (
+    TrueVoxelRasterizer
 )
 
 from .dataset import (
@@ -22,6 +32,10 @@ from .dataset import (
 
 from .trainer import (
     SVRasterTrainer, SVRasterTrainerConfig, create_svraster_trainer
+)
+
+from .renderer import (
+    SVRasterRenderer, SVRasterRendererConfig, TrueVoxelRasterizerConfig, create_svraster_renderer
 )
 
 from .utils import (
@@ -42,12 +56,15 @@ __author__ = "NeuroCity Team"
 
 __all__ = [
     # Core components
-    'SVRasterConfig', 'AdaptiveSparseVoxels', 'VoxelRasterizer', 'SVRasterModel', 'SVRasterLoss', # Dataset components
-    'SVRasterDataset', 'SVRasterDatasetConfig', 'create_svraster_dataloader', 'create_svraster_dataset', # Training components
-    'SVRasterTrainer', 'SVRasterTrainerConfig', 'create_svraster_trainer', # Utility functions
-    'morton_encode_3d', 'morton_decode_3d', 'ray_direction_dependent_ordering', 'octree_subdivision', 'voxel_pruning', 'depth_peeling'
-]
-
-# Add CUDA modules if available
-if CUDA_AVAILABLE:
-    __all__.extend(['SVRasterGPU', 'SVRasterGPUTrainer']) 
+    'SVRasterConfig', 'AdaptiveSparseVoxels', 'VolumeRenderer', 'TrueVoxelRasterizer', 'SVRasterModel', 'SVRasterLoss', 
+    # Dataset components
+    'SVRasterDataset', 'SVRasterDatasetConfig', 'create_svraster_dataloader', 'create_svraster_dataset', 
+    # Training components
+    'SVRasterTrainer', 'SVRasterTrainerConfig', 'create_svraster_trainer', 
+    # Rendering components
+    'SVRasterRenderer', 'SVRasterRendererConfig', 'TrueVoxelRasterizerConfig', 'create_svraster_renderer',
+    # Utility functions
+    'morton_encode_3d', 'morton_decode_3d', 'ray_direction_dependent_ordering', 'octree_subdivision', 'voxel_pruning', 'depth_peeling',
+    # CUDA support info
+    'CUDA_AVAILABLE', 'SVRasterGPU', 'SVRasterGPUTrainer'
+] 

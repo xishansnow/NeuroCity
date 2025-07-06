@@ -180,7 +180,7 @@ class BlockNeRFRenderer:
         camera_position: torch.Tensor,
         appearance_ids: torch.Tensor,
         exposure_values: torch.Tensor,
-        block_names: list[str]
+        block_names: List[str]
     ):
         """Render a batch of rays"""
         blocks = [self.block_manager.blocks[name] for name in block_names]
@@ -254,7 +254,7 @@ class BlockNeRFRenderer:
         print(f"Rendered {len(poses)} images to {output_dir}")
         return output_files
     
-    def create_video(self, image_paths: list[str], output_path: str, fps: int = 30):
+    def create_video(self, image_paths: List[str], output_path: str, fps: int = 30):
         """Create video from rendered images"""
         if not image_paths:
             print("No images to create video")

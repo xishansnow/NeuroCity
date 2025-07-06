@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from typing import Optional, Union
 """
 Voxel processing utilities for DNMP.
@@ -12,7 +14,7 @@ import open3d as o3d
 def voxelize_point_cloud(
     points: torch.Tensor,
     voxel_size: float = 0.1,
-    scene_bounds: Optional[tuple[float,
+    scene_bounds: Optional[Tuple[float,
     ...]] = None
 ):
     """
@@ -61,7 +63,7 @@ def voxelize_point_cloud(
     }
 
 def create_voxel_grid(
-    scene_bounds: tuple[float, float, float, float, float, float],
+    scene_bounds: Tuple[float, float, float, float, float, float],
     voxel_size: float
 ):
     """
@@ -169,7 +171,7 @@ def adaptive_voxel_subdivision(
 def compute_voxel_features(
     points: torch.Tensor,
     point_features: Optional[torch.Tensor],
-    voxel_info: dict[str,
+    voxel_info: Dict[str,
     torch.Tensor],
     aggregation: str = 'mean'
 ):

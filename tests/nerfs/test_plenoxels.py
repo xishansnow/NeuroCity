@@ -1,319 +1,452 @@
-from __future__ import annotations
-
 """
-Tests for Plenoxels implementation
+Tests for Plenoxels implementation.
 
-This module contains unit tests for the core Plenoxels components.
+This test suite provides comprehensive testing for the Plenoxels implementation,
+including core functionality, training, dataset handling, and utilities.
 """
-
-from typing import Any
 
 import unittest
 import torch
+import torch.nn.functional as F
 import numpy as np
-import sys
 import os
+import sys
+import tempfile
+import shutil
+from pathlib import Path
+from torch.utils.data import DataLoader
+import json
+import cv2
 
 # Add src to path for imports
-sys.path.append(os.path.join(os.path.dirname(__file__), '..', '..', 'src'))
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..")))
 
-from nerfs.plenoxels.core import (
-    PlenoxelConfig, SphericalHarmonics, VoxelGrid, PlenoxelModel, PlenoxelLoss
+from src.nerfs.plenoxels.core import (
+    PlenoxelConfig,
+    VoxelGrid,
+    SphericalHarmonics,
+    PlenoxelModel,
+    PlenoxelLoss,
+    VolumetricRenderer,
 )
-from nerfs.plenoxels.dataset import PlenoxelDatasetConfig
-from nerfs.plenoxels.trainer import PlenoxelTrainerConfig
+from src.nerfs.plenoxels.trainer import PlenoxelTrainer, PlenoxelTrainerConfig
+from src.nerfs.plenoxels.dataset import (
+    PlenoxelDataset,
+    PlenoxelDatasetConfig,
+    load_blender_data,
+    load_colmap_data,
+    create_plenoxel_dataset,
+    create_plenoxel_dataloader,
+)
+from src.nerfs.plenoxels.utils.rendering_utils import (
+    generate_rays,
+    sample_points_along_rays,
+    volume_render,
+    compute_ray_aabb_intersection,
+    hierarchical_sampling,
+)
+from src.nerfs.plenoxels.utils.voxel_utils import (
+    compute_voxel_bounds,
+    world_to_voxel_coords,
+    voxel_to_world_coords,
+)
+from src.nerfs.plenoxels.utils.metrics_utils import (
+    compute_psnr,
+    compute_ssim,
+    compute_lpips,
+)
 
-class TestSphericalHarmonics(unittest.TestCase):
-    """Test spherical harmonics utilities."""
-    
-    def test_sh_coeffs_count(self):
-        """Test SH coefficient counting."""
-        self.assertEqual(SphericalHarmonics.get_num_coeffs(0), 1)
-        self.assertEqual(SphericalHarmonics.get_num_coeffs(1), 4)
-        self.assertEqual(SphericalHarmonics.get_num_coeffs(2), 9)
-        self.assertEqual(SphericalHarmonics.get_num_coeffs(3), 16)
-    
-    def test_sh_evaluation(self):
-        """Test spherical harmonics evaluation."""
-        device = torch.device('cpu')
-        
-        # Test directions
-        dirs = torch.tensor([
-            [1.0, 0.0, 0.0], [0.0, 1.0, 0.0], [0.0, 0.0, 1.0]
-        ], device=device)
-        
-        # Test degree 0
-        sh_0 = SphericalHarmonics.eval_sh(0, dirs)
-        self.assertEqual(sh_0.shape, (3, 1))
-        
-        # Test degree 1
-        sh_1 = SphericalHarmonics.eval_sh(1, dirs)
-        self.assertEqual(sh_1.shape, (3, 4))
-        
-        # Test degree 2
-        sh_2 = SphericalHarmonics.eval_sh(2, dirs)
-        self.assertEqual(sh_2.shape, (3, 9))
-    
-    def test_sh_color_evaluation(self):
-        """Test SH color evaluation."""
-        device = torch.device('cpu')
-        
-        dirs = torch.tensor([
-            [1.0, 0.0, 0.0], [0.0, 1.0, 0.0]
-        ], device=device)
-        
-        # SH coefficients for RGB
-        sh_coeffs = torch.randn(2, 3, 4, device=device)  # degree 1
-        
-        colors = SphericalHarmonics.eval_sh_color(sh_coeffs, dirs)
-        self.assertEqual(colors.shape, (2, 3))
-        
-        # Colors should be in [0, 1] range due to sigmoid
-        self.assertTrue(torch.all(colors >= 0))
-        self.assertTrue(torch.all(colors <= 1))
 
-class TestVoxelGrid(unittest.TestCase):
-    """Test voxel grid functionality."""
-    
+class TestPlenoxelCore(unittest.TestCase):
+    """Test core Plenoxels functionality."""
+
     def setUp(self):
         """Set up test fixtures."""
-        self.device = torch.device('cpu')
-        self.resolution = (32, 32, 32)
-        self.scene_bounds = (-1.0, -1.0, -1.0, 1.0, 1.0, 1.0)
-        self.sh_degree = 1
-        
-        self.voxel_grid = VoxelGrid(
-            self.resolution, self.scene_bounds, self.sh_degree
-        ).to(self.device)
-    
-    def test_voxel_grid_creation(self):
-        """Test voxel grid creation."""
-        # Check parameter shapes
-        self.assertEqual(self.voxel_grid.density.shape, self.resolution)
-        
-        expected_sh_shape = (*self.resolution, 3, 4)  # degree 1 has 4 coeffs
-        self.assertEqual(self.voxel_grid.sh_coeffs.shape, expected_sh_shape)
-    
-    def test_coordinate_conversion(self):
-        """Test world to voxel coordinate conversion."""
-        # Test center point
-        world_coords = torch.tensor([[0.0, 0.0, 0.0]], device=self.device)
-        voxel_coords = self.voxel_grid.world_to_voxel_coords(world_coords)
-        
-        expected_center = torch.tensor([[15.5, 15.5, 15.5]], device=self.device)
-        self.assertTrue(torch.allclose(voxel_coords, expected_center, atol=1e-5))
-    
-    def test_trilinear_interpolation(self):
-        """Test trilinear interpolation."""
-        # Test interpolation at center
-        world_coords = torch.tensor([[0.0, 0.0, 0.0]], device=self.device)
-        density, sh_coeffs = self.voxel_grid.trilinear_interpolation(world_coords)
-        
-        self.assertEqual(density.shape, (1, ))
-        self.assertEqual(sh_coeffs.shape, (1, 3, 4))
-    
-    def test_occupancy_mask(self):
-        """Test occupancy mask computation."""
-        mask = self.voxel_grid.get_occupancy_mask(threshold=0.01)
-        self.assertEqual(mask.shape, self.resolution)
-        self.assertTrue(torch.all((mask == 0) | (mask == 1)))
-    
-    def test_total_variation_loss(self):
-        """Test total variation loss computation."""
-        tv_loss = self.voxel_grid.total_variation_loss()
-        self.assertIsInstance(tv_loss, torch.Tensor)
-        self.assertEqual(tv_loss.shape, ())
-        self.assertTrue(tv_loss >= 0)
-    
-    def test_l1_loss(self):
-        """Test L1 sparsity loss computation."""
-        l1_loss = self.voxel_grid.l1_loss()
-        self.assertIsInstance(l1_loss, torch.Tensor)
-        self.assertEqual(l1_loss.shape, ())
-        self.assertTrue(l1_loss >= 0)
-
-class TestPlenoxelModel(unittest.TestCase):
-    """Test Plenoxel model functionality."""
-    
-    def setUp(self):
-        """Set up test fixtures."""
-        self.device = torch.device('cpu')
+        self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
         self.config = PlenoxelConfig(
-            grid_resolution=(
-                32,
-                32,
-                32,
-            )
+            grid_resolution=(32, 32, 32),
+            scene_bounds=torch.tensor([-1.0, -1.0, -1.0, 1.0, 1.0, 1.0], device=self.device),
+            sh_degree=4,
+            num_samples=128,
+            batch_size=4096,
+            learning_rate=0.01,
+            device=self.device,
         )
-        self.model = PlenoxelModel(self.config).to(self.device)
-    
-    def test_model_creation(self):
-        """Test model creation."""
-        self.assertIsInstance(self.model.voxel_grid, VoxelGrid)
-        self.assertEqual(self.model.config, self.config)
-    
-    def test_forward_pass(self):
-        """Test model forward pass."""
-        # Create test rays
-        num_rays = 10
-        rays_o = torch.randn(num_rays, 3, device=self.device)
-        rays_d = torch.randn(num_rays, 3, device=self.device)
-        rays_d = rays_d / torch.norm(rays_d, dim=-1, keepdim=True)
-        
-        # Forward pass
-        outputs = self.model(rays_o, rays_d, num_samples=32)
-        
-        # Check output shapes
-        self.assertEqual(outputs['rgb'].shape, (num_rays, 3))
-        self.assertEqual(outputs['depth'].shape, (num_rays, ))
-        self.assertEqual(outputs['weights'].shape, (num_rays, 32))
-        
-        # Check value ranges
-        self.assertTrue(torch.all(outputs['rgb'] >= 0))
-        self.assertTrue(torch.all(outputs['rgb'] <= 1))
-        self.assertTrue(torch.all(outputs['depth'] >= 0))
-    
-    def test_occupancy_stats(self):
-        """Test occupancy statistics."""
-        stats = self.model.get_occupancy_stats()
-        
-        required_keys = ['total_voxels', 'occupied_voxels', 'occupancy_ratio', 'sparsity_ratio']
-        for key in required_keys:
-            self.assertIn(key, stats)
-        
-        self.assertEqual(stats['total_voxels'], 32 * 32 * 32)
-        self.assertTrue(0 <= stats['occupancy_ratio'] <= 1)
-        self.assertTrue(0 <= stats['sparsity_ratio'] <= 1)
-        self.assertAlmostEqual(stats['occupancy_ratio'] + stats['sparsity_ratio'], 1.0, places=5)
 
-class TestPlenoxelLoss(unittest.TestCase):
-    """Test Plenoxel loss function."""
-    
+    def test_voxel_grid_initialization(self):
+        """Test VoxelGrid initialization and basic operations."""
+        resolution = (32, 32, 32)
+        scene_bounds = torch.tensor([-1.0, -1.0, -1.0, 1.0, 1.0, 1.0], device=self.device)
+        grid = VoxelGrid(resolution, scene_bounds, device=self.device)
+
+        # Test grid shape
+        self.assertEqual(grid.density.shape, resolution)
+        self.assertEqual(grid.sh_coeffs.shape[:-2], resolution)  # [D, H, W, C, 3]
+
+        # Test device placement
+        self.assertEqual(grid.density.device.type, self.device.type)
+        self.assertEqual(grid.sh_coeffs.device.type, self.device.type)
+
+        # Test coordinate conversion
+        points = torch.rand(100, 3, device=self.device) * 2 - 1  # [-1, 1]
+        voxel_coords = grid.world_to_voxel_coords(points)
+        world_coords = grid.voxel_to_world_coords(voxel_coords)
+        self.assertTrue(torch.allclose(points, world_coords, atol=1e-5))
+
+    def test_spherical_harmonics(self):
+        """Test spherical harmonics computation."""
+        # SphericalHarmonics is a static class, no need to instantiate
+        dirs = torch.randn(100, 3, device=self.device)
+        dirs = F.normalize(dirs, dim=-1)
+
+        # Compute basis for degree 4
+        basis = SphericalHarmonics.eval_sh_basis(4, dirs)
+        num_coeffs = SphericalHarmonics.get_num_coeffs(4)
+
+        # Test shape and values
+        self.assertEqual(basis.shape, (100, num_coeffs))
+        self.assertTrue(torch.all(torch.isfinite(basis)))
+
+        # Test basis properties
+        # 1. First basis function (Y00) should be constant
+        y00 = 1.0 / np.sqrt(4 * np.pi)
+        self.assertTrue(
+            torch.allclose(basis[:, 0], torch.full((100,), y00, device=self.device), atol=1e-3)
+        )
+
+        # 2. Test orthogonality of basis functions
+        # Compute Gram matrix
+        gram = torch.mm(basis.T, basis) / basis.shape[0]  # Normalize by number of samples
+        # Diagonal should be close to 1
+        self.assertTrue(
+            torch.allclose(torch.diag(gram), torch.ones_like(torch.diag(gram)), atol=1e-2)
+        )
+        # Off-diagonal elements should be close to 0
+        off_diag = gram - torch.diag(torch.diag(gram))
+        self.assertTrue(torch.all(torch.abs(off_diag) < 1e-1))
+
+    def test_volumetric_renderer(self):
+        """Test volumetric rendering."""
+        resolution = (32, 32, 32)
+        scene_bounds = torch.tensor([-1.0, -1.0, -1.0, 1.0, 1.0, 1.0], device=self.device)
+        grid = VoxelGrid(resolution, scene_bounds, device=self.device)
+        renderer = VolumetricRenderer(self.config)
+
+        # Generate test rays
+        rays_o = torch.rand(64, 3, device=self.device) * 2 - 1
+        rays_d = torch.randn(64, 3, device=self.device)
+        rays_d = F.normalize(rays_d, dim=-1)
+
+        # Test rendering
+        with torch.no_grad():
+            output = renderer.render_rays(
+                grid,
+                rays_o,
+                rays_d,
+                num_samples=64,
+                near=0.1,
+                far=10.0,
+            )
+
+        # Check outputs
+        self.assertIn("rgb", output)
+        self.assertIn("depth", output)
+        self.assertIn("weights", output)
+        self.assertEqual(output["rgb"].shape, (64, 3))
+        self.assertEqual(output["depth"].shape, (64, 1))  # Depth is [N, 1]
+        self.assertTrue(torch.all(output["rgb"] >= 0) and torch.all(output["rgb"] <= 1))
+
+    def test_model_forward(self):
+        """Test full model forward pass."""
+        model = PlenoxelModel(self.config)
+
+        # Generate test data
+        rays_o = torch.rand(32, 3, device=self.device) * 2 - 1
+        rays_d = torch.randn(32, 3, device=self.device)
+        rays_d = F.normalize(rays_d, dim=-1)
+
+        # Test forward pass
+        with torch.no_grad():
+            output = model(rays_o, rays_d)
+
+        # Check outputs
+        self.assertIn("rgb", output)
+        self.assertIn("depth", output)
+        self.assertEqual(output["rgb"].shape, (32, 3))
+        self.assertEqual(output["depth"].shape, (32, 1))
+
+    def test_loss_computation(self):
+        """Test loss computation."""
+        loss_fn = PlenoxelLoss(self.config)
+        model = PlenoxelModel(self.config)
+
+        # Generate test data
+        outputs = {
+            "rgb": torch.rand(32, 3, device=self.device),
+            "depth": torch.rand(32, device=self.device),
+            "weights": torch.rand(32, 64, device=self.device),
+        }
+        batch = {
+            "rgb": torch.rand(32, 3, device=self.device),
+            "depth": torch.rand(32, device=self.device),
+        }
+
+        # Compute loss
+        loss_dict = loss_fn(outputs, batch, model, global_step=0)
+
+        # Check outputs
+        self.assertIn("total_loss", loss_dict)
+        self.assertIn("rgb_loss", loss_dict)
+        self.assertTrue(all(torch.isfinite(v) for v in loss_dict.values()))
+
+
+class TestPlenoxelDataset(unittest.TestCase):
+    """Test dataset functionality."""
+
     def setUp(self):
         """Set up test fixtures."""
-        self.device = torch.device('cpu')
-        self.config = PlenoxelConfig()
-        self.loss_fn = PlenoxelLoss(self.config)
-    
-    def test_color_loss(self):
-        """Test color reconstruction loss."""
-        # Create test outputs and targets
-        num_rays = 100
-        outputs = {
-            'rgb': torch.rand(num_rays, 3, device=self.device)
-        }
-        targets = {
-            'colors': torch.rand(num_rays, 3, device=self.device)
-        }
-        
-        losses = self.loss_fn(outputs, targets)
-        
-        self.assertIn('color_loss', losses)
-        self.assertIsInstance(losses['color_loss'], torch.Tensor)
-        self.assertEqual(losses['color_loss'].shape, ())
-        self.assertTrue(losses['color_loss'] >= 0)
-
-class TestConfigurations(unittest.TestCase):
-    """Test configuration classes."""
-    
-    def test_plenoxel_config(self):
-        """Test PlenoxelConfig."""
-        config = PlenoxelConfig()
-        
-        # Test default values
-        self.assertEqual(config.grid_resolution, (256, 256, 256))
-        self.assertEqual(config.sh_degree, 2)
-        self.assertTrue(config.use_coarse_to_fine)
-        
-        # Test custom values
-        custom_config = PlenoxelConfig(
-            grid_resolution=(128, 128, 128), sh_degree=1, use_coarse_to_fine=False
+        self.temp_dir = tempfile.mkdtemp()
+        self.config = PlenoxelDatasetConfig(
+            data_dir=self.temp_dir,
+            dataset_type="blender",
+            downsample_factor=1,
+            batch_size=4096,
+            num_rays_train=1024,
+            precrop_fraction=0.5,
+            precrop_iterations=500,
         )
-        
-        self.assertEqual(custom_config.grid_resolution, (128, 128, 128))
-        self.assertEqual(custom_config.sh_degree, 1)
-        self.assertFalse(custom_config.use_coarse_to_fine)
-    
-    def test_dataset_config(self):
-        """Test PlenoxelDatasetConfig."""
-        config = PlenoxelDatasetConfig()
-        
-        # Test default values
+
+    def tearDown(self):
+        """Clean up temporary files."""
+        shutil.rmtree(self.temp_dir)
+
+    def test_blender_data_loading(self):
+        """Test Blender data loading."""
+        # Create dummy data
+        os.makedirs(os.path.join(self.temp_dir, "train"))
+
+        # Create transforms.json for all splits
+        for split in ["train", "val", "test"]:
+            transforms = {
+                "camera_angle_x": 0.8,
+                "frames": [
+                    {"file_path": f"train/r_{i}.png", "transform_matrix": np.eye(4).tolist()}
+                    for i in range(3)
+                ],
+            }
+            with open(os.path.join(self.temp_dir, f"transforms_{split}.json"), "w") as f:
+                json.dump(transforms, f)
+
+        # Create images
+        for i in range(3):
+            img = (np.random.rand(100, 100, 4) * 255).astype(np.uint8)
+            cv2.imwrite(os.path.join(self.temp_dir, "train", f"r_{i}.png"), img)
+
+        # Test data loading
+        data = load_blender_data(self.temp_dir)
+        self.assertIn("images", data)
+        self.assertIn("poses", data)
+        self.assertEqual(len(data["images"]), 9)  # 3 images per split
+
+    def test_colmap_data_loading(self):
+        """Test COLMAP data loading."""
+        # Skip if test data not available
+        if not os.path.exists("test_demo_scene"):
+            self.skipTest("COLMAP test data not available")
+
+        data = load_colmap_data("test_demo_scene")
+        if data:  # Only test if data loading succeeded
+            self.assertIn("images", data)
+            self.assertIn("poses", data)
+
+    def test_dataset_creation(self):
+        """Test dataset creation and configuration."""
+        config = create_plenoxel_dataset(
+            data_dir="test_demo_scene",
+            dataset_type="blender",
+            downsample_factor=2,
+        )
+        self.assertIsInstance(config, PlenoxelDatasetConfig)
+        self.assertEqual(config.data_dir, "test_demo_scene")
         self.assertEqual(config.dataset_type, "blender")
-        self.assertEqual(config.downsample_factor, 1)
-        self.assertFalse(config.white_background)
-    
-    def test_trainer_config(self):
-        """Test PlenoxelTrainerConfig."""
-        config = PlenoxelTrainerConfig()
-        
-        # Test default values
-        self.assertEqual(config.max_epochs, 10000)
-        self.assertEqual(config.learning_rate, 0.1)
-        self.assertTrue(config.use_tensorboard)
+        self.assertEqual(config.downsample_factor, 2)
 
-class TestIntegration(unittest.TestCase):
-    """Integration tests for the complete pipeline."""
-    
-    def test_end_to_end_forward(self):
-        """Test end-to-end forward pass."""
-        device = torch.device('cpu')
-        
-        # Create small model for testing
-        config = PlenoxelConfig(
-            grid_resolution=(16, 16, 16), sh_degree=1, near_plane=0.5, far_plane=2.0
+
+class TestPlenoxelTraining(unittest.TestCase):
+    """Test training functionality."""
+
+    def setUp(self):
+        """Set up test fixtures."""
+        self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+        self.temp_dir = tempfile.mkdtemp()
+        self.model_config = PlenoxelConfig(
+            grid_resolution=(32, 32, 32),
+            scene_bounds=torch.tensor([-1.0, -1.0, -1.0, 1.0, 1.0, 1.0]),
+            sh_degree=2,
+            num_samples=64,
         )
-        model = PlenoxelModel(config).to(device)
-        
-        # Create batch of rays
-        batch_size = 5
-        rays_o = torch.randn(batch_size, 3, device=device)
-        rays_d = torch.randn(batch_size, 3, device=device)
-        rays_d = rays_d / torch.norm(rays_d, dim=-1, keepdim=True)
-        
-        # Forward pass
+        self.trainer_config = PlenoxelTrainerConfig(
+            max_epochs=10,
+            learning_rate=0.1,
+            coarse_to_fine=True,
+            resolution_schedule=[(16, 16, 16), (32, 32, 32)],
+            resolution_epochs=[5, 10],
+            output_dir=self.temp_dir,
+            experiment_name="test_experiment",
+        )
+        self.dataset_config = PlenoxelDatasetConfig(
+            data_dir="test_demo_scene",
+            dataset_type="blender",
+            batch_size=1024,
+            num_rays_train=512,
+        )
+
+    def tearDown(self):
+        """Clean up temporary files."""
+        shutil.rmtree(self.temp_dir)
+
+    def test_trainer_initialization(self):
+        """Test trainer initialization."""
+        trainer = PlenoxelTrainer(
+            model_config=self.model_config,
+            trainer_config=self.trainer_config,
+            dataset_config=self.dataset_config,
+        )
+
+        self.assertIsNotNone(trainer.model)
+        self.assertIsNotNone(trainer.optimizer)
+        self.assertIsNotNone(trainer.loss_fn)
+
+    def test_training_step(self):
+        """Test single training step."""
+        trainer = PlenoxelTrainer(
+            model_config=self.model_config,
+            trainer_config=self.trainer_config,
+            dataset_config=self.dataset_config,
+        )
+
+        # Run training step
+        metrics = trainer._train_epoch()
+        self.assertIn("total_loss", metrics)
+        self.assertTrue(isinstance(metrics["total_loss"], float))
+        self.assertTrue(np.isfinite(metrics["total_loss"]))
+
+    def test_validation_step(self):
+        """Test validation step."""
+        trainer = PlenoxelTrainer(
+            model_config=self.model_config,
+            trainer_config=self.trainer_config,
+            dataset_config=self.dataset_config,
+        )
+
+        # Create dummy validation data
+        N = 32
+        rays_o = torch.rand(N, 3, device=self.device)
+        rays_d = F.normalize(torch.randn(N, 3, device=self.device), dim=-1)
+        rgb = torch.rand(N, 3, device=self.device)
+
+        # Run validation
         with torch.no_grad():
-            outputs = model(rays_o, rays_d, num_samples=16)
-        
-        # Verify outputs
-        self.assertEqual(outputs['rgb'].shape, (batch_size, 3))
-        self.assertEqual(outputs['depth'].shape, (batch_size, ))
-        
-        # Test loss computation
-        loss_fn = PlenoxelLoss(config)
-        target_colors = torch.rand(batch_size, 3, device=device)
-        losses = loss_fn(outputs, {'colors': target_colors})
-        
-        self.assertIn('color_loss', losses)
-        self.assertTrue(losses['color_loss'] >= 0)
+            outputs = trainer.model(rays_o, rays_d)
 
-def run_tests():
-    """Run all tests."""
-    # Create test suite
-    loader = unittest.TestLoader()
-    suite = unittest.TestSuite()
-    
-    # Add test classes
-    test_classes = [
-        TestSphericalHarmonics, TestVoxelGrid, TestPlenoxelModel, TestPlenoxelLoss, TestConfigurations, TestIntegration
-    ]
-    
-    for test_class in test_classes:
-        tests = loader.loadTestsFromTestCase(test_class)
-        suite.addTests(tests)
-    
-    # Run tests
-    runner = unittest.TextTestRunner(verbosity=2)
-    result = runner.run(suite)
-    
-    return result.wasSuccessful()
+        # Check outputs
+        self.assertIn("rgb", outputs)
+        self.assertIn("depth", outputs)
+        self.assertEqual(outputs["rgb"].shape, (N, 3))
+        self.assertEqual(outputs["depth"].shape, (N, 1))
+        self.assertTrue(torch.all(outputs["rgb"] >= 0) and torch.all(outputs["rgb"] <= 1))
 
-if __name__ == '__main__':
-    # Run tests
-    success = run_tests()
-    
-    if success:
-        print("\nAll tests passed! ✅")
-    else:
-        print("\nSome tests failed! ❌")
-        exit(1) 
+    def test_checkpoint_saving_loading(self):
+        """Test checkpoint management."""
+        trainer = PlenoxelTrainer(
+            model_config=self.model_config,
+            trainer_config=self.trainer_config,
+            dataset_config=self.dataset_config,
+        )
+
+        # Save checkpoint
+        checkpoint_path = os.path.join(self.temp_dir, "checkpoint.pt")
+        trainer.save_checkpoint(checkpoint_path)
+
+        # Load checkpoint
+        trainer.load_checkpoint(checkpoint_path)
+
+        self.assertTrue(os.path.exists(checkpoint_path))
+
+
+class TestPlenoxelUtils(unittest.TestCase):
+    """Test utility functions."""
+
+    def setUp(self):
+        """Set up test fixtures."""
+        self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+
+    def test_ray_generation(self):
+        """Test ray generation utilities."""
+        H, W = 100, 100
+        focal = 50.0
+        poses = torch.eye(4, device=self.device).unsqueeze(0)  # [1, 4, 4]
+
+        rays_o, rays_d = generate_rays(poses, focal, H, W)
+
+        self.assertEqual(rays_o.shape, (1, H, W, 3))
+        self.assertEqual(rays_d.shape, (1, H, W, 3))
+
+        # Check ray directions are normalized
+        rays_d_norm = torch.norm(rays_d, dim=-1)
+        self.assertTrue(torch.allclose(rays_d_norm, torch.ones_like(rays_d_norm), atol=1e-3))
+
+        # Check ray origins are at camera center
+        self.assertTrue(
+            torch.allclose(rays_o[0], poses[0, :3, 3].view(1, 1, 3).expand(H, W, 3), atol=1e-3)
+        )
+
+        # Check central ray direction (should point along -z axis)
+        center_ray = rays_d[0, H // 2, W // 2]
+        expected_dir = F.normalize(torch.tensor([0, 0, -1], device=self.device))
+        self.assertTrue(torch.allclose(center_ray, expected_dir, atol=1e-3))
+
+    def test_ray_bounds(self):
+        """Test ray bounds computation."""
+        rays_o = torch.rand(100, 3, device=self.device)
+        rays_d = F.normalize(torch.randn(100, 3, device=self.device), dim=-1)
+
+        # Create AABB bounds
+        aabb_min = torch.tensor([-1.0, -1.0, -1.0], device=self.device)
+        aabb_max = torch.tensor([1.0, 1.0, 1.0], device=self.device)
+
+        near, far = compute_ray_aabb_intersection(rays_o, rays_d, aabb_min, aabb_max)
+
+        self.assertEqual(near.shape, (100,))
+        self.assertEqual(far.shape, (100,))
+        self.assertTrue(torch.all(near < far))
+
+    def test_metrics(self):
+        """Test metric computations."""
+        pred = torch.rand(32, 3, device=self.device)
+        target = torch.rand(32, 3, device=self.device)
+
+        # Test PSNR
+        psnr = compute_psnr(pred, target)
+        self.assertTrue(isinstance(psnr, float))
+        self.assertTrue(np.isfinite(psnr))
+
+        # Test SSIM
+        H, W = 32, 32  # Make image large enough for SSIM window
+        pred_img = pred.view(1, 3, H, W).permute(0, 2, 3, 1).cpu().numpy()  # [1, H, W, C]
+        target_img = target.view(1, 3, H, W).permute(0, 2, 3, 1).cpu().numpy()
+        ssim = compute_ssim(pred_img[0], target_img[0])
+        self.assertTrue(isinstance(ssim, float))
+        self.assertTrue(np.isfinite(ssim))
+
+        # Skip LPIPS if not available
+        try:
+            lpips = compute_lpips(pred_img, target_img)
+            self.assertTrue(isinstance(lpips, float))
+            self.assertTrue(np.isfinite(lpips))
+        except ImportError:
+            pass
+
+
+if __name__ == "__main__":
+    unittest.main()

@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from typing import Any, Optional, Union
 """
 Volumetric Renderer for Mega-NeRF
@@ -54,7 +56,7 @@ class VolumetricRenderer:
         appearance_ids: Optional[torch.Tensor] = None,
         return_weights: bool = False,
         return_depth: bool = False
-    ) -> dict[str, torch.Tensor]:
+    ) -> Dict[str, torch.Tensor]:
         """
         Render a batch of rays
         
@@ -103,7 +105,7 @@ class VolumetricRenderer:
             density_coarse, color_coarse, t_vals_coarse
         )
         
-        outputs: dict[str, torch.Tensor] = {}
+        outputs: Dict[str, torch.Tensor] = {}
         
         outputs['rgb_coarse'] = rgb_coarse
         outputs['depth_coarse'] = depth_coarse
@@ -236,7 +238,7 @@ class VolumetricRenderer:
         density: torch.Tensor,
         color: torch.Tensor,
         t_vals: torch.Tensor
-    ) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
+    ) -> Tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
         """Perform volume rendering"""
         # Compute deltas
         deltas = t_vals[:, 1:] - t_vals[:, :-1]
@@ -272,7 +274,7 @@ class VolumetricRenderer:
         camera_info,
         chunk_size: int = 1024,
         appearance_id: Optional[int] = None
-    ) -> dict[str, np.ndarray]:
+    ) -> Dict[str, np.ndarray]:
         """
         Render a full image
         
@@ -332,7 +334,7 @@ class VolumetricRenderer:
         self,
         camera_info,
         device: torch.device
-    ) -> tuple[torch.Tensor, torch.Tensor]:
+    ) -> Tuple[torch.Tensor, torch.Tensor]:
         """Generate rays for a camera"""
         H, W = camera_info.height, camera_info.width
         
@@ -371,10 +373,10 @@ class BatchRenderer:
     def render_rays_batch(
         self,
         model,
-        ray_batch: dict[str,
+        ray_batch: Dict[str,
         torch.Tensor],
         chunk_size: int = 1024
-    ) -> dict[str, torch.Tensor]:
+    ) -> Dict[str, torch.Tensor]:
         """
         Render a batch of rays efficiently
         
@@ -423,8 +425,8 @@ class BatchRenderer:
         model,
         camera_list: list,
         chunk_size: int = 1024,
-        appearance_ids: Optional[list[int]] = None
-    ) -> list[dict[str, np.ndarray]]:
+        appearance_ids: Optional[List[int]] = None
+    ) -> List[Dict[str, np.ndarray]]:
         """
         Render multiple camera views
         
@@ -473,7 +475,7 @@ class InteractiveRenderer:
         camera_info,
         use_cache: bool = True,
         appearance_id: Optional[int] = None
-    ) -> dict[str, np.ndarray]:
+    ) -> Dict[str, np.ndarray]:
         """
         Render a view with caching
         
@@ -516,7 +518,7 @@ class InteractiveRenderer:
         
         return key_data
     
-    def _update_cache(self, key: str, result: dict[str, np.ndarray]):
+    def _update_cache(self, key: str, result: Dict[str, np.ndarray]):
         """Update render cache"""
         # Remove oldest entry if cache is full
         if len(self.render_cache) >= self.cache_size:
@@ -538,7 +540,7 @@ class InteractiveRenderer:
         """Get cache hit rate"""
         return self.cache_hits / (self.cache_hits + self.cache_misses)
     
-    def get_cache_stats(self) -> dict[str, Any]:
+    def get_cache_stats(self) -> Dict[str, Any]:
         """Get cache statistics"""
         return {
             'cache_size': len(self.render_cache),

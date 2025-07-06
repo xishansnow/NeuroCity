@@ -1,4 +1,6 @@
-from typing import Any
+from __future__ import annotations
+
+from typing import Any, Dict
 #!/usr/bin/env python3
 """
 完整的训练流水线
@@ -17,7 +19,7 @@ logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 class TrainingPipeline:
-    def __init__(self, config: dict[str, Any]):
+    def __init__(self, config: Dict[str, Any]):
         """
         初始化训练流水线
         
@@ -148,13 +150,13 @@ def get_default_config():
         }
     }
 
-def save_config(config: dict[str, Any], path: str):
+def save_config(config: Dict[str, Any], path: str):
     """保存配置"""
     with open(path, 'w') as f:
         json.dump(config, f, indent=2)
     logger.info(f"配置已保存到: {path}")
 
-def load_config(path: str) -> dict[str, Any]:
+def load_config(path: str) -> Dict[str, Any]:
     """加载配置"""
     with open(path, 'r') as f:
         config = json.load(f)

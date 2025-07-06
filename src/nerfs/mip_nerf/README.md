@@ -53,13 +53,13 @@ Mip-NeRF improves upon the original NeRF by:
 
 ### 📊 Performance Comparison
 
-| Metric | Classic NeRF | Mip-NeRF | Trade-off |
-|--------|--------------|----------|-----------|
-| Training Time | 1-2 days | 1.5-3 days | **1.5x slower** |
-| Inference Speed | 10-30 sec/image | 15-45 sec/image | **1.5-2x slower** |
-| Model Size | 100-500 MB | 120-600 MB | **Similar** |
-| Anti-aliasing | Poor | Excellent | **Major improvement** |
-| Multi-scale Quality | Poor | Excellent | **Major improvement** |
+| Metric              | Classic NeRF    | Mip-NeRF        | Trade-off             |
+| ------------------- | --------------- | --------------- | --------------------- |
+| Training Time       | 1-2 days        | 1.5-3 days      | **1.5x slower**       |
+| Inference Speed     | 10-30 sec/image | 15-45 sec/image | **1.5-2x slower**     |
+| Model Size          | 100-500 MB      | 120-600 MB      | **Similar**           |
+| Anti-aliasing       | Poor            | Excellent       | **Major improvement** |
+| Multi-scale Quality | Poor            | Excellent       | **Major improvement** |
 
 ### 🎯 Use Cases
 - **High-quality Rendering**: Superior anti-aliasing for production rendering
@@ -219,13 +219,13 @@ Key configuration parameters in `MipNeRFConfig`:
 
 ## Differences from Original NeRF
 
-| Feature | Original NeRF | Mip-NeRF |
-|---------|---------------|----------|
-| Positional Encoding | Point-wise PE | Integrated PE (IPE) |
-| Ray Representation | Infinitesimal rays | Conical frustums |
-| Anti-aliasing | None | Built-in through IPE |
-| Multi-scale | Manual tricks | Natural handling |
-| Pixel footprint | Ignored | Properly modeled |
+| Feature             | Original NeRF      | Mip-NeRF             |
+| ------------------- | ------------------ | -------------------- |
+| Positional Encoding | Point-wise PE      | Integrated PE (IPE)  |
+| Ray Representation  | Infinitesimal rays | Conical frustums     |
+| Anti-aliasing       | None               | Built-in through IPE |
+| Multi-scale         | Manual tricks      | Natural handling     |
+| Pixel footprint     | Ignored            | Properly modeled     |
 
 ## Mathematical Foundation
 
@@ -253,11 +253,11 @@ Each pixel cone is approximated as a 3D Gaussian with:
 
 Expected performance on standard datasets:
 
-| Dataset | PSNR | Training Time | Memory |
-|---------|------|---------------|--------|
-| Lego (Blender) | ~32 dB | ~8 hours (RTX 3080) | ~8GB |
-| Chair (Blender) | ~34 dB | ~8 hours (RTX 3080) | ~8GB |
-| LLFF Scenes | ~26 dB | ~12 hours (RTX 3080) | ~10GB |
+| Dataset         | PSNR   | Training Time        | Memory |
+| --------------- | ------ | -------------------- | ------ |
+| Lego (Blender)  | ~32 dB | ~8 hours (RTX 3080)  | ~8GB   |
+| Chair (Blender) | ~34 dB | ~8 hours (RTX 3080)  | ~8GB   |
+| LLFF Scenes     | ~26 dB | ~12 hours (RTX 3080) | ~10GB  |
 
 ## Visualization
 
@@ -314,7 +314,7 @@ This implementation is provided for research and educational purposes.
 
 - Use `torch.compile()` for PyTorch 2.0+
 - Enable automatic mixed precision (AMP)
-- Use multiple GPUs with DataParallel
+- Use multiple GPUs with DistributedDataParallel (DDP)
 - Optimize batch size based on available memory
 
 ### Debugging

@@ -1,4 +1,6 @@
 """
+from __future__ import annotations
+
 Utility functions for Classic NeRF.
 """
 
@@ -46,10 +48,10 @@ def get_rays(
 
 def render_path(
     render_poses: torch.Tensor,
-    hwf: tuple[int, int,float],
+    hwf: Tuple[int, int,float],
     K: torch.Tensor,
     chunk: int,
-    render_kwargs: dict[str,Any],
+    render_kwargs: Dict[str,Any],
     savedir: str | None = None
 ):
     """Render images along a path."""

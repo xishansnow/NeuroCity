@@ -1,4 +1,6 @@
-from typing import Optional
+from __future__ import annotations
+
+from typing import Optional, List
 #!/usr/bin/env python3
 """
 Classic NeRF 演示脚本

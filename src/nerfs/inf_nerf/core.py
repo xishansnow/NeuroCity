@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from typing import Any, Optional
 """
 Core implementation of InfNeRF: Infinite Scale NeRF with O(log n) Space Complexity
@@ -104,7 +106,7 @@ class OctreeNode:
         self.level = level
         self.config = config  
         self.parent = parent
-        self.children: list[Optional['OctreeNode']] = [None] * 8
+        self.children: List[Optional['OctreeNode']] = [None] * 8
         self.is_leaf = True
         
         # Calculate Ground Sampling Distance (GSD)
@@ -119,10 +121,10 @@ class OctreeNode:
         self.bounds_max = center + half_size
         
         # Sparse points for pruning (will be populated during training)
-        self.sparse_points: list[np.ndarray] = []
+        self.sparse_points: List[np.ndarray] = []
         self.is_pruned = False
     
-    def get_aabb(self) -> tuple[np.ndarray, np.ndarray]:
+    def get_aabb(self) -> Tuple[np.ndarray, np.ndarray]:
         """Get axis-aligned bounding box."""
         return self.bounds_min.copy(), self.bounds_max.copy()
     
@@ -130,7 +132,7 @@ class OctreeNode:
         """Check if point is within this node's AABB."""
         return np.all(point >= self.bounds_min) and np.all(point < self.bounds_max)
     
-    def subdivide(self) -> list['OctreeNode']:
+    def subdivide(self) -> List['OctreeNode']:
         """
         Subdivide this node into 8 children.
         
@@ -240,7 +242,7 @@ class LoDAwareNeRF(nn.Module):
             if m.bias is not None:
                 torch.nn.init.zeros_(m.bias)
     
-    def forward(self, positions: torch.Tensor, directions: torch.Tensor) -> dict[str, torch.Tensor]:
+    def forward(self, positions: torch.Tensor, directions: torch.Tensor) -> Dict[str, torch.Tensor]:
         """
         Forward pass through LoD-aware NeRF.
         
@@ -365,7 +367,7 @@ class InfNeRFRenderer(nn.Module):
         near: float,
         far: float,
         num_samples: int,
-    ) -> tuple[torch.Tensor, torch.Tensor]:
+    ) -> Tuple[torch.Tensor, torch.Tensor]:
         """
         Sample points along rays with LoD-aware sampling.
         
@@ -436,7 +438,7 @@ class InfNeRFRenderer(nn.Module):
         z_vals: torch.Tensor,
         rays_d: torch.Tensor,
         white_bkgd: bool = False,
-    ) -> dict[str, torch.Tensor]:
+    ) -> Dict[str, torch.Tensor]:
         """
         Volume render colors and densities.
         
@@ -503,7 +505,7 @@ class InfNeRF(nn.Module):
         self.renderer = InfNeRFRenderer(config)
         
         # Keep track of all nodes for training
-        self.all_nodes: list[OctreeNode] = [self.root_node]
+        self.all_nodes: List[OctreeNode] = [self.root_node]
         
         # Level selection threshold
         self.level_threshold = config.max_gsd / config.min_gsd
@@ -599,7 +601,7 @@ class InfNeRF(nn.Module):
         focal_length: float,
         pixel_width: float,
         **kwargs,
-    ) -> dict[str, torch.Tensor]:
+    ) -> Dict[str, torch.Tensor]:
         """
         Forward pass through InfNeRF.
         
@@ -664,7 +666,7 @@ class InfNeRF(nn.Module):
         
         return rendered
     
-    def get_memory_usage(self) -> dict[str, float]:
+    def get_memory_usage(self) -> Dict[str, float]:
         """Get memory usage statistics."""
         total_memory = 0
         memory_by_level = {}

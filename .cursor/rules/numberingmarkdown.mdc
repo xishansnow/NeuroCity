@@ -1,0 +1,6 @@
+---
+description: 
+globs: 
+alwaysApply: true
+---
+生成或更新 Markdown文件时，自动矫正章节序号。

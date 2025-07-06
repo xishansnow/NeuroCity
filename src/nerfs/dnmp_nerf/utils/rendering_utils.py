@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from typing import Optional, Union
 """
 Rendering utilities for DNMP.
@@ -12,7 +14,7 @@ import numpy as np
 def generate_camera_rays(
     camera_matrix: torch.Tensor,
     view_matrix: torch.Tensor,
-    image_size: tuple[int, int]
+    image_size: Tuple[int, int]
 ):
     """
     Generate camera rays for given camera parameters.

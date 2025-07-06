@@ -131,12 +131,12 @@ class BlockCompositor:
         self.appearance_matcher = AppearanceMatcher()
         
         # Cache for appearance matched embeddings
-        self.appearance_cache: dict[tuple[str, str, int], torch.Tensor] = {}
+        self.appearance_cache: Dict[Tuple[str, str, int], torch.Tensor] = {}
     
     def compute_interpolation_weights(
         self,
         camera_position: torch.Tensor,
-        block_centers: list[torch.Tensor],
+        block_centers: List[torch.Tensor],
         method: Optional[str] = None
     ):
         """
@@ -188,7 +188,7 @@ class BlockCompositor:
     def render_blocks(
         self,
         blocks: list,
-        block_names: list[str],
+        block_names: List[str],
         ray_origins: torch.Tensor,
         ray_directions: torch.Tensor,
         appearance_ids: torch.Tensor,
@@ -305,7 +305,7 @@ class BlockCompositor:
     
     def composite_blocks(
         self,
-        block_outputs: list[dict[str,
+        block_outputs: List[Dict[str,
         torch.Tensor]],
         interpolation_weights: torch.Tensor,
         camera_position: torch.Tensor   
@@ -351,8 +351,8 @@ class BlockCompositor:
     def render_with_blocks(
         self,
         blocks: list,
-        block_names: list[str],
-        block_centers: list[torch.Tensor],
+        block_names: List[str],
+        block_centers: List[torch.Tensor],
         camera_position: torch.Tensor,
         ray_origins: torch.Tensor,
         ray_directions: torch.Tensor,
@@ -410,10 +410,10 @@ class BlockCompositor:
         self, 
         rays_o: torch.Tensor, 
         rays_d: torch.Tensor, 
-        block_outputs: list[dict[str, torch.Tensor]], 
+        block_outputs: List[Dict[str, torch.Tensor]], 
         block_weights: torch.Tensor, 
         **kwargs
-    ) -> dict[str, torch.Tensor]:
+    ) -> Dict[str, torch.Tensor]:
         """Forward pass for rays"""
         # Implementation of the forward method
         pass 

@@ -37,7 +37,7 @@ class BlockNeRFDataset(Dataset):
         cache_dir: Optional[str] = None,
         load_appearance_ids: bool = True,
         load_exposure: bool = True,
-        background_color: tuple[float,
+        background_color: Tuple[float,
         float,
         float] =,
     )
@@ -88,7 +88,7 @@ class BlockNeRFDataset(Dataset):
         self.num_images = len(self.images)
         print(f"Loaded {self.num_images} images for {split} split")
     
-    def _load_metadata(self) -> dict[str, Any]:
+    def _load_metadata(self) -> Dict[str, Any]:
         """Load dataset metadata"""
         metadata_path = self.data_root / 'metadata.json'
         
@@ -103,7 +103,7 @@ class BlockNeRFDataset(Dataset):
         
         return metadata
     
-    def _load_images_and_poses(self) -> tuple[list[np.ndarray], np.ndarray, np.ndarray]:
+    def _load_images_and_poses(self) -> Tuple[List[np.ndarray], np.ndarray, np.ndarray]:
         """Load images, camera poses, and intrinsics"""
         cache_path = self.cache_dir / f'{self.split}_images_poses.npz'
         
@@ -133,7 +133,7 @@ class BlockNeRFDataset(Dataset):
         
         return images, poses, intrinsics
     
-    def _load_colmap_data(self) -> tuple[list[np.ndarray], np.ndarray, np.ndarray]:
+    def _load_colmap_data(self) -> Tuple[List[np.ndarray], np.ndarray, np.ndarray]:
         """Load COLMAP format data"""
         from .utils.colmap_utils import read_cameras_binary, read_images_binary, read_points3D_binary
         
@@ -209,7 +209,7 @@ class BlockNeRFDataset(Dataset):
         
         return images, poses, intrinsics
     
-    def _load_llff_data(self) -> tuple[list[np.ndarray], np.ndarray, np.ndarray]:
+    def _load_llff_data(self) -> Tuple[List[np.ndarray], np.ndarray, np.ndarray]:
         """Load LLFF format data"""
         poses_bounds = np.load(self.data_root / 'poses_bounds.npy')
         
@@ -251,7 +251,7 @@ class BlockNeRFDataset(Dataset):
         
         return images, poses_4x4, intrinsics
     
-    def _load_custom_data(self) -> tuple[list[np.ndarray], np.ndarray, np.ndarray]:
+    def _load_custom_data(self) -> Tuple[List[np.ndarray], np.ndarray, np.ndarray]:
         """Load custom format data"""
         # Implement custom data loading logic here
         raise NotImplementedError("Custom data format not implemented")
@@ -363,7 +363,7 @@ class BlockNeRFDataset(Dataset):
         else:
             return len(self.images)
     
-    def __getitem__(self, idx: int) -> dict[str, torch.Tensor]:
+    def __getitem__(self, idx: int) -> Dict[str, torch.Tensor]:
         """Get a batch of rays"""
         if self.rays is not None:
             # Return batch of rays
@@ -428,7 +428,7 @@ class BlockNeRFDataset(Dataset):
         """Get all camera positions"""
         return self.poses[:, :3, 3]
     
-    def get_scene_bounds(self) -> tuple[np.ndarray, np.ndarray]:
+    def get_scene_bounds(self) -> Tuple[np.ndarray, np.ndarray]:
         """Get scene bounding box"""
         camera_positions = self.get_camera_positions()
         
@@ -449,6 +449,6 @@ class BlockNeRFDataset(Dataset):
             self, batch_size=batch_size, shuffle=shuffle, num_workers=num_workers, pin_memory=True
         )
 
-    def get_metadata(self) -> dict[str, Any]:
+    def get_metadata(self) -> Dict[str, Any]:
         """Get dataset metadata"""
         return self.metadata 

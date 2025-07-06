@@ -21,12 +21,12 @@ logger = logging.getLogger(__name__)
 class SpatialPartitioner(ABC):
     """Base class for spatial partitioning strategies"""
     
-    def __init__(self, scene_bounds: tuple[float, ...], config: dict[str, Any]):
+    def __init__(self, scene_bounds: Tuple[float, ...], config: Dict[str, Any]):
         self.scene_bounds = scene_bounds
         self.config = config
         
     @abstractmethod
-    def create_partitions(self) -> list[dict[str, Any]]:
+    def create_partitions(self) -> List[Dict[str, Any]]:
         """Create spatial partitions"""
         pass
     
@@ -36,7 +36,7 @@ class SpatialPartitioner(ABC):
         pass
     
     @abstractmethod
-    def get_partition_bounds(self, partition_idx: int) -> tuple[float, ...]:
+    def get_partition_bounds(self, partition_idx: int) -> Tuple[float, ...]:
         """Get bounds for a specific partition"""
         pass
 
@@ -45,13 +45,13 @@ class GridPartitioner(SpatialPartitioner):
     
     def __init__(
         self,
-        scene_bounds: tuple[float,
+        scene_bounds: Tuple[float,
         float,
         float,
         float,
         float,
         float],
-        grid_size: tuple[int,int] = (16, 16),
+        grid_size: Tuple[int,int] = (16, 16),
         overlap_factor: float = 0.15
     ):
         """
@@ -71,7 +71,7 @@ class GridPartitioner(SpatialPartitioner):
         self.overlap_factor = overlap_factor
         self.partitions = self.create_partitions()
         
-    def create_partitions(self) -> list[dict[str, Any]]:
+    def create_partitions(self) -> List[Dict[str, Any]]:
         """Create grid-based partitions"""
         x_min, y_min, z_min, x_max, y_max, z_max = self.scene_bounds
         grid_x, grid_y = self.grid_size
@@ -133,14 +133,14 @@ class GridPartitioner(SpatialPartitioner):
         
         return assignments
     
-    def get_partition_bounds(self, partition_idx: int) -> tuple[float, ...]:
+    def get_partition_bounds(self, partition_idx: int) -> Tuple[float, ...]:
         """Get bounds for a specific partition"""
         if partition_idx >= len(self.partitions):
             raise ValueError(f"Partition index {partition_idx} out of range")
         
         return self.partitions[partition_idx]['bounds']
     
-    def get_partition_bounds_with_overlap(self, partition_idx: int) -> tuple[float, ...]:
+    def get_partition_bounds_with_overlap(self, partition_idx: int) -> Tuple[float, ...]:
         """Get bounds with overlap for a specific partition"""
         if partition_idx >= len(self.partitions):
             raise ValueError(f"Partition index {partition_idx} out of range")
@@ -154,7 +154,7 @@ class GridPartitioner(SpatialPartitioner):
         
         return self.partitions[partition_idx]['centroid'].copy()
     
-    def get_adjacent_partitions(self, partition_idx: int) -> list[int]:
+    def get_adjacent_partitions(self, partition_idx: int) -> List[int]:
         """Get indices of adjacent partitions"""
         if partition_idx >= len(self.partitions):
             raise ValueError(f"Partition index {partition_idx} out of range")
@@ -231,7 +231,7 @@ class GeometryAwarePartitioner(SpatialPartitioner):
     
     def __init__(
         self,
-        scene_bounds: tuple[float,
+        scene_bounds: Tuple[float,
         float,
         float,
         float,
@@ -264,14 +264,14 @@ class GeometryAwarePartitioner(SpatialPartitioner):
         
         self.partitions = self.create_partitions()
     
-    def create_partitions(self) -> list[dict[str, Any]]:
+    def create_partitions(self) -> List[Dict[str, Any]]:
         """Create geometry-aware partitions"""
         if self.use_kmeans:
             return self._create_kmeans_partitions()
         else:
             return self._create_density_based_partitions()
     
-    def _create_kmeans_partitions(self) -> list[dict[str, Any]]:
+    def _create_kmeans_partitions(self) -> List[Dict[str, Any]]:
         """Create partitions using k-means clustering on camera positions"""
         from sklearn.cluster import KMeans
         
@@ -327,7 +327,7 @@ class GeometryAwarePartitioner(SpatialPartitioner):
         logger.info(f"Created {len(partitions)} k-means based partitions")
         return partitions
     
-    def _create_density_based_partitions(self) -> list[dict[str, Any]]:
+    def _create_density_based_partitions(self) -> List[Dict[str, Any]]:
         """Create partitions based on camera density"""
         # Create a 2D histogram of camera positions
         x_min, y_min, z_min, x_max, y_max, z_max = self.scene_bounds
@@ -415,14 +415,14 @@ class GeometryAwarePartitioner(SpatialPartitioner):
         
         return assignments
     
-    def get_partition_bounds(self, partition_idx: int) -> tuple[float, ...]:
+    def get_partition_bounds(self, partition_idx: int) -> Tuple[float, ...]:
         """Get bounds for a specific partition"""
         if partition_idx >= len(self.partitions):
             raise ValueError(f"Partition index {partition_idx} out of range")
         
         return self.partitions[partition_idx]['bounds']
     
-    def get_camera_coverage_stats(self) -> dict[str, Any]:
+    def get_camera_coverage_stats(self) -> Dict[str, Any]:
         """Get statistics about camera coverage for each partition"""
         stats = {}
         

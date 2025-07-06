@@ -13,36 +13,45 @@ Key Features:
 - Distributed training support
 """
 
-from .core import (
-    InfNeRF, InfNeRFConfig, OctreeNode, InfNeRFRenderer, LoDAwareNeRF
-)
+from .core import InfNeRF, InfNeRFConfig, OctreeNode, InfNeRFRenderer, LoDAwareNeRF
 
-from .dataset import (
-    InfNeRFDataset, InfNeRFDatasetConfig
-)
+from .dataset import InfNeRFDataset, InfNeRFDatasetConfig
 
-from .trainer import (
-    InfNeRFTrainer, InfNeRFTrainerConfig, create_inf_nerf_trainer
-)
-
-from .example_usage import demo_inf_nerf, create_inf_nerf_demo
+from .trainer import InfNeRFTrainer, InfNeRFTrainerConfig, create_inf_nerf_trainer
 
 # Utils
-from .utils.octree_utils import (
-    OctreeBuilder, OctreePruner, calculate_gsd
-)
+from .utils.octree_utils import OctreeBuilder, OctreePruner, calculate_gsd
 from .utils.lod_utils import (
-    LoDManager, anti_aliasing_sampling, determine_lod_level, pyramid_supervision
+    LoDManager,
+    anti_aliasing_sampling,
+    determine_lod_level,
+    pyramid_supervision,
 )
-from .utils.rendering_utils import (
-    distributed_rendering, memory_efficient_rendering
-)
+from .utils.rendering_utils import distributed_rendering, memory_efficient_rendering
 
 __version__ = "1.0.0"
 
 __all__ = [
     # Core components
-    "InfNeRF", "InfNeRFConfig", "OctreeNode", "InfNeRFRenderer", "LoDAwareNeRF", # Dataset and training
-    "InfNeRFDataset", "InfNeRFDatasetConfig", "InfNeRFTrainer", "InfNeRFTrainerConfig", "create_inf_nerf_trainer", # Examples
-    "demo_inf_nerf", "create_inf_nerf_demo", # Utils
-    "OctreeBuilder", "OctreePruner", "calculate_gsd", "LoDManager", "anti_aliasing_sampling", "determine_lod_level", "pyramid_supervision", "distributed_rendering", "memory_efficient_rendering", ] 
+    "InfNeRF",
+    "InfNeRFConfig",
+    "OctreeNode",
+    "InfNeRFRenderer",
+    "LoDAwareNeRF",
+    # Dataset and training
+    "InfNeRFDataset",
+    "InfNeRFDatasetConfig",
+    "InfNeRFTrainer",
+    "InfNeRFTrainerConfig",
+    "create_inf_nerf_trainer",
+    # Utils
+    "OctreeBuilder",
+    "OctreePruner",
+    "calculate_gsd",
+    "LoDManager",
+    "anti_aliasing_sampling",
+    "determine_lod_level",
+    "pyramid_supervision",
+    "distributed_rendering",
+    "memory_efficient_rendering",
+]

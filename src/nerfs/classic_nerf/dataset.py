@@ -1,4 +1,6 @@
 """
+from __future__ import annotations
+
 Dataset module for Classic NeRF.
 
 Supports common NeRF datasets including:
@@ -17,7 +19,7 @@ from typing import Any
 import cv2
 
 
-def get_rays_np(H: int, W: int, K: np.ndarray, c2w: np.ndarray) -> tuple[np.ndarray, np.ndarray]:
+def get_rays_np(H: int, W: int, K: np.ndarray, c2w: np.ndarray) -> Tuple[np.ndarray, np.ndarray]:
     """Get ray origins and directions from camera parameters."""
     i, j = np.meshgrid(
         np.arange,
@@ -214,7 +216,7 @@ class BlenderDataset(Dataset):
     def __len__(self) -> int:
         return len(self.rgbs)
     
-    def __getitem__(self, idx: int) -> dict[str, torch.Tensor]:
+    def __getitem__(self, idx: int) -> Dict[str, torch.Tensor]:
         """Get a single ray."""
         return {
             'rays_o': self.rays[idx, 0], 'rays_d': self.rays[idx, 1], 'target': self.rgbs[idx]
@@ -238,7 +240,7 @@ def create_nerf_dataloader(
         raise ValueError(f"Unknown dataset type: {dataset_type}")
     
     # Custom collate function for ray batching
-    def nerf_collate_fn(batch: list[dict[str, torch.Tensor]]) -> dict[str, torch.Tensor]:
+    def nerf_collate_fn(batch: List[Dict[str, torch.Tensor]]) -> Dict[str, torch.Tensor]:
         batch_rays_o = torch.stack([item['rays_o'] for item in batch])
         batch_rays_d = torch.stack([item['rays_d'] for item in batch])
         batch_targets = torch.stack([item['target'] for item in batch])

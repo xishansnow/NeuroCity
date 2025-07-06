@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from typing import Any, Optional
 """
 Visualization utilities for Mip-NeRF
@@ -59,10 +61,10 @@ def visualize_rays(
     plt.show()
 
 def plot_training_curves(
-    losses: dict[str,
-    list[float]],
-    metrics: dict[str,
-    list[float]],
+    losses: Dict[str,
+    List[float]],
+    metrics: Dict[str,
+    List[float]],
     save_path: Optional[str] = None,
 )
     """
@@ -169,7 +171,7 @@ def render_video(
     print(f"Video saved to {output_path}")
 
 def save_rendered_images(
-    images: dict[str,
+    images: Dict[str,
     torch.Tensor],
     output_dir: str,
     prefix: str = "render",

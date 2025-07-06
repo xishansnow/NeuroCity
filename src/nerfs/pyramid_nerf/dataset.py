@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from typing import Any, Optional, Union
 """
 Dataset module for PyNeRF
@@ -23,7 +25,7 @@ class PyNeRFDataset(data.Dataset):
     """
     
     def __init__(
-        self, data_dir: str, split: str = "train", img_downscale: int = 1, use_cache: bool = True, white_background: bool = False, near_far: Optional[tuple[float, float]] = None, **kwargs
+        self, data_dir: str, split: str = "train", img_downscale: int = 1, use_cache: bool = True, white_background: bool = False, near_far: Optional[Tuple[float, float]] = None, **kwargs
     ):
         super().__init__()
         
@@ -193,7 +195,7 @@ class PyNeRFDataset(data.Dataset):
         self.poses = self.poses[indices]
         self.image_paths = [self.image_paths[i] for i in indices]
     
-    def get_rays(self, idx: int) -> tuple[torch.Tensor, torch.Tensor]:
+    def get_rays(self, idx: int) -> Tuple[torch.Tensor, torch.Tensor]:
         """
         Get rays for a specific image
         
@@ -224,7 +226,7 @@ class PyNeRFDataset(data.Dataset):
     def __len__(self):
         return len(self.images)
     
-    def __getitem__(self, idx: int) -> dict[str, torch.Tensor]:
+    def __getitem__(self, idx: int) -> Dict[str, torch.Tensor]:
         """
         Get a single data sample
         
@@ -259,7 +261,7 @@ class MultiScaleDataset(PyNeRFDataset):
     """
     
     def __init__(
-        self, data_dir: str, split: str = "train", scales: list[int] = [1, 2, 4, 8], **kwargs
+        self, data_dir: str, split: str = "train", scales: List[int] = [1, 2, 4, 8], **kwargs
     ):
         self.scales = scales
         super().__init__(data_dir, split, **kwargs)
@@ -297,7 +299,7 @@ class MultiScaleDataset(PyNeRFDataset):
     
     def get_rays_multiscale(
         self, idx: int, scale: int = 1
-    ) -> tuple[torch.Tensor, torch.Tensor]:
+    ) -> Tuple[torch.Tensor, torch.Tensor]:
         """
         Get rays for a specific image at a given scale
         
@@ -328,7 +330,7 @@ class MultiScaleDataset(PyNeRFDataset):
         
         return torch.from_numpy(rays_o), torch.from_numpy(rays_d)
     
-    def __getitem__(self, idx: int) -> dict[str, torch.Tensor]:
+    def __getitem__(self, idx: int) -> Dict[str, torch.Tensor]:
         """
         Get a multi-scale data sample
         
@@ -385,7 +387,7 @@ def create_dataloader(
         dataset, batch_size=batch_size, shuffle=shuffle, num_workers=num_workers, pin_memory=True, **kwargs
     )
 
-def collate_fn(batch: list[dict]) -> dict[str, torch.Tensor]:
+def collate_fn(batch: List[dict]) -> Dict[str, torch.Tensor]:
     """
     Custom collate function for PyNeRF data
     

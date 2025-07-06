@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from typing import Any, Optional
 """
 Dataset module for InfNeRF supporting large-scale scenes and multi-resolution supervision.
@@ -245,7 +247,7 @@ class InfNeRFDataset(Dataset):
         else:
             return len(self.images)
     
-    def __getitem__(self, idx: int) -> dict[str, torch.Tensor]:
+    def __getitem__(self, idx: int) -> Dict[str, torch.Tensor]:
         """
         Get training sample.
         
@@ -296,7 +298,7 @@ class InfNeRFDataset(Dataset):
         intrinsic: np.ndarray,
         extrinsic: np.ndarray,
         num_rays: int,
-    ) -> tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
+    ) -> Tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
         """
         Sample rays from image.
         
@@ -350,7 +352,7 @@ class InfNeRFDataset(Dataset):
         pixel_coords: np.ndarray,
         intrinsic: np.ndarray,
         extrinsic: np.ndarray,
-    ) -> tuple[np.ndarray, np.ndarray]:
+    ) -> Tuple[np.ndarray, np.ndarray]:
         """
         Convert pixel coordinates to 3D rays.
         
@@ -389,7 +391,7 @@ class InfNeRFDataset(Dataset):
         """Get sparse points from SfM."""
         return self.sparse_points.copy()
     
-    def get_all_camera_poses(self) -> list[np.ndarray]:
+    def get_all_camera_poses(self) -> List[np.ndarray]:
         """Get all camera poses for testing."""
         return [ext.copy() for ext in self.extrinsics]
     

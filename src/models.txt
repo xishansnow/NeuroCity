@@ -1,1 +1,0 @@
-block-nerf, classic_nerf, dnmp_nerf, grid_nerf, mega-nerf, mip_nerf, nerfacto, plenoxels, svraster, bungee_nerf, instant_ngp, mega_nerf_plus, pyramid_nerf

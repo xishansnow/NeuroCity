@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from typing import Any, Optional
 """
 CNC-NeRF Dataset Module
@@ -34,7 +36,7 @@ class CNCNeRFDatasetConfig:
     pyramid_levels: int = 4
     min_resolution: int = 64
     use_pyramid_loss: bool = True
-    pyramid_loss_weights: list[float] = None
+    pyramid_loss_weights: List[float] = None
     
     # Training data
     train_split: float = 0.8
@@ -86,7 +88,7 @@ class CNCNeRFDataset(Dataset):
         
         print(f"Loaded {len(self.indices)} {split} views, {len(self.rays)} rays")
     
-    def _load_cameras(self) -> dict[str, Any]:
+    def _load_cameras(self) -> Dict[str, Any]:
         """Load camera parameters from JSON file."""
         cameras_path = Path(self.config.data_root) / self.config.cameras_file
         
@@ -126,7 +128,7 @@ class CNCNeRFDataset(Dataset):
         
         return cameras
     
-    def _load_images(self) -> list[np.ndarray]:
+    def _load_images(self) -> List[np.ndarray]:
         """Load and preprocess images."""
         images = []
         images_dir = Path(self.config.data_root) / self.config.images_dir
@@ -161,7 +163,7 @@ class CNCNeRFDataset(Dataset):
         
         return images
     
-    def _create_image_pyramid(self) -> list[list[np.ndarray]]:
+    def _create_image_pyramid(self) -> List[List[np.ndarray]]:
         """Create multi-resolution image pyramid for pyramid supervision."""
         pyramid = []
         
@@ -181,7 +183,7 @@ class CNCNeRFDataset(Dataset):
         
         return pyramid
     
-    def _create_split(self) -> list[int]:
+    def _create_split(self) -> List[int]:
         """Create train/val/test split indices."""
         num_images = len(self.images)
         indices = list(range(num_images))
@@ -198,7 +200,7 @@ class CNCNeRFDataset(Dataset):
             start_idx = int(num_images * (self.config.train_split + self.config.val_split))
             return indices[start_idx:]
     
-    def _precompute_rays(self) -> tuple[torch.Tensor, torch.Tensor]:
+    def _precompute_rays(self) -> Tuple[torch.Tensor, torch.Tensor]:
         """Pre-compute rays and colors for all pixels."""
         all_rays = []
         all_colors = []
@@ -223,7 +225,7 @@ class CNCNeRFDataset(Dataset):
         intrinsic: np.ndarray,
         extrinsic: np.ndarray,
         image: np.ndarray,
-    ) -> tuple[torch.Tensor, torch.Tensor]:
+    ) -> Tuple[torch.Tensor, torch.Tensor]:
         """Generate rays for a single image."""
         H, W = image.shape[:2]
         
@@ -261,7 +263,7 @@ class CNCNeRFDataset(Dataset):
         
         return torch.from_numpy(rays).float(), torch.from_numpy(colors).float()
     
-    def get_pyramid_targets(self, ray_indices: torch.Tensor) -> list[torch.Tensor]:
+    def get_pyramid_targets(self, ray_indices: torch.Tensor) -> List[torch.Tensor]:
         """Get multi-resolution targets for pyramid supervision."""
         if not self.config.use_pyramid_loss:
             return [self.colors[ray_indices]]
@@ -290,7 +292,7 @@ class CNCNeRFDataset(Dataset):
         """Get dataset size."""
         return len(self.rays) // self.config.num_rays_per_batch
     
-    def __getitem__(self, idx: int) -> dict[str, torch.Tensor]:
+    def __getitem__(self, idx: int) -> Dict[str, torch.Tensor]:
         """Get a batch of rays and colors."""
         # Sample random rays
         if self.split == 'train':
@@ -436,8 +438,8 @@ def create_synthetic_dataset(
     return CNCNeRFDataset(config, split='train')
 
 def compute_pyramid_loss(
-    predictions: list[torch.Tensor],
-    targets: list[torch.Tensor],
+    predictions: List[torch.Tensor],
+    targets: List[torch.Tensor],
     weights: torch.Tensor,
 ) -> torch.Tensor:
     """Compute multi-resolution pyramid loss."""

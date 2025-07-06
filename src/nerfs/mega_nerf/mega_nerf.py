@@ -42,13 +42,13 @@ class MegaNeRFConfig:
     """Mega-NeRF配置参数"""
     # 场景分解参数
     num_submodules: int = 8
-    grid_size: tuple[int, int] = (4, 2)  # 2D网格分解
+    grid_size: Tuple[int, int] = (4, 2)  # 2D网格分解
     overlap_factor: float = 0.15
     
     # 网络参数
     hidden_dim: int = 256
     num_layers: int = 8
-    skip_connections: list[int] = None
+    skip_connections: List[int] = None
     use_viewdirs: bool = True
     
     # 训练参数
@@ -68,7 +68,7 @@ class MegaNeRFConfig:
     appearance_dim: int = 48
     
     # 边界参数
-    scene_bounds: tuple[float, float, float, float, float, float] = (-100, -100, -10, 100, 100, 50)
+    scene_bounds: Tuple[float, float, float, float, float, float] = (-100, -100, -10, 100, 100, 50)
     foreground_ratio: float = 0.8
     
     def __post_init__(self):

@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from typing import Optional
 """
 CNC-NeRF Trainer Module
@@ -106,7 +108,7 @@ class CNCNeRFTrainer:
         print(f"Trainer initialized on device: {self.device}")
         print(f"Model parameters: {sum(p.numel() for p in self.model.parameters()):, }")
     
-    def volume_render(self, rays: torch.Tensor, num_samples: int = 64) -> dict[str, torch.Tensor]:
+    def volume_render(self, rays: torch.Tensor, num_samples: int = 64) -> Dict[str, torch.Tensor]:
         """Volume rendering with the CNC model."""
         rays_o, rays_d = rays[..., :3], rays[..., 3:6]
         near, far = rays[..., 6:7], rays[..., 7:8]
@@ -157,11 +159,11 @@ class CNCNeRFTrainer:
     
     def compute_losses(
         self,
-        batch: dict[str,
+        batch: Dict[str,
         torch.Tensor],
-        outputs: dict[str,
+        outputs: Dict[str,
         torch.Tensor],
-    ) -> dict[str, torch.Tensor]:
+    ) -> Dict[str, torch.Tensor]:
         """Compute all losses."""
         losses = {}
         
@@ -210,7 +212,7 @@ class CNCNeRFTrainer:
         
         return losses
     
-    def compute_metrics(self, predictions: torch.Tensor, targets: torch.Tensor) -> dict[str, float]:
+    def compute_metrics(self, predictions: torch.Tensor, targets: torch.Tensor) -> Dict[str, float]:
         """Compute evaluation metrics."""
         mse = F.mse_loss(predictions, targets).item()
         psnr = -10.0 * np.log10(mse) if mse > 0 else 100.0
@@ -219,7 +221,7 @@ class CNCNeRFTrainer:
             'mse': mse, 'psnr': psnr
         }
     
-    def train_step(self, batch: dict[str, torch.Tensor]) -> dict[str, float]:
+    def train_step(self, batch: Dict[str, torch.Tensor]) -> Dict[str, float]:
         """Single training step."""
         self.model.train()
         
@@ -255,7 +257,7 @@ class CNCNeRFTrainer:
         
         return result
     
-    def validate(self) -> dict[str, float]:
+    def validate(self) -> Dict[str, float]:
         """Run validation."""
         if self.val_dataset is None:
             return {}
@@ -294,7 +296,7 @@ class CNCNeRFTrainer:
         
         return avg_metrics
     
-    def save_checkpoint(self, metrics: dict[str, float]):
+    def save_checkpoint(self, metrics: Dict[str, float]):
         """Save model checkpoint."""
         checkpoint = {
             'epoch': self.epoch, 'global_step': self.global_step, 'model_state_dict': self.model.state_dict(

@@ -78,7 +78,7 @@ class NeRFTrainer:
         """Setup tensorboard logging."""
         self.writer = SummaryWriter(log_dir)
     
-    def train_step(self, batch: dict[str, torch.Tensor]) -> dict[str, float]:
+    def train_step(self, batch: Dict[str, torch.Tensor]) -> Dict[str, float]:
         """
         Single training step.
         
@@ -129,7 +129,7 @@ class NeRFTrainer:
         
         return {k: v.item() if torch.is_tensor(v) else v for k, v in losses.items()}
     
-    def validate(self, val_loader: DataLoader) -> dict[str, float]:
+    def validate(self, val_loader: DataLoader) -> Dict[str, float]:
         """
         Run validation.
         
@@ -355,7 +355,7 @@ class NeRFTrainer:
             self.save_checkpoint(ckpt_dir, num_epochs - 1, is_final=True)
     
     def save_checkpoint(
-        self, save_dir: str, epoch: int, is_final: bool = False, extra_state: Optional[dict[str, Any]] = None
+        self, save_dir: str, epoch: int, is_final: bool = False, extra_state: Optional[Dict[str, Any]] = None
     ) -> None:
         """Save model checkpoint."""
         if save_dir is None:

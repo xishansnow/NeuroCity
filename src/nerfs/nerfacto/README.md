@@ -33,11 +33,11 @@ pip install scipy matplotlib
 ### 1. Basic Usage
 
 ```python
-from src.nerfacto import NerfactoModel, NerfactoConfig, NerfactoTrainer
+from src.nerfacto import NerfactoModel, NeRFactoConfig, NerfactoTrainer
 from src.nerfacto.dataset import NerfactoDatasetConfig
 
 # Create model configuration
-model_config = NerfactoConfig(
+model_config = NeRFactoConfig(
     num_levels=16,
     base_resolution=16,
     max_resolution=2048,
@@ -147,13 +147,13 @@ data/
 
 ### 📊 Performance Comparison
 
-| Metric | Classic NeRF | Nerfacto | Improvement |
-|--------|--------------|----------|-------------|
-| Training Time | 1-2 days | 30-60 min | **25-50x faster** |
-| Inference Speed | 10-30 sec/image | 1-3 sec/image | **5-15x faster** |
-| Model Size | 100-500 MB | 20-80 MB | **3-8x smaller** |
-| GPU Memory | 8-16 GB | 3-6 GB | **2-3x less** |
-| Quality (PSNR) | Baseline | +1.0-2.0 dB | **Better quality** |
+| Metric          | Classic NeRF    | Nerfacto      | Improvement        |
+| --------------- | --------------- | ------------- | ------------------ |
+| Training Time   | 1-2 days        | 30-60 min     | **25-50x faster**  |
+| Inference Speed | 10-30 sec/image | 1-3 sec/image | **5-15x faster**   |
+| Model Size      | 100-500 MB      | 20-80 MB      | **3-8x smaller**   |
+| GPU Memory      | 8-16 GB         | 3-6 GB        | **2-3x less**      |
+| Quality (PSNR)  | Baseline        | +1.0-2.0 dB   | **Better quality** |
 
 ### 🎯 Use Cases
 - **Production Rendering**: High-quality novel view synthesis for media
@@ -185,7 +185,7 @@ Nerfacto uses a modern NeRF architecture with:
 
 ```python
 @dataclass
-class NerfactoConfig:
+class NeRFactoConfig:
     # Hash encoding
     num_levels: int = 16
     base_resolution: int = 16

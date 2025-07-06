@@ -1,0 +1,6 @@
+---
+description: 
+globs: 
+alwaysApply: true
+---
+when use terminal to run some thing, please auto `conda activate neurocity`. `neurocity` is my customized conda environment.

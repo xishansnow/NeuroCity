@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from typing import Any, Optional
 """
 Memory management components for Mega-NeRF++
@@ -91,7 +93,7 @@ class MemoryManager:
                 )
             })
     
-    def get_memory_stats(self) -> dict[str, float]:
+    def get_memory_stats(self) -> Dict[str, float]:
         """Get current memory statistics"""
         self._update_memory_stats()
         return self.memory_stats.copy()
@@ -401,7 +403,7 @@ class StreamingDataLoader:
         except queue.Empty:
             raise StopIteration
     
-    def _collate_batch(self, batch_data: list[dict]) -> dict[str, torch.Tensor]:
+    def _collate_batch(self, batch_data: List[dict]) -> Dict[str, torch.Tensor]:
         """Collate batch data"""
         
         if not batch_data:
@@ -523,7 +525,7 @@ class MemoryOptimizer:
         return tensor.numel() * tensor.element_size() / (1024**2)
     
     @staticmethod
-    def get_model_memory_usage(model: nn.Module) -> dict[str, float]:
+    def get_model_memory_usage(model: nn.Module) -> Dict[str, float]:
         """Get detailed memory usage of model components"""
         
         memory_usage = {}

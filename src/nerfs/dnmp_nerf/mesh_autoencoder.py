@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from typing import Optional
 """
 Mesh AutoEncoder for DNMP.
@@ -37,7 +39,7 @@ class MeshEncoder(nn.Module):
         self,
         input_dim: int = 3,
         latent_dim: int = 128,
-        hidden_dims: tuple[int, ...] = (256, 128, 64, 32),
+        hidden_dims: Tuple[int, ...] = (256, 128, 64, 32),
     ):
         super().__init__()
 
@@ -127,7 +129,7 @@ class MeshDecoder(nn.Module):
         latent_dim: int = 128,
         output_dim: int = 3,
         num_vertices: int = None,
-        hidden_dims: tuple[int, ...] = (256, 128, 64, 32),
+        hidden_dims: Tuple[int, ...] = (256, 128, 64, 32),
     ):
         super().__init__()
 
@@ -237,7 +239,7 @@ class MeshAutoEncoder(nn.Module):
         self,
         latent_dim: int = 128,
         num_vertices: int = None,
-        hidden_dims: tuple[int, ...] = (256, 128, 64, 32),
+        hidden_dims: Tuple[int, ...] = (256, 128, 64, 32),
     ):
         super().__init__()
 

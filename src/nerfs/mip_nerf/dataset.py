@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from typing import Any, Optional
 """
 Dataset module for Mip-NeRF
@@ -26,7 +28,7 @@ class MipNeRFDataset(data.Dataset):
         self,
         data_dir: str,
         split: str = 'train',
-        img_wh: Optional[tuple[int,int]] = None,
+        img_wh: Optional[Tuple[int,int]] = None,
         white_bkgd: bool = False,
         half_res: bool = False,
         testskip: int = 1,
@@ -70,7 +72,7 @@ class MipNeRFDataset(data.Dataset):
             'rays': self.rays[idx], 'rgbs': self.rgbs[idx]
         }
     
-    def get_rays(self, pose: torch.Tensor, H: int, W: int, focal: float) -> dict[str, torch.Tensor]:
+    def get_rays(self, pose: torch.Tensor, H: int, W: int, focal: float) -> Dict[str, torch.Tensor]:
         """
         Generate rays from camera pose and intrinsics
         
@@ -404,7 +406,7 @@ def create_mip_nerf_dataloader(
             dataset, batch_size=batch_size, shuffle=shuffle, num_workers=num_workers, pin_memory=pin_memory
         )
 
-def collate_fn(batch: list[dict[str, torch.Tensor]]) -> dict[str, torch.Tensor]:
+def collate_fn(batch: List[Dict[str, torch.Tensor]]) -> Dict[str, torch.Tensor]:
     """
     Custom collate function for MipNeRF data
     

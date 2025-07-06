@@ -147,4 +147,52 @@ __device__ float3 alpha_compositing(
 // Utility functions
 void radix_sort_voxels(Voxel* voxels, int num_voxels);
 
+// Kernel launch wrapper functions
+void launch_ray_voxel_intersection_kernel(
+    int grid_size, int block_size,
+    const Ray* rays,
+    const Voxel* voxels,
+    int* intersection_counts,
+    int* intersection_indices,
+    float* intersection_t_near,
+    float* intersection_t_far,
+    int num_rays,
+    int num_voxels,
+    int max_intersections_per_ray
+);
+
+void launch_voxel_rasterization_kernel(
+    int grid_size, int block_size,
+    const Ray* rays,
+    const Voxel* voxels,
+    const int* intersection_counts,
+    const int* intersection_indices,
+    const float* intersection_t_near,
+    const float* intersection_t_far,
+    float3* output_colors,
+    float* output_depths,
+    int num_rays,
+    int max_intersections_per_ray,
+    float3 background_color
+);
+
+void launch_compute_morton_codes_kernel(
+    int grid_size, int block_size,
+    Voxel* voxels,
+    const float3 scene_min,
+    const float3 scene_size,
+    int num_voxels
+);
+
+void launch_adaptive_subdivision_kernel(
+    int grid_size, int block_size,
+    Voxel* voxels,
+    const float* voxel_gradients,
+    int* subdivision_flags,
+    int* new_voxel_count,
+    float subdivision_threshold,
+    int max_level,
+    int num_voxels
+);
+
 #endif // SVRASTER_CUDA_KERNEL_H 

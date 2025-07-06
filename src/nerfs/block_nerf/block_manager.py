@@ -27,11 +27,11 @@ class BlockManager:
     
     def __init__(
         self,
-        scene_bounds: tuple[tuple[float,
+        scene_bounds: Tuple[Tuple[float,
         float],
-        tuple[float,
+        Tuple[float,
         float],
-        tuple[float,
+        Tuple[float,
         float]],
         block_size: float = 75.0,
         overlap_ratio: float = 0.5,
@@ -52,9 +52,9 @@ class BlockManager:
         self.device = device
         
         # Storage for blocks
-        self.blocks: dict[str, BlockNeRF] = {}
-        self.block_centers: dict[str, torch.Tensor] = {}
-        self.block_metadata: dict[str, dict] = {}
+        self.blocks: Dict[str, BlockNeRF] = {}
+        self.block_centers: Dict[str, torch.Tensor] = {}
+        self.block_metadata: Dict[str, dict] = {}
         
         # Visibility network (shared across blocks)
         self.visibility_network = VisibilityNetwork().to(device)
@@ -192,7 +192,7 @@ class BlockManager:
     def get_training_blocks_for_image(
         self,
         camera_position: torch.Tensor,
-        image_bounds: Optional[tuple[torch.Tensor,
+        image_bounds: Optional[Tuple[torch.Tensor,
         torch.Tensor]] = None
     ):
         """
@@ -222,7 +222,7 @@ class BlockManager:
     def compute_block_weights(
         self,
         camera_position: torch.Tensor,
-        block_names: list[str],
+        block_names: List[str],
         power: float = 2.0  
     ):
         """
@@ -381,10 +381,10 @@ class BlockManager:
 
     def forward(
         self, rays_o: torch.Tensor, rays_d: torch.Tensor, **kwargs
-    ) -> dict[str, torch.Tensor]:
+    ) -> Dict[str, torch.Tensor]:
         # Implementation of forward method
         pass
 
-    def get_block_info(self) -> dict[str, Union[torch.Tensor, float, list[float]]]:
+    def get_block_info(self) -> Dict[str, Union[torch.Tensor, float, List[float]]]:
         # Implementation of get_block_info method
         pass 

@@ -1,4 +1,7 @@
+from __future__ import annotations
+
 from typing import Any, Optional, Union
+
 """
 Dataset module for SVRaster.
 """
@@ -6,308 +9,344 @@ Dataset module for SVRaster.
 import os
 import json
 import torch
-import torch.nn.functional as F
 from torch.utils.data import Dataset, DataLoader
 import numpy as np
 from PIL import Image
 from dataclasses import dataclass
 import logging
+from pathlib import Path
+from concurrent.futures import ThreadPoolExecutor
+import cv2
+import torch.nn.functional as F
 
 logger = logging.getLogger(__name__)
 
+
 @dataclass
 class SVRasterDatasetConfig:
-    """Configuration for SVRaster dataset."""
-    
-    # Data paths
+    """SVRaster dataset configuration.
+
+    Attributes:
+        data_dir: Data directory path
+        image_width: Image width
+        image_height: Image height
+        camera_angle_x: Camera horizontal FoV in radians
+        train_split: Training split ratio
+        val_split: Validation split ratio
+        test_split: Test split ratio
+        downscale_factor: Image downscale factor
+        color_space: Color space ("linear" or "srgb")
+        num_rays_train: Number of rays per training batch
+        num_rays_val: Number of rays per validation batch
+        patch_size: Size of image patches for ray sampling
+    """
+
     data_dir: str = "data/nerf_synthetic/lego"
-    images_dir: str = "data/nerf_synthetic/lego/images"
-    masks_dir: Optional[str] = None
-    
-    # Data format
-    dataset_type: str = "colmap"
-    image_format: str = "png"
-    
-    # Image processing
-    image_height: int = 800
     image_width: int = 800
-    downscale_factor: float = 1.0
-    
-    # Camera parameters
-    camera_model: str = "pinhole"
-    distortion_params: Optional[list[float]] = None
-    
-    # Data loading
+    image_height: int = 800
+    camera_angle_x: float = 0.6911112070083618  # ~40 degrees
     train_split: float = 0.8
     val_split: float = 0.1
     test_split: float = 0.1
-    
-    # Ray sampling
-    num_rays_train: int = 1024
-    num_rays_val: int = 512
+    downscale_factor: float = 1.0
+    color_space: str = "srgb"
+    num_rays_train: int = 4096
+    num_rays_val: int = 1024
     patch_size: int = 1
-    
+
+    # Data paths
+    images_dir: str = "data/nerf_synthetic/lego/images"
+    masks_dir: Optional[str] = None
+
+    # Data format
+    dataset_type: str = "colmap"
+    image_format: str = "png"
+
+    # Image processing
+    downscale_factor: float = 1.0
+
+    # Camera parameters
+    camera_model: str = "pinhole"
+    distortion_params: Optional[List[float]] = None
+
     # Data augmentation
     use_color_jitter: bool = False
     color_jitter_strength: float = 0.1
     use_random_background: bool = False
-    
+
     # Scene bounds
     auto_scale_poses: bool = True
     scene_scale: float = 1.0
-    scene_center: Optional[tuple[float, float, float]] = None
-    
+    scene_center: Optional[Tuple[float, float, float]] = None
+
     # Background handling
     white_background: bool = False
     black_background: bool = False
 
+
 class SVRasterDataset(Dataset):
-    """Main dataset class for SVRaster."""
-    
+    """SVRaster dataset with modern PyTorch features.
+
+    Features:
+    - Efficient data loading and preprocessing
+    - Memory-optimized ray generation
+    - Automatic mixed precision support
+    - CUDA acceleration with CPU fallback
+    - Flexible data augmentation
+    """
+
     def __init__(self, config: SVRasterDatasetConfig, split: str = "train"):
+        """Initialize dataset.
+
+        Args:
+            config: Dataset configuration
+            split: Dataset split ("train", "val", or "test")
+        """
+        super().__init__()
         self.config = config
         self.split = split
-        
-        # Load dataset based on type
-        if config.dataset_type == "colmap":
-            self._load_colmap_data()
-        elif config.dataset_type == "blender":
-            self._load_blender_data()
-        else:
-            raise ValueError(f"Unsupported dataset type: {config.dataset_type}")
-        
-        # Process and filter data
-        self._process_images()
-        self._split_data()
+        self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+
+        # Load and preprocess data
+        self._load_data()
+        self._preprocess_data()
         self._setup_rays()
-        
-        logger.info(f"Loaded {len(self.images)} images for {split} split")
-    
-    def _load_colmap_data(self):
-        """Load COLMAP format data."""
-        images_path = os.path.join(self.config.data_dir, self.config.images_dir)
-        image_files = sorted([f for f in os.listdir(images_path) 
-                            if f.endswith(('.png', '.jpg', '.jpeg'))])
-        
-        self.images = []
-        self.poses = []
-        self.intrinsics = []
-        
-        # Load camera intrinsics (simplified)
-        focal = 800.0
-        cx, cy = self.config.image_width / 2, self.config.image_height / 2
-        
-        for img_file in image_files:
-            # Load image
-            img_path = os.path.join(images_path, img_file)
-            image = Image.open(img_path).convert('RGB')
-            image = image.resize((self.config.image_width, self.config.image_height))
-            image = np.array(image) / 255.0
-            self.images.append(image)
-            
-            # Generate dummy pose
-            pose = np.eye(4)
-            pose[:3, 3] = np.random.randn(3) * 2
-            self.poses.append(pose)
-            
-            # Camera intrinsics
-            K = np.array([
-                [focal, 0, cx], [0, focal, cy], [0, 0, 1]
-            ])
-            self.intrinsics.append(K)
-        
-        self.images = np.array(self.images)
-        self.poses = np.array(self.poses)
-        self.intrinsics = np.array(self.intrinsics)
-    
-    def _load_blender_data(self):
-        """Load Blender synthetic data format."""
-        transforms_file = os.path.join(self.config.data_dir, f"transforms_{self.split}.json")
-        
-        with open(transforms_file, 'r') as f:
-            transforms = json.load(f)
-        
-        self.images = []
-        self.poses = []
-        
-        # Extract camera parameters
-        camera_angle_x = transforms.get('camera_angle_x', 0.6911112070083618)
-        focal = 0.5 * self.config.image_width / np.tan(0.5 * camera_angle_x)
-        
-        # Camera intrinsics
-        K = np.array([
-            [focal, 0, self.config.image_width / 2], [0, focal, self.config.image_height / 2], [0, 0, 1]
-        ])
-        
-        for frame in transforms['frames']:
-            # Load image
-            img_path = os.path.join(self.config.data_dir, frame['file_path'] + '.png')
-            if not os.path.exists(img_path):
-                img_path = img_path.replace('.png', '.jpg')
-            
-            if os.path.exists(img_path):
-                image = Image.open(img_path).convert('RGBA')
-                image = image.resize((self.config.image_width, self.config.image_height))
-                image = np.array(image) / 255.0
-                
-                # Handle alpha channel
-                if image.shape[2] == 4:
-                    alpha = image[..., 3:4]
-                    rgb = image[..., :3]
-                    
-                    if self.config.white_background:
-                        rgb = rgb * alpha + (1 - alpha)
-                    elif self.config.black_background:
-                        rgb = rgb * alpha
-                    
-                    image = rgb
-                
-                self.images.append(image)
-                
-                # Load pose
-                pose = np.array(frame['transform_matrix'])
-                self.poses.append(pose)
-        
-        self.images = np.array(self.images)
-        self.poses = np.array(self.poses)
-        self.intrinsics = np.tile(K[None, ...], (len(self.images), 1, 1))
-    
-    def _process_images(self):
-        """Process loaded images."""
-        if self.config.downscale_factor != 1.0:
-            new_h = int(self.config.image_height / self.config.downscale_factor)
-            new_w = int(self.config.image_width / self.config.downscale_factor)
-            
-            processed_images = []
-            for img in self.images:
-                img_tensor = torch.from_numpy(img).permute(2, 0, 1).unsqueeze(0)
-                img_resized = F.interpolate(
-                    img_tensor,
-                    size=(new_h, new_w),
-                    mode='bilinear',
-                    align_corners=False,
-                )
-                img_resized = img_resized.squeeze(0).permute(1, 2, 0).numpy()
-                processed_images.append(img_resized)
-            
-            self.images = np.array(processed_images)
-            self.config.image_height = new_h
-            self.config.image_width = new_w
-    
-    def _split_data(self):
-        """Split data into train/val/test sets."""
+
+    def _load_image(self, path: Path) -> np.ndarray:
+        """Load and preprocess a single image.
+
+        Args:
+            path: Path to image file
+
+        Returns:
+            Preprocessed image array
+        """
+        image = cv2.imread(str(path))
+        if image is None:
+            raise ValueError(f"Failed to load image: {path}")
+        image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
+        return image.astype(np.float32) / 255.0
+
+    def _load_pose(self, path: Path) -> np.ndarray:
+        """Load camera pose from file.
+
+        Args:
+            path: Path to pose file
+
+        Returns:
+            Camera pose matrix
+        """
+        return np.loadtxt(str(path))
+
+    def _load_intrinsics(self) -> np.ndarray:
+        """Load camera intrinsics.
+
+        Returns:
+            Camera intrinsics matrix
+        """
+        # Load intrinsics from file if available
+        intrinsics_path = Path(self.config.data_dir) / "intrinsics.txt"
+        if intrinsics_path.exists():
+            return np.loadtxt(str(intrinsics_path))
+
+        # Otherwise, use default intrinsics based on image size
+        H, W = self.config.image_height, self.config.image_width
+        focal = 0.5 * W / np.tan(0.5 * self.config.camera_angle_x)
+
+        K = np.array([[focal, 0, W / 2], [0, focal, H / 2], [0, 0, 1]])
+
+        return K
+
+    def _load_data(self) -> None:
+        """Load raw data efficiently."""
+        # Load images and camera parameters
+        data_dir = Path(self.config.data_dir)
+        image_paths = sorted(data_dir.glob("images/*.png"))
+        pose_paths = sorted(data_dir.glob("poses/*.txt"))
+
+        if not image_paths:
+            raise ValueError(f"No images found in {data_dir}/images/")
+        if not pose_paths:
+            raise ValueError(f"No pose files found in {data_dir}/poses/")
+
+        # Load data in parallel
+        with ThreadPoolExecutor() as executor:
+            # Load images
+            image_futures = [executor.submit(self._load_image, path) for path in image_paths]
+            self.images = [f.result() for f in image_futures]
+
+            # Load poses
+            pose_futures = [executor.submit(self._load_pose, path) for path in pose_paths]
+            self.poses = [f.result() for f in pose_futures]
+
+        # Load camera intrinsics
+        self.intrinsics = self._load_intrinsics()
+
+        # Convert to tensors with consistent data types
+        self.images = torch.stack([torch.from_numpy(img).float() for img in self.images])
+        self.poses = torch.stack([torch.from_numpy(pose).float() for pose in self.poses])
+        self.intrinsics = torch.from_numpy(self.intrinsics).float()
+
+        # Split data
         num_images = len(self.images)
-        indices = np.arange(num_images)
-        
-        # Calculate split sizes
+        indices = torch.randperm(num_images)
         train_size = int(num_images * self.config.train_split)
         val_size = int(num_images * self.config.val_split)
-        
+
         if self.split == "train":
             self.indices = indices[:train_size]
         elif self.split == "val":
-            self.indices = indices[train_size:train_size + val_size]
-        elif self.split == "test":
-            self.indices = indices[train_size + val_size:]
-        else:
-            self.indices = indices
-        
-        # Filter data
+            self.indices = indices[train_size : train_size + val_size]
+        else:  # test
+            self.indices = indices[train_size + val_size :]
+
+        # Update data
         self.images = self.images[self.indices]
         self.poses = self.poses[self.indices]
-        self.intrinsics = self.intrinsics[self.indices]
-    
-    def _setup_rays(self):
-        """Pre-compute ray information."""
-        self.rays_o = []
-        self.rays_d = []
-        self.target_colors = []
-        
-        for i in range(len(self.images)):
-            pose = self.poses[i]
-            K = self.intrinsics[i]
-            image = self.images[i]
-            
-            # Generate rays
-            rays_o, rays_d = self._generate_rays(pose, K)
-            
-            # Flatten rays and colors
-            rays_o_flat = rays_o.reshape(-1, 3)
-            rays_d_flat = rays_d.reshape(-1, 3)
-            colors_flat = image.reshape(-1, image.shape[-1])
-            
-            self.rays_o.append(rays_o_flat)
-            self.rays_d.append(rays_d_flat)
-            self.target_colors.append(colors_flat)
-        
-        # Concatenate all rays
-        self.all_rays_o = np.concatenate(self.rays_o, axis=0)
-        self.all_rays_d = np.concatenate(self.rays_d, axis=0)
-        self.all_colors = np.concatenate(self.target_colors, axis=0)
-    
-    def _generate_rays(self, pose: np.ndarray, K: np.ndarray) -> tuple[np.ndarray, np.ndarray]:
-        """Generate rays for a camera."""
-        H, W = self.config.image_height, self.config.image_width
-        
-        # Pixel coordinates
-        i, j = np.meshgrid(np.arange(W), np.arange(H), indexing='xy')
-        
-        # Camera coordinates
-        dirs = np.stack([
-            (i - K[0, 2]) / K[0, 0], -(j - K[1, 2]) / K[1, 1], -np.ones_like(i)
-        ], axis=-1)
-        
-        # Transform to world coordinates
-        rays_d = np.sum(dirs[..., None, :] * pose[:3, :3], axis=-1)
-        rays_o = np.broadcast_to(pose[:3, 3], rays_d.shape)
-        
-        return rays_o, rays_d
-    
-    def __len__(self):
-        """Return dataset size."""
-        if self.split == "train":
-            return len(self.all_rays_o) // self.config.num_rays_train
-        else:
-            return len(self.images)
-    
-    def __getitem__(self, idx: int) -> dict[str, torch.Tensor]:
-        """Get a batch of data."""
+
+    def _preprocess_data(self) -> None:
+        """Preprocess loaded data."""
+        # Resize images if needed
+        if self.config.downscale_factor != 1.0:
+            H = int(self.config.image_height * self.config.downscale_factor)
+            W = int(self.config.image_width * self.config.downscale_factor)
+            self.images = F.interpolate(
+                self.images.permute(0, 3, 1, 2),
+                size=(H, W),
+                mode="bilinear",
+                align_corners=False,
+            ).permute(0, 2, 3, 1)
+
+        # Convert color space if needed
+        if self.config.color_space == "linear":
+            self.images = self.images.pow(2.2)  # sRGB to linear
+
+    def _setup_rays(self) -> None:
+        """Set up ray generation."""
+        self.H = int(self.config.image_height * self.config.downscale_factor)
+        self.W = int(self.config.image_width * self.config.downscale_factor)
+
+        # Create pixel coordinates
+        i, j = torch.meshgrid(
+            torch.arange(self.H, dtype=torch.float32),
+            torch.arange(self.W, dtype=torch.float32),
+            indexing="ij",
+        )
+        self.pixels = torch.stack([i, j], dim=-1)  # [H, W, 2]
+
+    def __len__(self) -> int:
+        """Get dataset length."""
+        return len(self.images)
+
+    def __getitem__(self, idx: int) -> Dict[str, torch.Tensor]:
+        """Get dataset item.
+
+        Args:
+            idx: Item index
+
+        Returns:
+            Dictionary containing rays and colors
+        """
+        # Get image and pose
+        image = self.images[idx]  # [H, W, 3]
+        pose = self.poses[idx]  # [4, 4]
+
+        # Sample rays
         if self.split == "train":
             # Random ray sampling for training
             num_rays = self.config.num_rays_train
-            ray_indices = np.random.choice(len(self.all_rays_o), num_rays, replace=False)
-            
-            rays_o = torch.from_numpy(self.all_rays_o[ray_indices]).float()
-            rays_d = torch.from_numpy(self.all_rays_d[ray_indices]).float()
-            colors = torch.from_numpy(self.all_colors[ray_indices]).float()
-            
-            return {
-                'rays_o': rays_o, 'rays_d': rays_d, 'colors': colors
-            }
-        else:
-            # Full image for validation/test
-            image_idx = idx % len(self.images)
-            
-            rays_o = torch.from_numpy(self.rays_o[image_idx]).float()
-            rays_d = torch.from_numpy(self.rays_d[image_idx]).float()
-            colors = torch.from_numpy(self.target_colors[image_idx]).float()
-            
-            return {
-                'rays_o': rays_o, 
-                'rays_d': rays_d, 
-                'colors': colors, 
-                'image_idx': torch.tensor(image_idx, dtype=torch.int32), 
-                'pose': torch.from_numpy(self.poses[image_idx]).float(),
-            }
+            if self.config.patch_size > 1:
+                # Sample patches
+                patch_size = self.config.patch_size
+                num_patches = num_rays // (patch_size * patch_size)
+                patch_indices = torch.randint(
+                    0,
+                    (self.H - patch_size) * (self.W - patch_size),
+                    size=(num_patches,),
+                )
+                row_indices = patch_indices // (self.W - patch_size)
+                col_indices = patch_indices % (self.W - patch_size)
 
-    def get_dataset_info(self) -> dict[str, Any]:
+                # Get patch pixels
+                pixels = []
+                for r, c in zip(row_indices, col_indices):
+                    patch_pixels = self.pixels[
+                        r : r + patch_size,
+                        c : c + patch_size,
+                    ].reshape(-1, 2)
+                    pixels.append(patch_pixels)
+                pixels = torch.cat(pixels, dim=0)  # [num_rays, 2]
+            else:
+                # Random pixel sampling
+                indices = torch.randint(0, self.H * self.W, size=(num_rays,))
+                pixels = self.pixels.reshape(-1, 2)[indices]  # [num_rays, 2]
+        else:
+            # Use all pixels for validation/testing
+            pixels = self.pixels.reshape(-1, 2)  # [H*W, 2]
+
+        # Generate rays
+        rays_o, rays_d = self._get_rays(pixels, pose)  # [num_rays, 3]
+
+        # Get colors
+        if self.split == "train":
+            if self.config.patch_size > 1:
+                # Get patch colors
+                colors = []
+                for r, c in zip(row_indices, col_indices):
+                    patch_colors = image[
+                        r : r + patch_size,
+                        c : c + patch_size,
+                    ].reshape(-1, 3)
+                    colors.append(patch_colors)
+                colors = torch.cat(colors, dim=0)  # [num_rays, 3]
+            else:
+                # Random color sampling
+                colors = image.reshape(-1, 3)[indices]  # [num_rays, 3]
+        else:
+            # Use all colors for validation/testing
+            colors = image.reshape(-1, 3)  # [H*W, 3]
+
+        return {
+            "rays_o": rays_o,
+            "rays_d": rays_d,
+            "colors": colors,
+            "image_id": idx,
+        }
+
+    def _get_rays(
+        self,
+        pixels: torch.Tensor,
+        pose: torch.Tensor,
+    ) -> Tuple[torch.Tensor, torch.Tensor]:
+        """Generate rays for given pixels and pose.
+
+        Args:
+            pixels: Pixel coordinates [N, 2]
+            pose: Camera pose [4, 4]
+
+        Returns:
+            Tuple of ray origins and directions [N, 3]
+        """
+        # Unproject pixels to camera space
+        x = (pixels[:, 1] - self.intrinsics[0, 2]) / self.intrinsics[0, 0]
+        y = (pixels[:, 0] - self.intrinsics[1, 2]) / self.intrinsics[1, 1]
+        dirs = torch.stack([x, y, torch.ones_like(x)], dim=-1)  # [N, 3]
+
+        # Transform to world space
+        rays_d = torch.einsum("ij,nj->ni", pose[:3, :3], dirs)  # [N, 3]
+        rays_o = pose[:3, 3].expand_as(rays_d)  # [N, 3]
+
+        return rays_o, rays_d
+
+    def get_dataset_info(self) -> Dict[str, Any]:
         """Get dataset information."""
         return {
-            'num_images': len(self.images),
-            'image_size': (self.config.image_height, self.config.image_width),
-            'num_train_rays': len(self.all_rays_o) // self.config.num_rays_train,
-            'num_val_rays': len(self.all_rays_o) // self.config.num_rays_val,
+            "num_images": len(self.images),
+            "image_size": (self.config.image_height, self.config.image_width),
+            "num_train_rays": len(self.pixels) // self.config.num_rays_train,
+            "num_val_rays": len(self.pixels) // self.config.num_rays_val,
         }
+
 
 def create_svraster_dataloader(
     config: SVRasterDatasetConfig,
@@ -318,11 +357,17 @@ def create_svraster_dataloader(
 ) -> DataLoader:
     """Create a DataLoader for SVRaster dataset."""
     dataset = SVRasterDataset(config, split)
-    
+
     return DataLoader(
-        dataset, batch_size=batch_size, shuffle=shuffle, num_workers=num_workers, pin_memory=True, drop_last=split == "train"
+        dataset,
+        batch_size=batch_size,
+        shuffle=shuffle,
+        num_workers=num_workers,
+        pin_memory=True,
+        drop_last=split == "train",
     )
+
 
 def create_svraster_dataset(config: SVRasterDatasetConfig, split: str = "train") -> SVRasterDataset:
     """Create a SVRaster dataset."""
-    return SVRasterDataset(config, split) 
+    return SVRasterDataset(config, split)

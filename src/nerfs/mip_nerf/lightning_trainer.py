@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from typing import Any, Optional
 """
 PyTorch Lightning trainer for Mip-NeRF.
@@ -16,7 +18,7 @@ from dataclasses import dataclass
 import numpy as np
 import logging
 
-from .core import MipNeRF, MipNeRFConfig, MipNeRFLoss, ConicalFrustum
+from .core import MipNeRF, MipNeRFConfig, ConicalFrustum
 from .dataset import MipNeRFDataset
 
 logger = logging.getLogger(__name__)
@@ -78,7 +80,7 @@ class MipNeRFLightningModule(pl.LightningModule):
         
         # Initialize model and loss
         self.model = MipNeRF(config.model_config)
-        self.loss_fn = MipNeRFLoss(config.model_config)
+        # Loss function is now part of the model
         
         # Initialize metrics
         self.train_psnr = torchmetrics.image.PeakSignalNoiseRatio()
@@ -106,7 +108,7 @@ class MipNeRFLightningModule(pl.LightningModule):
             pixel_radius = self.config.pixel_radius
         return self.model(origins, directions, viewdirs, near, far, pixel_radius)
     
-    def training_step(self, batch: dict[str, torch.Tensor], batch_idx: int) -> torch.Tensor:
+    def training_step(self, batch: Dict[str, torch.Tensor], batch_idx: int) -> torch.Tensor:
         """Training step."""
         # Extract batch data
         rays_o = batch['rays_o']  # [N, 3]
@@ -158,7 +160,7 @@ class MipNeRFLightningModule(pl.LightningModule):
     
     def validation_step(
         self,
-        batch: dict[str,
+        batch: Dict[str,
         torch.Tensor],
         batch_idx: int,
     )
@@ -204,7 +206,7 @@ class MipNeRFLightningModule(pl.LightningModule):
             'target_rgb': target_colors[:100], 'coarse_rgb': outputs['rgb_coarse'][:100]
         }
     
-    def validation_epoch_end(self, outputs: list[dict[str, torch.Tensor]]) -> None:
+    def validation_epoch_end(self, outputs: List[Dict[str, torch.Tensor]]) -> None:
         """Aggregate validation results."""
         # Average metrics
         avg_loss = torch.stack([x['val_loss'] for x in outputs]).mean()
@@ -222,7 +224,7 @@ class MipNeRFLightningModule(pl.LightningModule):
         if len(outputs) > 0 and self.current_epoch % 5 == 0:
             self._log_sample_images(outputs[0])
     
-    def configure_optimizers(self) -> dict[str, Any]:
+    def configure_optimizers(self) -> Dict[str, Any]:
         """Configure optimizers and schedulers."""
         # Create optimizer
         if self.config.optimizer_type == "adam":
@@ -304,7 +306,7 @@ class MipNeRFLightningModule(pl.LightningModule):
         
         return all_outputs
     
-    def _log_sample_images(self, sample_output: dict[str, torch.Tensor]):
+    def _log_sample_images(self, sample_output: Dict[str, torch.Tensor]):
         """Log sample rendered images to tensorboard."""
         if self.logger is not None and hasattr(self.logger, 'experiment'):
             # Log predicted vs target vs coarse
@@ -330,8 +332,8 @@ class MipNeRFLightningModule(pl.LightningModule):
             self.log('val/sample_coarse_mean', coarse_rgb.mean())
 
 def create_mip_nerf_lightning_trainer(
-    config: MipNeRFLightningConfig, train_dataset, val_dataset = None, max_epochs: int = 200, gpus: int | list[int] = 1, logger_type: str = "tensorboard", project_name: str = "mip_nerf", experiment_name: str = "default", checkpoint_dir: str = "checkpoints", **trainer_kwargs
-) -> tuple[MipNeRFLightningModule, pl.Trainer]:
+    config: MipNeRFLightningConfig, train_dataset, val_dataset = None, max_epochs: int = 200, gpus: int | List[int] = 1, logger_type: str = "tensorboard", project_name: str = "mip_nerf", experiment_name: str = "default", checkpoint_dir: str = "checkpoints", **trainer_kwargs
+) -> Tuple[MipNeRFLightningModule, pl.Trainer]:
     """
     Create Mip-NeRF Lightning module and trainer.
     

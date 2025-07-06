@@ -20,7 +20,7 @@ import matplotlib.pyplot as plt
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 try:
-    from src.nerfs.nerfacto.core import Nerfacto, NerfactoConfig
+    from src.nerfs.nerfacto.core import Nerfacto, NeRFactoConfig
     from src.nerfs.nerfacto.trainer import NerfactoTrainer
     NERFACTO_AVAILABLE = True
 except ImportError as e:

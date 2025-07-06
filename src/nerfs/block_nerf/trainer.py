@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from typing import Any, Optional
 """
 Block-NeRF Trainer
@@ -143,8 +145,8 @@ class BlockNeRFTrainer:
         self.best_psnr = 0.0
         
         # Optimizers (will be set up during training)
-        self.optimizers: dict[str, optim.Optimizer] = {}
-        self.schedulers: dict[str, Any] = {}
+        self.optimizers: Dict[str, optim.Optimizer] = {}
+        self.schedulers: Dict[str, Any] = {}
         
         # Loss tracking
         self.loss_history = []
@@ -158,7 +160,7 @@ class BlockNeRFTrainer:
             )
         ).to(self.device)
     
-    def setup_optimizers(self, blocks: list[str]):
+    def setup_optimizers(self, blocks: List[str]):
         """Setup optimizers for all components"""
         lr = self.training_config.get('learning_rate', 5e-4)
         weight_decay = self.training_config.get('weight_decay', 0.0)
@@ -192,11 +194,11 @@ class BlockNeRFTrainer:
     
     def compute_losses(
         self,
-        predicted: dict[str,
+        predicted: Dict[str,
         torch.Tensor],
-        target: dict[str,
+        target: Dict[str,
         torch.Tensor],
-        block_outputs: list[dict[str,
+        block_outputs: List[Dict[str,
         torch.Tensor]],
         visibility_outputs: Optional[torch.Tensor] = None,
     )
@@ -261,9 +263,9 @@ class BlockNeRFTrainer:
     
     def train_step(
         self,
-        batch: dict[str,
+        batch: Dict[str,
         torch.Tensor],
-        active_blocks: list[str],
+        active_blocks: List[str],
     )
         """
         Single training step
@@ -367,7 +369,7 @@ class BlockNeRFTrainer:
         
         return loss_values
     
-    def validate(self, val_dataloader: DataLoader) -> dict[str, float]:
+    def validate(self, val_dataloader: DataLoader) -> Dict[str, float]:
         """
         Validation loop
         
@@ -430,7 +432,7 @@ class BlockNeRFTrainer:
         camera_position: torch.Tensor,
         appearance_ids: torch.Tensor,
         exposure_values: torch.Tensor,
-        active_blocks: list[str],
+        active_blocks: List[str],
     )
         """Render a batch of rays"""
         batch_blocks = [self.block_manager.blocks[name] for name in active_blocks if name in self.block_manager.blocks]
