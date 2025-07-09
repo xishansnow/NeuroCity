@@ -7,7 +7,7 @@ This module provides functions for visualizing voxel grids, density fields,
 and rendering novel view videos.
 """
 
-from typing import Any, Optional, Union
+from typing import Any, Optional, Union, Tuple
 import torch
 import numpy as np
 import matplotlib.pyplot as plt
@@ -72,7 +72,7 @@ def visualize_voxel_grid(
 def visualize_density_field(
     density: torch.Tensor,
     scene_bounds: torch.Tensor,
-    resolution: Tuple[int, int, int] = (64, 64, 64),
+    resolution: tuple[int, int, int] = (64, 64, 64),
     output_path: Optional[Union[str, Path]] = None,
     title: str = "Density Field Visualization",
 ) -> None:

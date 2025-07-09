@@ -6,7 +6,7 @@ SVRaster 高效渲染演示
 重点展示推理阶段的光栅化渲染性能和质量。
 
 特点：
-- 使用 TrueVoxelRasterizer 进行快速光栅化
+- 使用 VoxelRasterizer 进行快速光栅化
 - 实时渲染性能优化
 - 多种渲染模式对比
 - GPU 加速渲染
@@ -35,7 +35,7 @@ sys.path.insert(0, str(project_root / 'src'))
 from src.nerfs.svraster import (
     SVRasterConfig, SVRasterModel,
     SVRasterRenderer, SVRasterRendererConfig,
-    TrueVoxelRasterizer, VolumeRenderer
+    VoxelRasterizer, VolumeRenderer
 )
 
 # 设置日志
@@ -132,7 +132,7 @@ class SVRasterRenderingDemo:
         self.volume_renderer = VolumeRenderer(self.model_config)
         
         # 创建真正的光栅化器（推理用）
-        self.true_rasterizer = TrueVoxelRasterizer(self.model_config)
+        self.true_rasterizer = VoxelRasterizer(self.model_config)
         
         # 创建 SVRaster 渲染器（高级接口）
         self.svraster_renderer = SVRasterRenderer(
@@ -604,7 +604,7 @@ def main():
         
         print("\n🎉 SVRaster 高效渲染演示完成！")
         print("\n渲染特点:")
-        print("✅ 使用 TrueVoxelRasterizer 进行实时光栅化")
+        print("✅ 使用 VoxelRasterizer 进行实时光栅化")
         print("✅ GPU 加速高性能渲染")
         print("✅ 多分辨率性能测试")
         print("✅ 训练/推理模式质量对比")

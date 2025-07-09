@@ -80,7 +80,7 @@ class DNMPTrainer:
             self.optimizer, step_size=1000, gamma=0.9
         )
     
-    def train_epoch(self, dataloader: DataLoader) -> Dict[str, float]:
+    def train_epoch(self, dataloader: DataLoader) -> dict[str, float]:
         """Train for one epoch."""
         self.model.train()
         epoch_losses = {}
@@ -124,7 +124,7 @@ class DNMPTrainer:
         
         return epoch_losses
     
-    def train_step(self, batch: Dict[str, torch.Tensor]) -> Dict[str, float]:
+    def train_step(self, batch: dict[str, torch.Tensor]) -> dict[str, float]:
         """Single training step."""
         self.optimizer.zero_grad()
         
@@ -156,7 +156,7 @@ class DNMPTrainer:
         # Return scalar losses
         return {key: value.item() for key, value in loss_dict.items()}
     
-    def validate(self, dataloader: DataLoader) -> Dict[str, float]:
+    def validate(self, dataloader: DataLoader) -> dict[str, float]:
         """Validate model."""
         self.model.eval()
         val_losses = {}
@@ -191,7 +191,7 @@ class DNMPTrainer:
         
         return val_losses
     
-    def move_batch_to_device(self, batch: Dict[str, Any]) -> Dict[str, Any]:
+    def move_batch_to_device(self, batch: dict[str, Any]) -> dict[str, Any]:
         """Move batch data to device."""
         device_batch = {}
         

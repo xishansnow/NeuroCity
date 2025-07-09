@@ -100,7 +100,7 @@ class MipNeRFTrainer:
         self.val_psnrs = []
         self.learning_rates = []
 
-    def train_step(self, batch: Dict[str, torch.Tensor]) -> Dict[str, float]:
+    def train_step(self, batch: dict[str, torch.Tensor]) -> dict[str, float]:
         """
         Single training step
 
@@ -149,7 +149,7 @@ class MipNeRFTrainer:
 
         return loss_dict
 
-    def validate(self) -> Dict[str, float]:
+    def validate(self) -> dict[str, float]:
         """
         Validate the model on validation set
 
@@ -321,14 +321,14 @@ class MipNeRFTrainer:
         self.save_checkpoint("final_model.pth")
         print("Training completed!")
 
-    def log_metrics(self, losses: Dict[str, float], learning_rate: float):
+    def log_metrics(self, losses: dict[str, float], learning_rate: float):
         """Log training metrics"""
         for name, value in losses.items():
             self.writer.add_scalar(f"train/{name}", value, self.global_step)
 
         self.writer.add_scalar("train/learning_rate", learning_rate, self.global_step)
 
-    def log_validation_metrics(self, metrics: Dict[str, float]):
+    def log_validation_metrics(self, metrics: dict[str, float]):
         """Log validation metrics"""
         for name, value in metrics.items():
             self.writer.add_scalar(f"val/{name}", value, self.global_step)
@@ -368,7 +368,7 @@ class MipNeRFTrainer:
         print(f"Checkpoint loaded from {checkpoint_path}")
         print(f"Resumed at step {self.global_step}, epoch {self.epoch}")
 
-    def test(self, save_images: bool = True) -> Dict[str, float]:
+    def test(self, save_images: bool = True) -> dict[str, float]:
         """
         Test the model on test set
 

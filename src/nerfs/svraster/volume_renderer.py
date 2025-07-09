@@ -11,18 +11,31 @@ from __future__ import annotations
 import torch
 import torch.nn.functional as F
 import numpy as np
-from typing import Dict, List, Tuple, Optional
 from .utils.rendering_utils import ray_direction_dependent_ordering
 from .spherical_harmonics import eval_sh_basis
 import math
+import logging
+
+logger = logging.getLogger(__name__)
+
+# Try to import CUDA extensions
+try:
+    import nerfs.svraster.cuda.svraster_cuda as svraster_cuda
+
+    CUDA_AVAILABLE = True
+    logger.info("CUDA extensions loaded successfully for VolumeRenderer")
+except ImportError as e:
+    CUDA_AVAILABLE = False
+    logger.warning(f"CUDA extensions not available for VolumeRenderer: {e}")
 
 
 class VolumeRenderer:
     """
-    体积渲染器（原 VoxelRasterizer）
+    体积渲染器
 
     实现了基于光线投射的体积渲染算法，用于训练阶段。
     支持自适应采样和深度剥离，使用体积渲染积分。
+    现在支持 CUDA 加速以提高训练速度。
     """
 
     def __init__(self, config):
@@ -32,13 +45,20 @@ class VolumeRenderer:
         self.use_morton = config.morton_ordering
         self.background_color = torch.tensor(config.background_color)
 
+        # CUDA 支持
+        self.use_cuda = CUDA_AVAILABLE and torch.cuda.is_available()
+        if self.use_cuda:
+            logger.info("VolumeRenderer initialized with CUDA support")
+        else:
+            logger.info("VolumeRenderer initialized with CPU fallback")
+
     def __call__(
         self,
-        voxels: Dict[str, torch.Tensor],
+        voxels: dict[str, torch.Tensor],
         ray_origins: torch.Tensor,
         ray_directions: torch.Tensor,
-        camera_params: Optional[Dict[str, torch.Tensor]] = None,
-    ) -> Dict[str, torch.Tensor]:
+        camera_params: dict[str, torch.Tensor] | None = None,
+    ) -> dict[str, torch.Tensor]:
         """
         执行光栅化过程
 
@@ -50,6 +70,88 @@ class VolumeRenderer:
 
         Returns:
             包含渲染结果的字典
+        """
+        # 检查是否可以使用 CUDA 加速
+        if self.use_cuda and CUDA_AVAILABLE:
+            return self._render_cuda(voxels, ray_origins, ray_directions)
+        else:
+            return self._render_cpu(voxels, ray_origins, ray_directions)
+
+    def _render_cuda(
+        self,
+        voxels: dict[str, torch.Tensor],
+        ray_origins: torch.Tensor,
+        ray_directions: torch.Tensor,
+    ) -> dict[str, torch.Tensor]:
+        """
+        使用 CUDA 加速的渲染方法
+        """
+        try:
+            # 确保所有张量都在 GPU 上
+            device = ray_origins.device
+            if not device.type == "cuda":
+                device = torch.device("cuda")
+                ray_origins = ray_origins.to(device)
+                ray_directions = ray_directions.to(device)
+                for k, v in voxels.items():
+                    if isinstance(v, torch.Tensor):
+                        voxels[k] = v.to(device)
+
+            # 提取体素数据
+            voxel_positions = voxels["positions"]
+            voxel_sizes = voxels["sizes"]
+            voxel_densities = voxels["densities"]
+            voxel_colors = voxels["colors"]
+
+            # 使用 CUDA 内核进行光线-体素相交
+            intersection_result = svraster_cuda.ray_voxel_intersection(
+                ray_origins,
+                ray_directions,
+                voxel_positions,
+                voxel_sizes,
+                voxel_densities,
+                voxel_colors,
+            )
+
+            intersection_counts, intersection_indices, intersection_t_near, intersection_t_far = (
+                intersection_result
+            )
+
+            # 使用 CUDA 内核进行体素光栅化
+            output_colors, output_depths = svraster_cuda.voxel_rasterization(
+                ray_origins,
+                ray_directions,
+                voxel_positions,
+                voxel_sizes,
+                voxel_densities,
+                voxel_colors,
+                intersection_counts,
+                intersection_indices,
+                intersection_t_near,
+                intersection_t_far,
+            )
+
+            # 计算权重（简化版本）
+            weights = torch.ones_like(output_depths)
+
+            return {
+                "rgb": output_colors,
+                "depth": output_depths,
+                "weights": weights,
+            }
+
+        except Exception as e:
+            logger.warning(f"CUDA rendering failed, falling back to CPU: {e}")
+            return self._render_cpu(voxels, ray_origins, ray_directions)
+
+    def _render_cpu(
+        self,
+        voxels: dict[str, torch.Tensor],
+        ray_origins: torch.Tensor,
+        ray_directions: torch.Tensor,
+    ) -> dict[str, torch.Tensor]:
+        """
+        使用 CPU 的渲染方法（原始实现）
         """
         # Sort voxels by view direction if needed
         if self.use_morton:
@@ -85,9 +187,9 @@ class VolumeRenderer:
 
     def _sort_voxels_by_ray_direction(
         self,
-        voxels: Dict[str, torch.Tensor],
+        voxels: dict[str, torch.Tensor],
         mean_ray_direction: torch.Tensor,
-    ) -> Dict[str, torch.Tensor]:
+    ) -> dict[str, torch.Tensor]:
         """
         根据平均光线方向对体素进行排序
 
@@ -120,8 +222,8 @@ class VolumeRenderer:
         self,
         ray_o: torch.Tensor,
         ray_d: torch.Tensor,
-        voxels: Dict[str, torch.Tensor],
-    ) -> List[Tuple[int, float, float]]:
+        voxels: dict[str, torch.Tensor],
+    ) -> list[tuple[int, float, float]]:
         """
         计算光线与体素的相交
 
@@ -129,8 +231,8 @@ class VolumeRenderer:
         返回相交的体素索引和相交参数。
 
         Args:
-            ray_o: 光线起点 [N, 3]
-            ray_d: 光线方向 [N, 3]
+            ray_o: 光线起点 [N, 3] 或 [3]
+            ray_d: 光线方向 [N, 3] 或 [3]
             voxels: 体素数据
 
         Returns:
@@ -141,26 +243,29 @@ class VolumeRenderer:
         device = positions.device
 
         # 计算所有体素的 AABB
-        # sizes is [N_voxels, 3], so half_sizes should also be [N_voxels, 3]
-        half_sizes = sizes / 2
+        # sizes is [N_voxels], so we need to expand it to [N_voxels, 3]
+        if sizes.dim() == 1:
+            half_sizes = (sizes / 2).unsqueeze(-1).expand(-1, 3)  # [N_voxels, 3]
+        else:
+            half_sizes = sizes / 2  # Already [N_voxels, 3]
+
         box_mins = positions - half_sizes
         box_maxs = positions + half_sizes
 
-        # 简化处理：只处理第一条光线
-        # TODO: 支持批量光线处理
+        # 确保光线张量是单条光线的格式
         if ray_o.dim() > 1:
             ray_o = ray_o[0]  # Take first ray
             ray_d = ray_d[0]
-        
+
         # Ensure ray tensors are on the same device
         ray_o = ray_o.to(device)
         ray_d = ray_d.to(device)
-        
+
         # 向量化的光线-AABB 相交检测
         # Expand ray to match voxel count
         ray_o_expanded = ray_o.unsqueeze(0).expand(positions.shape[0], -1)
         ray_d_expanded = ray_d.unsqueeze(0).expand(positions.shape[0], -1)
-        
+
         t_mins = (box_mins - ray_o_expanded) / ray_d_expanded
         t_maxs = (box_maxs - ray_o_expanded) / ray_d_expanded
 
@@ -187,9 +292,9 @@ class VolumeRenderer:
         self,
         ray_o: torch.Tensor,
         ray_d: torch.Tensor,
-        intersections: List[Tuple[int, float, float]],
-        voxels: Dict[str, torch.Tensor],
-    ) -> Tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
+        intersections: list[tuple[int, float, float]],
+        voxels: dict[str, torch.Tensor],
+    ) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
         """
         渲染单条光线（支持体积积分、球谐函数、视角相关颜色）
         """
@@ -197,10 +302,54 @@ class VolumeRenderer:
         sh_degree = getattr(self.config, "sh_degree", 2)
         num_sh_coeffs = (sh_degree + 1) ** 2
 
-        # Handle batched rays - only process first ray for now
+        # 处理批量光线 - 现在支持多条光线
         if ray_o.dim() > 1:
-            ray_o = ray_o[0]
-            ray_d = ray_d[0]
+            batch_size = ray_o.shape[0]
+            all_colors = []
+            all_depths = []
+            all_weights = []
+
+            for i in range(batch_size):
+                single_ray_o = ray_o[i]
+                single_ray_d = ray_d[i]
+
+                # 为单条光线计算相交
+                single_intersections = self._ray_voxel_intersections(
+                    single_ray_o.unsqueeze(0), single_ray_d.unsqueeze(0), voxels
+                )
+
+                # 渲染单条光线
+                color, depth, weight = self._render_single_ray(
+                    single_ray_o, single_ray_d, single_intersections, voxels
+                )
+
+                all_colors.append(color)
+                all_depths.append(depth)
+                all_weights.append(weight)
+
+            # 组合批量结果
+            colors = torch.stack(all_colors, dim=0)  # [batch_size, 3]
+            depths = torch.stack(all_depths, dim=0)  # [batch_size, 1]
+            weights = torch.stack(all_weights, dim=0)  # [batch_size, 1]
+
+            return colors, depths, weights
+        else:
+            # 单条光线的情况
+            return self._render_single_ray(ray_o, ray_d, intersections, voxels)
+
+    def _render_single_ray(
+        self,
+        ray_o: torch.Tensor,
+        ray_d: torch.Tensor,
+        intersections: list[tuple[int, float, float]],
+        voxels: dict[str, torch.Tensor],
+    ) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
+        """
+        渲染单条光线（内部方法）
+        """
+        device = ray_o.device
+        sh_degree = getattr(self.config, "sh_degree", 2)
+        num_sh_coeffs = (sh_degree + 1) ** 2
 
         if not intersections:
             # 确保返回的张量有梯度
@@ -222,12 +371,17 @@ class VolumeRenderer:
             # 所有采样点方向都用 ray_d
             dirs = ray_d.expand(n_samples, 3)
 
-            # 获取体素 SH 系数
-            color_coeffs = voxels["colors"][voxel_idx]  # [3 * num_sh_coeffs]
-            color_coeffs = color_coeffs.to(device)  # Ensure correct device
-            color_coeffs = color_coeffs.view(3, num_sh_coeffs)  # [3, num_sh_coeffs]
-            sh_basis = eval_sh_basis(sh_degree, dirs)  # [n_samples, num_sh_coeffs]
-            rgb_samples = torch.matmul(sh_basis, color_coeffs.t())  # [n_samples, 3]
+            # 获取体素颜色或 SH 系数
+            color_coeffs = voxels["colors"][voxel_idx]
+            color_coeffs = color_coeffs.to(device)
+            if color_coeffs.numel() == 3 * num_sh_coeffs:
+                # 使用球谐函数
+                color_coeffs = color_coeffs.view(3, num_sh_coeffs)  # [3, num_sh_coeffs]
+                sh_basis = eval_sh_basis(sh_degree, dirs)  # [n_samples, num_sh_coeffs]
+                rgb_samples = torch.matmul(sh_basis, color_coeffs.t())  # [n_samples, 3]
+            else:
+                # fallback: 直接用 RGB
+                rgb_samples = color_coeffs.unsqueeze(0).expand(n_samples, 3)  # [n_samples, 3]
 
             # 激活函数
             if self.config.color_activation == "sigmoid":

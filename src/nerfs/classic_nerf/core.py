@@ -1,5 +1,5 @@
 from __future__ import annotations
-from typing import Any, Callable, Optional, TypeVar, Union
+from typing import Any, Callable, TypeVar
 
 """
 Classic NeRF: Representing Scenes as Neural Radiance Fields for View Synthesis.
@@ -76,7 +76,7 @@ class Embedder(nn.Module):
         num_freqs: int,
         log_sampling: bool = True,
         include_input: bool = True,
-        periodic_fns: List[Callable[[torch.Tensor], torch.Tensor]] | None = None,
+        periodic_fns: list[Callable[[torch.Tensor], torch.Tensor]] | None = None,
     ):
         super().__init__()
 
@@ -123,7 +123,7 @@ class Embedder(nn.Module):
         return torch.cat(embeds, dim=-1)
 
 
-def get_embedder(multires: int, input_dims: int = 3) -> Tuple[Embedder | nn.Identity, int]:
+def get_embedder(multires: int, input_dims: int = 3) -> tuple[Embedder | nn.Identity, int]:
     """Get positional encoding embedder."""
     if multires == -1:
         return nn.Identity(), input_dims
@@ -230,7 +230,7 @@ def raw2outputs(
     raw_noise_std: float = 0.0,
     white_bkgd: bool = False,
     pytest: bool = False,
-) -> Dict[str, Any]:
+) -> dict[str, Any]:
     """
     Transforms model's predictions to semantically meaningful values.
 
@@ -396,7 +396,7 @@ class NeRFRenderer:
 
     def render_rays(
         self,
-        ray_batch: Dict[str, torch.Tensor],
+        ray_batch: dict[str, torch.Tensor],
         network_fn: NeRF,
         network_fine: NeRF | None = None,
         retraw: bool = False,
@@ -406,7 +406,7 @@ class NeRFRenderer:
         raw_noise_std: float = 0.0,
         verbose: bool = False,
         pytest: bool = False,
-    ) -> Dict[str, torch.Tensor]:
+    ) -> dict[str, torch.Tensor]:
         """
         Volumetric rendering.
 
@@ -506,7 +506,7 @@ class NeRFRenderer:
         return ret
 
 
-def create_nerf(config: NeRFConfig) -> Tuple[NeRF, NeRF | None, Dict[str, Any]]:
+def create_nerf(config: NeRFConfig) -> tuple[NeRF, NeRF | None, dict[str, Any]]:
     """
     Create NeRF models.
 
@@ -569,9 +569,9 @@ class NeRFLoss(nn.Module):
 
     def forward(
         self,
-        pred: Dict[str, torch.Tensor],
+        pred: dict[str, torch.Tensor],
         target: torch.Tensor,
-    ) -> Dict[str, torch.Tensor]:
+    ) -> dict[str, torch.Tensor]:
         """
         Compute loss between prediction and target.
 
@@ -603,7 +603,7 @@ def create_bungee_nerf(
 
 
 def batch_process_coordinates(
-    coords_list: List[np.ndarray],
+    coords_list: list[np.ndarray],
     batch_size: int = 1000,
 ):
     """Process coordinates in batches."""

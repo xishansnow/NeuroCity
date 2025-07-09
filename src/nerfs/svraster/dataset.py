@@ -1,7 +1,5 @@
 from __future__ import annotations
 
-from typing import Any, Optional, Union
-
 """
 Dataset module for SVRaster.
 """
@@ -18,6 +16,7 @@ from pathlib import Path
 from concurrent.futures import ThreadPoolExecutor
 import cv2
 import torch.nn.functional as F
+from typing import Optional
 
 logger = logging.getLogger(__name__)
 
@@ -67,7 +66,7 @@ class SVRasterDatasetConfig:
 
     # Camera parameters
     camera_model: str = "pinhole"
-    distortion_params: Optional[List[float]] = None
+    distortion_params: Optional[list[float]] = None
 
     # Data augmentation
     use_color_jitter: bool = False
@@ -77,11 +76,24 @@ class SVRasterDatasetConfig:
     # Scene bounds
     auto_scale_poses: bool = True
     scene_scale: float = 1.0
-    scene_center: Optional[Tuple[float, float, float]] = None
+    scene_center: Optional[tuple[float, float, float]] = None
 
     # Background handling
     white_background: bool = False
     black_background: bool = False
+
+    def __post_init__(self):
+        """Post-initialization validation."""
+        if self.image_width <= 0:
+            raise ValueError("image_width must be positive")
+        if self.image_height <= 0:
+            raise ValueError("image_height must be positive")
+        if self.num_rays_train <= 0:
+            raise ValueError("num_rays_train must be positive")
+        if not (0 < self.train_split <= 1):
+            raise ValueError("train_split must be between 0 and 1")
+        if self.downscale_factor <= 0:
+            raise ValueError("downscale_factor must be positive")
 
 
 class SVRasterDataset(Dataset):
@@ -238,7 +250,7 @@ class SVRasterDataset(Dataset):
         """Get dataset length."""
         return len(self.images)
 
-    def __getitem__(self, idx: int) -> Dict[str, torch.Tensor]:
+    def __getitem__(self, idx: int) -> dict[str, torch.Tensor]:
         """Get dataset item.
 
         Args:
@@ -317,7 +329,7 @@ class SVRasterDataset(Dataset):
         self,
         pixels: torch.Tensor,
         pose: torch.Tensor,
-    ) -> Tuple[torch.Tensor, torch.Tensor]:
+    ) -> tuple[torch.Tensor, torch.Tensor]:
         """Generate rays for given pixels and pose.
 
         Args:
@@ -338,7 +350,7 @@ class SVRasterDataset(Dataset):
 
         return rays_o, rays_d
 
-    def get_dataset_info(self) -> Dict[str, Any]:
+    def get_dataset_info(self) -> dict[str, Any]:
         """Get dataset information."""
         return {
             "num_images": len(self.images),

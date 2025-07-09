@@ -251,7 +251,7 @@ class FrequencyScheduler:
         # Create frequency schedule
         self.schedule = self._create_schedule()
     
-    def _create_schedule(self) -> List[int]:
+    def _create_schedule(self) -> list[int]:
         """Create frequency activation schedule"""
         
         if self.schedule_type == "linear":
@@ -296,7 +296,7 @@ class AnisotropicEncoder(nn.Module):
     """
     
     def __init__(
-        self, num_freqs: int = 10, anisotropy_factors: List[float] = None, include_input: bool = True
+        self, num_freqs: int = 10, anisotropy_factors: list[float] = None, include_input: bool = True
     ):
         super().__init__()
         
@@ -352,7 +352,7 @@ class HierarchicalEncoder(nn.Module):
     """
     
     def __init__(
-        self, scales: List[float] = None, num_freqs_per_scale: int = 6, include_input: bool = True
+        self, scales: list[float] = None, num_freqs_per_scale: int = 6, include_input: bool = True
     ):
         super().__init__()
         

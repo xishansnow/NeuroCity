@@ -119,7 +119,7 @@ def create_grid_nerf_model(config: dict = None, device: str = "cuda") -> GridNeR
 
 def quick_setup(
     data_path: str, output_dir: str, config: dict = None, device: str = "cuda"
-) -> Tuple[GridNeRF, GridNeRFTrainer, GridNeRFDataset]:
+) -> tuple[GridNeRF, GridNeRFTrainer, GridNeRFDataset]:
     """
     Quick setup for Grid-NeRF training.
 

@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import Any, Optional, Union
+from typing import Any
 
 """
 Grid-guided Neural Radiance Fields for Large Urban Scenes.
@@ -33,7 +33,7 @@ logger = logging.getLogger(__name__)
 Tensor = torch.Tensor
 Device = torch.device | str
 DType = torch.dtype
-TensorDict = Dict[str, Tensor]
+TensorDict = dict[str, Tensor]
 
 
 @dataclass
@@ -51,7 +51,7 @@ class GridNeRFConfig:
     # Network architecture
     mlp_hidden_dim: int = 64
     mlp_num_layers: int = 3
-    skip_connections: List[int] = (2,)
+    skip_connections: list[int] = (2,)
     activation: str = "relu"
     output_activation: str = "sigmoid"
 
@@ -269,8 +269,8 @@ class GridGuidedMLP(nn.Module):
         return torch.cat(encoded, dim=-1)
 
     def forward(
-        self, grid_features: torch.Tensor, view_dirs: Optional[torch.Tensor] = None
-    ) -> Tuple[torch.Tensor, torch.Tensor]:
+        self, grid_features: torch.Tensor, view_dirs: torch.Tensor | None = None
+    ) -> tuple[torch.Tensor, torch.Tensor]:
         """Forward pass through the MLP network.
 
         Args:
@@ -278,7 +278,7 @@ class GridGuidedMLP(nn.Module):
             view_dirs: Optional view directions [N, 3]
 
         Returns:
-            Tuple[torch.Tensor, torch.Tensor]: (rgb_colors, densities)
+            tuple[torch.Tensor, torch.Tensor]: (rgb_colors, densities)
                 - rgb_colors: RGB colors [N, 3]
                 - densities: Volume densities [N, 1]
         """
@@ -321,7 +321,7 @@ class GridNeRFRenderer(nn.Module):
         far: float,
         num_samples: int,
         stratified: bool = True,
-    ) -> Tuple[torch.Tensor, torch.Tensor]:
+    ) -> tuple[torch.Tensor, torch.Tensor]:
         """Sample points along rays using stratified sampling.
 
         Args:
@@ -333,7 +333,7 @@ class GridNeRFRenderer(nn.Module):
             stratified: Whether to use stratified sampling
 
         Returns:
-            Tuple[torch.Tensor, torch.Tensor]: (sample_points, t_vals)
+            tuple[torch.Tensor, torch.Tensor]: (sample_points, t_vals)
                 - sample_points: Sampled 3D points [N, num_samples, 3]
                 - t_vals: Distance values along rays [N, num_samples]
         """
@@ -365,7 +365,7 @@ class GridNeRFRenderer(nn.Module):
         coarse_weights: torch.Tensor,
         coarse_t_vals: torch.Tensor,
         num_fine_samples: int,
-    ) -> Tuple[torch.Tensor, torch.Tensor]:
+    ) -> tuple[torch.Tensor, torch.Tensor]:
         """Sample points hierarchically based on coarse network predictions.
 
         Args:
@@ -376,7 +376,7 @@ class GridNeRFRenderer(nn.Module):
             num_fine_samples: Number of fine samples to generate
 
         Returns:
-            Tuple[torch.Tensor, torch.Tensor]: (fine_points, fine_t_vals)
+            tuple[torch.Tensor, torch.Tensor]: (fine_points, fine_t_vals)
                 - fine_points: Sampled 3D points [N, num_fine_samples, 3]
                 - fine_t_vals: Distance values along rays [N, num_fine_samples]
         """
@@ -424,8 +424,8 @@ class GridNeRFRenderer(nn.Module):
         densities: torch.Tensor,
         t_vals: torch.Tensor,
         ray_directions: torch.Tensor,
-        background_color: Optional[torch.Tensor] = None,
-    ) -> Dict[str, torch.Tensor]:
+        background_color: torch.Tensor | None = None,
+    ) -> dict[str, torch.Tensor]:
         """Render colors and depths using volume rendering equation.
 
         Args:
@@ -436,7 +436,7 @@ class GridNeRFRenderer(nn.Module):
             background_color: Optional background color [3]
 
         Returns:
-            Dict[str, torch.Tensor]: Rendering outputs containing:
+            dict[str, torch.Tensor]: Rendering outputs containing:
                 - 'color': Rendered RGB colors [N, 3]
                 - 'depth': Rendered depth values [N, 1]
                 - 'weights': Sample weights [N, num_samples]
@@ -580,7 +580,7 @@ class GridNeRF(nn.Module):
 
     def training_step(
         self, batch: TensorDict, optimizer: torch.optim.Optimizer
-    ) -> Tuple[Tensor, TensorDict]:
+    ) -> tuple[Tensor, TensorDict]:
         """Optimized training step with AMP support."""
         # Zero gradients efficiently
         optimizer.zero_grad(set_to_none=self.config.set_grad_to_none)

@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import Optional, List, Dict, Tuple
+from typing import Optional
 #!/usr/bin/env python3
 """
 从OpenStreetMap下载建筑物数据并转换为VDB格式
@@ -28,7 +28,7 @@ logger = logging.getLogger(__name__)
 class OSMVDBConverter:
     def __init__(
         self,
-        bbox: Tuple[float, float, float, float],
+        bbox: tuple[float, float, float, float],
         voxel_size: float = 1.0,
         max_height: float = 200.0,
     ):
@@ -60,7 +60,7 @@ class OSMVDBConverter:
             always_xy=True
         )
         
-    def _calculate_grid_size(self) -> Tuple[int, int, int]:
+    def _calculate_grid_size(self) -> tuple[int, int, int]:
         """计算网格尺寸"""
         # 将经纬度转换为米
         min_lat, min_lon, max_lat, max_lon = self.bbox
@@ -121,7 +121,7 @@ class OSMVDBConverter:
             logger.error(f"下载OSM数据失败: {e}")
             raise
     
-    def parse_osm_buildings(self, osm_file: str) -> List[Dict]:
+    def parse_osm_buildings(self, osm_file: str) -> list[dict]:
         """
         解析OSM文件中的建筑物数据
         
@@ -198,7 +198,7 @@ class OSMVDBConverter:
         logger.info(f"找到 {len(buildings)} 个建筑物")
         return buildings
     
-    def convert_coordinates_to_meters(self, buildings: List[Dict]) -> List[Dict]:
+    def convert_coordinates_to_meters(self, buildings: list[dict]) -> list[dict]:
         """
         将建筑物坐标从经纬度转换为米
         
@@ -303,7 +303,7 @@ class OSMVDBConverter:
         
         return None
     
-    def voxelize_mesh(self, mesh: trimesh.Trimesh, grid_size: Tuple[int, int, int]) -> np.ndarray:
+    def voxelize_mesh(self, mesh: trimesh.Trimesh, grid_size: tuple[int, int, int]) -> np.ndarray:
         """
         将3D网格体素化
         
@@ -347,9 +347,9 @@ class OSMVDBConverter:
     
     def create_vdb_from_buildings(
         self,
-        buildings: List[Dict],
+        buildings: list[dict],
         output_path: str = "osm_buildings.vdb",
-    )
+    ):
         """
         从建筑物数据创建VDB文件
         

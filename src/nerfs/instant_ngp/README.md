@@ -10,8 +10,7 @@ This implementation provides a fast, efficient, and easy-to-use version of Insta
 - **🎯 High Quality**: Maintains rendering quality while being much faster
 - **🔧 Easy to Use**: Simple API for training and inference
 - **📦 Complete Package**: Includes dataset loading, training, and rendering
-- **🧪 Well Tested**: Comprehensive test suite with 95%+ coverage
-- **📖 Documented**: Detailed documentation and examples
+- **🧪 CUDA Accelerated**: Optimized CUDA kernels for maximum performance
 
 ## 🏗️ Architecture Overview
 
@@ -30,205 +29,118 @@ Input Direction (θ,φ) → SH Encoding → Color MLP → RGB Color
 
 ## 📦 Installation
 
-The module is included as part of the NeuroCity package. Ensure you have the required dependencies:
-
 ```bash
-pip install torch torchvision numpy pillow matplotlib tqdm
+pip install -r requirements.txt
+```
+
+For CUDA support:
+```bash
+cd cuda
+python setup.py build_ext --inplace
 ```
 
 ## 🚀 Quick Start
 
-### Basic Usage
+### Basic Training
 
 ```python
-from instant_ngp import InstantNGPConfig, InstantNGP, InstantNGPTrainer
+from nerfs.instant_ngp import (
+    InstantNGPConfig, InstantNGPModel,
+    InstantNGPTrainer, InstantNGPTrainerConfig,
+    InstantNGPDataset, InstantNGPDatasetConfig
+)
 
-# Create configuration
+# Create model
 config = InstantNGPConfig(
     num_levels=16,
-    level_dim=2,
     base_resolution=16,
-    desired_resolution=2048
+    finest_resolution=512
 )
+model = InstantNGPModel(config)
 
-# Create and train model
-trainer = InstantNGPTrainer(config)
-trainer.train(train_loader, val_loader, num_epochs=20)
-
-# Inference
-model = trainer.model
-rgb, density = model(positions, directions)
-```
-
-### Training on NeRF Dataset
-
-```python
-from instant_ngp import create_instant_ngp_dataloader, InstantNGPTrainer
-
-# Load dataset
-train_loader = create_instant_ngp_dataloader(
-    data_root="data/nerf_synthetic/lego",
-    split='train',
+# Create trainer
+trainer_config = InstantNGPTrainerConfig(
+    num_epochs=20,
     batch_size=8192,
-    img_wh=(400, 400)
+    learning_rate=1e-2
 )
+trainer = InstantNGPTrainer(model, trainer_config)
 
-val_loader = create_instant_ngp_dataloader(
-    data_root="data/nerf_synthetic/lego", 
-    split='val',
-    batch_size=1,
-    img_wh=(400, 400)
+# Create dataset
+dataset_config = InstantNGPDatasetConfig(
+    data_root="data/nerf_synthetic/lego",
+    dataset_type="blender"
 )
+train_dataset = InstantNGPDataset(dataset_config, split="train")
+val_dataset = InstantNGPDataset(dataset_config, split="val")
 
-# Train model
-config = InstantNGPConfig()
-trainer = InstantNGPTrainer(config)
-trainer.train(train_loader, val_loader, num_epochs=20)
-
-# Save model
-trainer.save_checkpoint("instant_ngp_lego.pth")
+# Train
+trainer.train(train_dataset, val_dataset)
 ```
 
-### Rendering Images
+### Inference
 
 ```python
-from instant_ngp import InstantNGPRenderer
+from nerfs.instant_ngp import (
+    InstantNGPInferenceRenderer, InstantNGPRendererConfig
+)
 
 # Create renderer
-renderer = InstantNGPRenderer(config)
-
-# Render rays
-results = renderer.render_rays(
-    model, rays_o, rays_d, near, far, 
-    num_samples=128
+renderer_config = InstantNGPRendererConfig(
+    num_samples=64,
+    batch_size=4096
 )
+renderer = InstantNGPInferenceRenderer(model, renderer_config)
 
-rgb_image = results['rgb']
-depth_map = results['depth']
+# Render image
+result = renderer.render_image(
+    camera_pose=camera_pose,
+    intrinsics=intrinsics,
+    width=800,
+    height=800
+)
+```
+
+### Command Line Interface
+
+```bash
+# Training
+python -m nerfs.instant_ngp.cli train \
+    --data-dir data/nerf_synthetic/lego \
+    --output-dir outputs \
+    --num-epochs 20
+
+# Rendering
+python -m nerfs.instant_ngp.cli render \
+    --checkpoint outputs/model.pth \
+    --output-dir renders \
+    --width 800 --height 800
 ```
 
 ## 🔧 Configuration
 
-The `InstantNGPConfig` class controls all model parameters:
-
-### Hash Encoding Parameters
+Key configuration parameters:
 
 ```python
 config = InstantNGPConfig(
     # Hash encoding
     num_levels=16,           # Number of resolution levels
     level_dim=2,             # Features per level
-    per_level_scale=2.0,     # Scale factor between levels
     base_resolution=16,      # Base grid resolution
-    log2_hashmap_size=19,    # Hash table size (2^19)
-    desired_resolution=2048, # Finest resolution
-)
-```
-
-### Network Architecture
-
-```python
-config = InstantNGPConfig(
+    finest_resolution=512,   # Finest resolution
+    log2_hashmap_size=19,    # Hash table size
+    
     # Network architecture
-    geo_feat_dim=15,         # Geometry feature dimension
-    hidden_dim=64,           # Hidden layer dimension
-    hidden_dim_color=64,     # Color network hidden dimension
-    num_layers=2,            # Number of hidden layers
-    num_layers_color=3,      # Color network layers
-    dir_pe=4,                # Direction PE levels
-)
-```
-
-### Training Parameters
-
-```python
-config = InstantNGPConfig(
+    hidden_dim=64,           # MLP hidden dimension
+    num_layers=2,            # Number of MLP layers
+    
     # Training
     learning_rate=1e-2,      # Learning rate
-    learning_rate_decay=0.33, # LR decay factor
-    decay_step=1000,         # Decay step size
-    weight_decay=1e-6,       # Weight decay
-    
-    # Loss weights
-    lambda_entropy=1e-4,     # Entropy regularization
-    lambda_tv=1e-4,          # Total variation loss
+    batch_size=8192,         # Ray batch size
 )
 ```
 
-## 📊 Dataset Format
-
-The implementation supports standard NeRF dataset formats:
-
-### Directory Structure
-```
-data/
-└── scene_name/
-    ├── transforms_train.json
-    ├── transforms_val.json  
-    ├── transforms_test.json (optional)
-    ├── train/
-    │   ├── r_0.png
-    │   ├── r_1.png
-    │   └── ...
-    ├── val/
-    └── test/
-```
-
-### transforms.json Format
-```json
-{
-    "camera_angle_x": 0.6911112070083618,
-    "frames": [
-        {
-            "file_path": "./train/r_0",
-            "transform_matrix": [
-                [0.915, 0.183, -0.357, -1.439],
-                [-0.403, 0.387, -0.829, -3.338], 
-                [-0.0136, 0.904, 0.427, 1.721],
-                [0.0, 0.0, 0.0, 1.0]
-            ]
-        }
-    ]
-}
-```
-
-## 🎯 Model Characteristics
-
-### 🎨 Representation Method
-- **Multi-resolution Hash Encoding**: Uses hash tables at different resolution levels (16 levels by default)
-- **Compact MLPs**: Small neural networks (2-3 layers, 64 hidden units) for density and color prediction
-- **Spherical Harmonics**: View-dependent appearance encoded using spherical harmonics basis functions
-- **Spatial Feature Grid**: Hash-based spatial encoding replaces large coordinate MLPs
-
-### ⚡ Training Performance
-- **Training Time**: 20-60 minutes for typical scenes (vs. 1-2 days for classic NeRF)
-- **Training Speed**: ~50,000 rays/second on RTX 3080
-- **Convergence**: Fast convergence due to efficient hash encoding
-- **GPU Memory**: ~2-4GB during training for 512³ scenes
-- **Scalability**: Excellent scaling with scene complexity
-
-### 🎬 Rendering Mechanism
-- **Hash Grid Lookup**: O(1) feature lookup using multi-level hash tables
-- **Trilinear Interpolation**: Smooth interpolation between hash grid vertices
-- **Volume Rendering**: Standard ray marching with alpha compositing
-- **Hierarchical Sampling**: Optional coarse-to-fine sampling for efficiency
-- **View-Dependent Shading**: Spherical harmonics for realistic reflections
-
-### 🚀 Rendering Speed
-- **Inference Speed**: Real-time rendering (>30 FPS) at 800×800 resolution
-- **Ray Processing**: ~100,000 rays/second on RTX 3080
-- **Image Generation**: <1 second per 800×800 image
-- **Interactive Rendering**: Suitable for real-time applications
-- **Batch Processing**: Efficient batch rendering for video generation
-
-### 💾 Storage Requirements
-- **Model Size**: 10-50 MB (vs. 100-500 MB for classic NeRF)
-- **Hash Tables**: ~20-40 MB for 16-level encoding
-- **MLP Weights**: <5 MB for compact networks
-- **Scene Representation**: Scales logarithmically with scene size
-- **Memory Efficiency**: 10-100x more efficient than voxel grids
-
-### 📊 Performance Comparison
+## 📊 Performance
 
 | Metric | Classic NeRF | Instant NGP | Improvement |
 |--------|--------------|-------------|-------------|
@@ -236,232 +148,16 @@ data/
 | Inference Speed | 30 sec/image | Real-time | **>100x faster** |
 | Model Size | 100-500 MB | 10-50 MB | **5-10x smaller** |
 | GPU Memory | 8-16 GB | 2-4 GB | **2-4x less** |
-| Quality (PSNR) | Baseline | +0.5-1.0 dB | **Better quality** |
-
-### 🎯 Use Cases
-- **Real-time Applications**: Interactive 3D scene exploration
-- **Rapid Prototyping**: Quick NeRF experiments and iterations
-- **Large-scale Scenes**: Efficient handling of complex environments
-- **Mobile Deployment**: Compact models suitable for edge devices
-- **Video Generation**: Fast novel view synthesis for cinematography
-
-## 📚 API Reference
-
-### Core Classes
-
-#### `InstantNGPConfig`
-Configuration dataclass for all model parameters.
-
-```python
-config = InstantNGPConfig(
-    num_levels=16,
-    level_dim=2,
-    learning_rate=1e-2
-)
-```
-
-#### `InstantNGP`
-
-Main model class implementing the neural network.
-
-```python
-model = InstantNGP(config)
-rgb, density = model(positions, directions)
-```
-
-**Methods:**
-
-- `forward(positions, directions=None)`: Main forward pass
-- `get_density(positions)`: Get density only
-- `parameters()`: Get model parameters
-
-#### `InstantNGPTrainer`
-Training wrapper with optimizers and scheduling.
-
-```python
-trainer = InstantNGPTrainer(config)
-trainer.train(train_loader, val_loader, num_epochs=20)
-```
-
-**Methods:**
-- `train(train_loader, val_loader, num_epochs)`: Full training loop
-- `train_step(batch)`: Single training step
-- `validate(val_loader)`: Validation
-- `save_checkpoint(path)`: Save model
-- `load_checkpoint(path)`: Load model
-
-#### `InstantNGPDataset`
-Dataset class for loading NeRF data.
-
-```python
-dataset = InstantNGPDataset(
-    data_root="data/lego",
-    split='train',
-    img_wh=(400, 400)
-)
-```
-
-#### `InstantNGPRenderer`
-
-Renderer for generating images.
-
-```python
-renderer = InstantNGPRenderer(config)
-results = renderer.render_rays(model, rays_o, rays_d, near, far)
-```
-
-### Utility Functions
-
-#### `create_instant_ngp_dataloader`
-Factory function for creating dataloaders.
-
-```python
-loader = create_instant_ngp_dataloader(
-    data_root="data/lego",
-    split='train', 
-    batch_size=8192
-)
-```
-
-#### `contract_to_unisphere`
-
-Contract infinite coordinates to unit sphere.
-
-```python
-contracted = contract_to_unisphere(positions)
-```
-
-#### `compute_tv_loss`
-Compute total variation loss for regularization.
-
-```python
-tv_loss = compute_tv_loss(hash_grid)
-```
 
 ## 🧪 Testing
 
-Run the comprehensive test suite:
+Run the test suite:
 
-```python
-# Run all tests
-python -m pytest src/instant_ngp/test_instant_ngp.py -v
-
-# Run specific test classes
-python -m pytest src/instant_ngp/test_instant_ngp.py::TestHashEncoder -v
-python -m pytest src/instant_ngp/test_instant_ngp.py::TestInstantNGP -v
-
-# Run basic functionality tests
-python src/instant_ngp/test_instant_ngp.py
-```
-
-Test coverage includes:
-- ✅ Hash encoding correctness
-- ✅ Model forward/backward passes
-- ✅ Training step functionality
-- ✅ Dataset loading
-- ✅ Rendering pipeline
-- ✅ Utility functions
-
-## 📖 Examples
-
-### Example 1: Hash Encoding Demo
-
-```python
-from instant_ngp import HashEncoder, InstantNGPConfig
-
-config = InstantNGPConfig(num_levels=4, level_dim=2)
-encoder = HashEncoder(config)
-
-positions = torch.randn(1000, 3) * 0.5
-encoded = encoder(positions)
-print(f"Encoded shape: {encoded.shape}")  # [1000, 8]
-```
-
-### Example 2: Spherical Harmonics
-
-```python
-from instant_ngp.core import SHEncoder
-
-encoder = SHEncoder(degree=4)
-directions = torch.randn(100, 3)
-directions = directions / torch.norm(directions, dim=-1, keepdim=True)
-
-sh_coeffs = encoder(directions)
-print(f"SH coefficients shape: {sh_coeffs.shape}")  # [100, 16]
-```
-
-### Example 3: Custom Training Loop
-
-```python
-from instant_ngp import InstantNGP, InstantNGPConfig, InstantNGPLoss
-
-config = InstantNGPConfig()
-model = InstantNGP(config)
-loss_fn = InstantNGPLoss(config)
-optimizer = torch.optim.Adam(model.parameters(), lr=config.learning_rate)
-
-for batch in dataloader:
-    rays_o = batch['rays_o']
-    rays_d = batch['rays_d']
-    target_rgb = batch['rgbs']
-    
-    # Sample points along rays
-    t_vals = torch.linspace(0.1, 5.0, 64)
-    positions = rays_o[..., None, :] + rays_d[..., None, :] * t_vals[..., None]
-    
-    # Get model predictions
-    rgb, density = model(positions.reshape(-1, 3), rays_d.repeat_interleave(64, 0))
-    
-    # Compute loss
-    loss = loss_fn(rgb.reshape(-1, 64, 3), target_rgb)
-    
-    # Optimize
-    optimizer.zero_grad()
-    loss.backward()
-    optimizer.step()
-```
-
-## 🐛 Troubleshooting
-
-### Common Issues
-
-**Hash table too small error:**
-```python
-# Increase hash table size
-config = InstantNGPConfig(log2_hashmap_size=20)  # Larger table
-```
-
-**Out of memory:**
-```python
-# Reduce batch size or resolution
-config = InstantNGPConfig(
-    desired_resolution=1024,  # Lower resolution
-    num_levels=12             # Fewer levels
-)
-```
-
-**Slow training:**
-```python
-# Optimize hyperparameters
-config = InstantNGPConfig(
-    learning_rate=5e-3,       # Higher learning rate
-    hidden_dim=32             # Smaller networks
-)
-```
-
-**Poor quality:**
-```python
-# Increase model capacity
-config = InstantNGPConfig(
-    num_levels=20,            # More levels
-    level_dim=4,              # More features
-    hidden_dim=128            # Larger networks
-)
+```bash
+python run_tests.py
 ```
 
 ## 📄 Citation
-
-If you use this implementation, please cite the original paper:
 
 ```bibtex
 @article{mueller2022instant,
@@ -481,11 +177,10 @@ For issues and questions:
 - 🐛 **Bug reports**: Open an issue with reproduction steps
 - 💡 **Feature requests**: Describe the desired functionality  
 - ❓ **Usage questions**: Check examples and API documentation first
-- 🤝 **Contributions**: Pull requests welcome!
 
 ## 📜 License
 
-This implementation is provided under the same terms as the NeuroCity project. Please refer to the main project license for details.
+MIT License - see LICENSE file for details.
 
 ---
 

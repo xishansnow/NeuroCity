@@ -17,10 +17,10 @@ logger = logging.getLogger(__name__)
 
 
 def create_voxel_grid(
-    resolution: Tuple[int, int, int],
-    scene_bounds: Tuple[float, float, float, float, float, float],
+    resolution: tuple[int, int, int],
+    scene_bounds: tuple[float, float, float, float, float, float],
     device: torch.device = None,
-) -> Dict[str, torch.Tensor]:
+) -> dict[str, torch.Tensor]:
     """
     Create a voxel grid with specified resolution and scene bounds.
 
@@ -67,7 +67,7 @@ def prune_voxel_grid(
     density: torch.Tensor,
     sh_coeffs: torch.Tensor,
     threshold: float = 0.01,
-) -> Tuple[torch.Tensor, torch.Tensor]:
+) -> tuple[torch.Tensor, torch.Tensor]:
     """
     Prune voxel grid by removing low-density voxels.
 
@@ -94,7 +94,7 @@ def prune_voxel_grid(
 
 def compute_voxel_bounds(
     coords: torch.Tensor,
-    scene_bounds: Tuple[float, float, float, float, float, float],
+    scene_bounds: tuple[float, float, float, float, float, float],
 ) -> torch.Tensor:
     """
     Compute which voxels contain the given coordinates.
@@ -116,8 +116,8 @@ def compute_voxel_bounds(
 
 def voxel_to_world_coords(
     voxel_indices: torch.Tensor,
-    resolution: Tuple[int, int, int],
-    scene_bounds: Tuple[float, float, float, float, float, float],
+    resolution: tuple[int, int, int],
+    scene_bounds: tuple[float, float, float, float, float, float],
 ) -> torch.Tensor:
     """
     Convert voxel indices to world coordinates.
@@ -151,8 +151,8 @@ def voxel_to_world_coords(
 
 def world_to_voxel_coords(
     world_coords: torch.Tensor,
-    resolution: Tuple[int, int, int],
-    scene_bounds: Tuple[float, float, float, float, float, float],
+    resolution: tuple[int, int, int],
+    scene_bounds: tuple[float, float, float, float, float, float],
 ) -> torch.Tensor:
     """
     Convert world coordinates to voxel indices.
@@ -180,7 +180,7 @@ def world_to_voxel_coords(
 def compute_voxel_occupancy_stats(
     density: torch.Tensor,
     threshold: float = 0.01,
-) -> Dict[str, float]:
+) -> dict[str, float]:
     """
     Compute statistics about voxel occupancy.
 
@@ -256,7 +256,7 @@ def subdivide_voxel_grid(
     density: torch.Tensor,
     sh_coeffs: torch.Tensor,
     subdivision_factor: int = 2,
-) -> Tuple[torch.Tensor, torch.Tensor]:
+) -> tuple[torch.Tensor, torch.Tensor]:
     """
     Subdivide voxel grid by increasing resolution.
 
@@ -325,7 +325,7 @@ def apply_voxel_mask(
     density: torch.Tensor,
     sh_coeffs: torch.Tensor,
     mask: torch.Tensor,
-) -> Tuple[torch.Tensor, torch.Tensor]:
+) -> tuple[torch.Tensor, torch.Tensor]:
     """
     Apply a binary mask to voxel grid.
 

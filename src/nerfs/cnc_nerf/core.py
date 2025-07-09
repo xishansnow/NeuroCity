@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import Any, Optional
+from typing import Any
 
 """
 CNC-NeRF Core Module
@@ -30,7 +30,7 @@ from typing import TypeAlias
 Tensor: TypeAlias = torch.Tensor
 Device: TypeAlias = torch.device | str
 DType: TypeAlias = torch.dtype
-TensorDict: TypeAlias = Dict[str, Tensor]
+TensorDict: TypeAlias = dict[str, Tensor]
 
 try:
     import tinycudann as tcnn
@@ -374,7 +374,7 @@ class LevelWiseContextModel(ContextModel):
             ),
         )
 
-    def build_context(self, embeddings_list: List[torch.Tensor], level: int) -> torch.Tensor:
+    def build_context(self, embeddings_list: list[torch.Tensor], level: int) -> torch.Tensor:
         """Build context from previous levels."""
         current_embeddings = embeddings_list[level]
 
@@ -384,7 +384,7 @@ class LevelWiseContextModel(ContextModel):
 
         return context
 
-    def forward(self, embeddings_list: List[torch.Tensor], level: int) -> torch.Tensor:
+    def forward(self, embeddings_list: list[torch.Tensor], level: int) -> torch.Tensor:
         """Predict probability distribution for current level."""
         context = self.build_context(embeddings_list, level)
         probabilities = self.context_fuser(context)
@@ -426,7 +426,7 @@ class DimensionWiseContextModel(ContextModel):
 
     def forward(
         self,
-        embeddings_2d_list: List[torch.Tensor],
+        embeddings_2d_list: list[torch.Tensor],
         embeddings_3d: torch.Tensor,
         level: int,
     ) -> torch.Tensor:
@@ -500,7 +500,7 @@ class ArithmeticCoder(nn.Module):
             encoded_size = len(quantized) * 0.1
             return b"compressed" * int(encoded_size)
 
-    def decode(self, encoded_data: bytes, shape: Tuple[int, ...]) -> torch.Tensor:
+    def decode(self, encoded_data: bytes, shape: tuple[int, ...]) -> torch.Tensor:
         """Decode embeddings from compressed data."""
         # Placeholder implementation
         if self.config.use_binarization:
@@ -609,7 +609,7 @@ class CNCRenderer(nn.Module):
     def _forward_with_checkpointing(
         self,
         coords: Tensor,
-        view_dirs: Optional[Tensor] = None,
+        view_dirs: Tensor | None = None,
     ) -> TensorDict:
         """Forward pass with gradient checkpointing."""
 
@@ -707,7 +707,7 @@ class CNCNeRF(nn.Module):
 
     def training_step(
         self, batch: TensorDict, optimizer: torch.optim.Optimizer
-    ) -> Tuple[Tensor, Dict[str, float]]:
+    ) -> tuple[Tensor, dict[str, float]]:
         """Training step."""
         # Move batch to device
         batch = {
@@ -758,7 +758,7 @@ class CNCNeRF(nn.Module):
 
         return total_loss, metrics
 
-    def validation_step(self, batch: TensorDict) -> Dict[str, float]:
+    def validation_step(self, batch: TensorDict) -> dict[str, float]:
         """Validation step."""
         # Move batch to device
         batch = {
@@ -838,7 +838,7 @@ class CNCNeRF(nn.Module):
 
         return total_entropy_loss
 
-    def compress_model(self) -> Dict[str, Any]:
+    def compress_model(self) -> dict[str, Any]:
         """Compress the model and return compression info."""
         compression_info = {"compressed_data": {}}
 
@@ -899,7 +899,7 @@ class CNCNeRF(nn.Module):
 
         return compression_info
 
-    def get_compression_stats(self) -> Dict[str, float]:
+    def get_compression_stats(self) -> dict[str, float]:
         """Get compression statistics."""
         return {
             "compression_ratio": self.compression_ratio,

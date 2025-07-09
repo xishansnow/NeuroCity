@@ -39,7 +39,7 @@ def compute_sample_area(
     return sample_areas
 
 def get_pyramid_level(
-    sample_areas: torch.Tensor, pyramid_levels: List[int], scale_factor: float = 2.0
+    sample_areas: torch.Tensor, pyramid_levels: list[int], scale_factor: float = 2.0
 ) -> torch.Tensor:
     """
     Determine pyramid level for each sample based on area
@@ -66,8 +66,8 @@ def get_pyramid_level(
     return level_indices.long()
 
 def interpolate_pyramid_outputs(
-    rgb_outputs: List[Tuple[torch.Tensor, torch.Tensor, torch.Tensor]], sigma_outputs: List[Tuple[torch.Tensor, torch.Tensor, torch.Tensor]], pyramid_levels: torch.Tensor, num_points: int, device: torch.device
-) -> Tuple[torch.Tensor, torch.Tensor]:
+    rgb_outputs: list[tuple[torch.Tensor, torch.Tensor, torch.Tensor]], sigma_outputs: list[tuple[torch.Tensor, torch.Tensor, torch.Tensor]], pyramid_levels: torch.Tensor, num_points: int, device: torch.device
+) -> tuple[torch.Tensor, torch.Tensor]:
     """
     Interpolate outputs from different pyramid levels
     
@@ -94,7 +94,7 @@ def interpolate_pyramid_outputs(
 
 def create_pyramid_hierarchy(
     num_levels: int = 8, base_resolution: int = 16, scale_factor: float = 2.0, max_resolution: int = 2048
-) -> List[int]:
+) -> list[int]:
     """
     Create pyramid hierarchy of resolutions
     
@@ -147,7 +147,7 @@ def save_pyramid_model(
 
 def load_pyramid_model(
     model: torch.nn.Module, load_path: str, device: str = "cuda"
-) -> Tuple[torch.nn.Module, dict]:
+) -> tuple[torch.nn.Module, dict]:
     """
     Load PyNeRF model and configuration
     
@@ -250,7 +250,7 @@ def compute_ssim(
     return ssim_map.mean().item()
 
 def log_pyramid_stats(
-    model: torch.nn.Module, step: int, losses: Dict[str, float]
+    model: torch.nn.Module, step: int, losses: dict[str, float]
 ) -> None:
     """
     Log pyramid model statistics
@@ -271,7 +271,7 @@ def log_pyramid_stats(
 
 def create_training_schedule(
     max_steps: int, warmup_steps: int = 1000, decay_steps: int = 5000, decay_rate: float = 0.1
-) -> Dict[str, any]:
+) -> dict[str, any]:
     """
     Create learning rate schedule for PyNeRF training
     
@@ -289,7 +289,7 @@ def create_training_schedule(
     }
 
 def apply_learning_rate_schedule(
-    optimizer: torch.optim.Optimizer, step: int, schedule: Dict[str, any], base_lr: float
+    optimizer: torch.optim.Optimizer, step: int, schedule: dict[str, any], base_lr: float
 ) -> float:
     """
     Apply learning rate schedule

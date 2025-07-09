@@ -23,7 +23,7 @@ import numpy as np
 import math
 from dataclasses import dataclass, field
 import logging
-from typing import Optional, Dict, Tuple, Union, List
+from typing import Optional, Union
 from pathlib import Path
 import time
 import matplotlib.pyplot as plt
@@ -83,7 +83,7 @@ class PlenoxelConfig:
     """
 
     # Grid parameters
-    grid_resolution: Tuple[int, int, int] = (256, 256, 256)
+    grid_resolution: tuple[int, int, int] = (256, 256, 256)
     scene_bounds: torch.Tensor | None = None
 
     # Spherical harmonics parameters
@@ -103,10 +103,10 @@ class PlenoxelConfig:
     coarse_to_fine_iters: int = 1000
 
     # Coarse-to-fine resolutions
-    coarse_resolutions: List[Tuple[int, int, int]] = field(
+    coarse_resolutions: list[tuple[int, int, int]] = field(
         default_factory=lambda: [(128, 128, 128), (256, 256, 256), (512, 512, 512)]
     )
-    coarse_epochs: List[int] = field(default_factory=lambda: [2000, 5000, 10000])
+    coarse_epochs: list[int] = field(default_factory=lambda: [2000, 5000, 10000])
 
     # Regularization parameters
     sparsity_threshold: float = 0.01
@@ -455,7 +455,7 @@ class VoxelGrid(nn.Module):
 
     def __init__(
         self,
-        resolution: Tuple[int, int, int],
+        resolution: tuple[int, int, int],
         scene_bounds: torch.Tensor,
         num_sh_coeffs: int = 9,
         device: torch.device | None = None,
@@ -566,7 +566,7 @@ class VoxelGrid(nn.Module):
 
         return world_coords
 
-    def forward(self, points: torch.Tensor, dirs: torch.Tensor) -> Dict[str, torch.Tensor]:
+    def forward(self, points: torch.Tensor, dirs: torch.Tensor) -> dict[str, torch.Tensor]:
         """Forward pass with automatic mixed precision support.
 
         Args:
@@ -630,7 +630,7 @@ class VoxelGrid(nn.Module):
     @torch.jit.export
     def get_density_and_color(
         self, points: torch.Tensor, dirs: torch.Tensor
-    ) -> Tuple[torch.Tensor, torch.Tensor]:
+    ) -> tuple[torch.Tensor, torch.Tensor]:
         """Get density and color values efficiently (TorchScript compatible).
 
         Args:
@@ -708,7 +708,7 @@ class VoxelGrid(nn.Module):
         """
         return self.occupancy_grid.sum().item()
 
-    def update_resolution(self, new_resolution: Tuple[int, int, int]) -> None:
+    def update_resolution(self, new_resolution: tuple[int, int, int]) -> None:
         """Update voxel grid resolution.
 
         Args:
@@ -780,7 +780,7 @@ class VolumetricRenderer:
         far: float = 6.0,
         use_adaptive_sampling: bool = True,
         chunk_size: int = 4096,
-    ) -> Dict[str, torch.Tensor]:
+    ) -> dict[str, torch.Tensor]:
         """Render rays through a voxel grid.
 
         Args:
@@ -891,7 +891,7 @@ class VolumetricRenderer:
         far: float,
         use_adaptive_sampling: bool,
         chunk_size: int,
-    ) -> Dict[str, torch.Tensor]:
+    ) -> dict[str, torch.Tensor]:
         """CPU implementation of ray rendering."""
         # Sample points along rays
         points, deltas = self.sample_points_along_rays(
@@ -918,7 +918,7 @@ class VolumetricRenderer:
 
     def ray_grid_intersect(
         self, rays_o: torch.Tensor, rays_d: torch.Tensor
-    ) -> Tuple[torch.Tensor, torch.Tensor]:
+    ) -> tuple[torch.Tensor, torch.Tensor]:
         """Compute ray-grid intersections.
 
         Args:
@@ -943,7 +943,7 @@ class VolumetricRenderer:
 
     def _ray_grid_intersect_cpu(
         self, rays_o: torch.Tensor, rays_d: torch.Tensor
-    ) -> Tuple[torch.Tensor, torch.Tensor]:
+    ) -> tuple[torch.Tensor, torch.Tensor]:
         """CPU implementation of ray-grid intersection."""
         # Compute intersections with axis-aligned bounding box
         inv_rays_d = 1.0 / (rays_d + 1e-10)
@@ -968,7 +968,7 @@ class VolumetricRenderer:
         near: float,
         far: float,
         use_adaptive_sampling: bool = True,
-    ) -> Tuple[torch.Tensor, torch.Tensor]:
+    ) -> tuple[torch.Tensor, torch.Tensor]:
         """Sample points along rays.
 
         Args:
@@ -1087,7 +1087,7 @@ class PlenoxelModel(nn.Module):
         rays_o: torch.Tensor,
         rays_d: torch.Tensor,
         chunk_size: Optional[int] = None,
-    ) -> Dict[str, torch.Tensor]:
+    ) -> dict[str, torch.Tensor]:
         """Forward pass.
 
         Args:
@@ -1142,7 +1142,7 @@ class PlenoxelModel(nn.Module):
             "points": points,
         }
 
-    def get_occupancy_stats(self) -> Dict[str, float]:
+    def get_occupancy_stats(self) -> dict[str, float]:
         """Get occupancy statistics of the voxel grid.
 
         Returns:
@@ -1167,7 +1167,7 @@ class PlenoxelModel(nn.Module):
             "memory_mb": memory_mb,
         }
 
-    def update_resolution(self, new_resolution: Tuple[int, int, int]) -> None:
+    def update_resolution(self, new_resolution: tuple[int, int, int]) -> None:
         """Update voxel grid resolution.
 
         Args:
@@ -1209,7 +1209,7 @@ class PlenoxelModel(nn.Module):
     @classmethod
     def load_checkpoint(
         cls, path: str | Path, map_location: Optional[torch.device] = None
-    ) -> Tuple["PlenoxelModel", Optional[Dict]]:
+    ) -> tuple["PlenoxelModel", Optional[Dict]]:
         """Load model from checkpoint.
 
         Args:
@@ -1326,11 +1326,11 @@ class PlenoxelLoss:
 
     def __call__(
         self,
-        outputs: Dict[str, torch.Tensor],
-        batch: Dict[str, torch.Tensor],
+        outputs: dict[str, torch.Tensor],
+        batch: dict[str, torch.Tensor],
         model: PlenoxelModel,
         global_step: int,
-    ) -> Dict[str, torch.Tensor]:
+    ) -> dict[str, torch.Tensor]:
         """Compute all losses efficiently.
 
         Args:
@@ -1348,7 +1348,7 @@ class PlenoxelLoss:
         )
 
         # Initialize loss dict with modern type hints
-        losses: Dict[str, torch.Tensor] = {"rgb_loss": rgb_loss}
+        losses: dict[str, torch.Tensor] = {"rgb_loss": rgb_loss}
 
         # Add depth loss if available
         if "depth" in outputs and "depth" in batch:
@@ -1429,7 +1429,7 @@ class PlenoxelLoss:
 
     def compute_regularization_loss(
         self, model: PlenoxelModel, global_step: int
-    ) -> Dict[str, torch.Tensor]:
+    ) -> dict[str, torch.Tensor]:
         """Compute regularization losses.
 
         Args:
@@ -1485,7 +1485,7 @@ class PlenoxelMetrics:
             logger.warning("TensorBoard not available, logging disabled")
             self.use_tensorboard = False
 
-    def update(self, metrics: Dict[str, float], step: int):
+    def update(self, metrics: dict[str, float], step: int):
         """Update metrics with new values.
 
         Args:
@@ -1578,7 +1578,7 @@ class PlenoxelScheduler:
             self.stage_steps = [steps for steps in config.coarse_epochs]
             self.stage_lrs = [self.initial_lr * (0.5**i) for i in range(len(self.stage_steps))]
 
-    def step(self, metrics: Optional[Dict[str, float]] = None):
+    def step(self, metrics: Optional[dict[str, float]] = None):
         """Update learning rate.
 
         Args:
@@ -1677,7 +1677,7 @@ class PlenoxelTrainer:
         self.global_step = 0
         self.best_val_loss = float("inf")
 
-    def train_epoch(self, epoch: int | None = None) -> Dict[str, float]:
+    def train_epoch(self, epoch: int | None = None) -> dict[str, float]:
         """Train for one epoch.
 
         Args:
@@ -1814,7 +1814,7 @@ class PlenoxelTrainer:
             self.optimizer.load_state_dict(optimizer_state)
 
     def _log_progress(
-        self, phase: str, metrics: Optional[Dict[str, float]] = None, epoch: Optional[int] = None
+        self, phase: str, metrics: Optional[dict[str, float]] = None, epoch: Optional[int] = None
     ):
         """Log training progress.
 
@@ -1840,7 +1840,7 @@ class PlenoxelTrainer:
         logger.info(msg)
 
     @torch.no_grad()
-    def validate_epoch(self, epoch: int | None = None) -> Dict[str, float]:
+    def validate_epoch(self, epoch: int | None = None) -> dict[str, float]:
         """Perform validation for one epoch.
 
         Args:
@@ -1953,7 +1953,7 @@ class PlenoxelVisualizer:
         plt.style.use("seaborn")
 
     def plot_training_metrics(
-        self, metrics_history: List[Dict[str, float]], save_path: Optional[str] = None
+        self, metrics_history: list[dict[str, float]], save_path: Optional[str] = None
     ):
         """Plot training metrics history.
 
@@ -2046,7 +2046,7 @@ class PlenoxelVisualizer:
 
         plt.close()
 
-    def plot_timing_breakdown(self, event_times: Dict[str, float], save_path: Optional[str] = None):
+    def plot_timing_breakdown(self, event_times: dict[str, float], save_path: Optional[str] = None):
         """Plot timing breakdown of different operations.
 
         Args:

@@ -15,7 +15,7 @@ import json
 logger = logging.getLogger(__name__)
 
 def compute_scale_factor(
-    distances: torch.Tensor, scale_thresholds: List[float]
+    distances: torch.Tensor, scale_thresholds: list[float]
 ) -> torch.Tensor:
     """
     Compute scale factors based on distance
@@ -38,7 +38,7 @@ def compute_scale_factor(
     return scale_factors
 
 def get_level_of_detail(
-    distances: torch.Tensor, lod_thresholds: List[float]
+    distances: torch.Tensor, lod_thresholds: list[float]
 ) -> torch.Tensor:
     """
     Get level of detail based on distance
@@ -107,8 +107,8 @@ def progressive_positional_encoding(
     return torch.cat(encoded, dim=-1)
 
 def multiscale_sampling(
-    rays_o: torch.Tensor, rays_d: torch.Tensor, bounds: torch.Tensor, distances: torch.Tensor, num_samples_base: int = 64, scale_factors: List[float] = None
-) -> Tuple[torch.Tensor, torch.Tensor]:
+    rays_o: torch.Tensor, rays_d: torch.Tensor, bounds: torch.Tensor, distances: torch.Tensor, num_samples_base: int = 64, scale_factors: list[float] = None
+) -> tuple[torch.Tensor, torch.Tensor]:
     """
     Multi-scale sampling along rays
     
@@ -169,8 +169,8 @@ def multiscale_sampling(
     return all_points, all_z_vals
 
 def compute_multiscale_loss(
-    outputs: Dict[str, torch.Tensor], targets: Dict[str, torch.Tensor], distances: torch.Tensor, stage: int, config
-) -> Dict[str, torch.Tensor]:
+    outputs: dict[str, torch.Tensor], targets: dict[str, torch.Tensor], distances: torch.Tensor, stage: int, config
+) -> dict[str, torch.Tensor]:
     """
     Compute multi-scale loss for BungeeNeRF
     
@@ -270,7 +270,7 @@ def save_bungee_model(
 
 def load_bungee_model(
     model: torch.nn.Module, load_path: str, device: str = "cuda"
-) -> Tuple[torch.nn.Module, dict]:
+) -> tuple[torch.nn.Module, dict]:
     """
     Load BungeeNeRF model and configuration
     
@@ -378,7 +378,7 @@ def compute_ssim(
 
 def create_progressive_schedule(
     num_stages: int = 4, steps_per_stage: int = 50000, warmup_steps: int = 1000
-) -> Dict[str, any]:
+) -> dict[str, any]:
     """
     Create progressive training schedule
     
@@ -401,7 +401,7 @@ def create_progressive_schedule(
     return schedule
 
 def apply_progressive_schedule(
-    step: int, schedule: Dict[str, any]
+    step: int, schedule: dict[str, any]
 ) -> int:
     """
     Get current stage based on training step
@@ -479,7 +479,7 @@ def convert_ges_to_nerf_poses(
 
 def compute_scene_bounds(
     poses: np.ndarray, percentile: float = 95.0
-) -> Tuple[float, float]:
+) -> tuple[float, float]:
     """
     Compute scene bounds from camera poses
     

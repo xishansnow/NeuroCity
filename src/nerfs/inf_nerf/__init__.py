@@ -1,57 +1,50 @@
 """
-InfNeRF: Towards Infinite Scale NeRF Rendering with O(log n) Space Complexity
+InfNeRF: Infinite Scale NeRF with O(log n) Space Complexity
 
-This module implements InfNeRF as described in:
-"InfNeRF: Towards Infinite Scale NeRF Rendering with O(log n) Space Complexity"
-by Jiabin Liang et al. (SIGGRAPH Asia 2024)
-
-Key Features:
-- Octree-based Level of Detail (LoD) structure
-- O(log n) space complexity for rendering
-- Anti-aliasing rendering through hierarchical structure
-- Scalable large-scale scene representation
-- Distributed training support
+This package implements InfNeRF with decoupled trainer and renderer architecture.
 """
 
-from .core import InfNeRF, InfNeRFConfig, OctreeNode, InfNeRFRenderer, LoDAwareNeRF
-
-from .dataset import InfNeRFDataset, InfNeRFDatasetConfig
+from .core import (
+    InfNeRF,
+    InfNeRFConfig,
+    OctreeNode,
+    LoDAwareNeRF,
+    HashEncoder,
+    SphericalHarmonicsEncoder,
+)
 
 from .trainer import InfNeRFTrainer, InfNeRFTrainerConfig, create_inf_nerf_trainer
 
-# Utils
-from .utils.octree_utils import OctreeBuilder, OctreePruner, calculate_gsd
-from .utils.lod_utils import (
-    LoDManager,
-    anti_aliasing_sampling,
-    determine_lod_level,
-    pyramid_supervision,
+from .renderer import (
+    InfNeRFRenderer,
+    InfNeRFRendererConfig,
+    create_inf_nerf_renderer,
+    render_demo_images,
 )
-from .utils.rendering_utils import distributed_rendering, memory_efficient_rendering
+
+from .utils.volume_renderer import VolumeRenderer, VolumeRendererConfig, create_volume_renderer
 
 __version__ = "1.0.0"
 
 __all__ = [
-    # Core components
+    # Core models
     "InfNeRF",
     "InfNeRFConfig",
     "OctreeNode",
-    "InfNeRFRenderer",
     "LoDAwareNeRF",
-    # Dataset and training
-    "InfNeRFDataset",
-    "InfNeRFDatasetConfig",
+    "HashEncoder",
+    "SphericalHarmonicsEncoder",
+    # Trainer
     "InfNeRFTrainer",
     "InfNeRFTrainerConfig",
     "create_inf_nerf_trainer",
-    # Utils
-    "OctreeBuilder",
-    "OctreePruner",
-    "calculate_gsd",
-    "LoDManager",
-    "anti_aliasing_sampling",
-    "determine_lod_level",
-    "pyramid_supervision",
-    "distributed_rendering",
-    "memory_efficient_rendering",
+    # Renderer
+    "InfNeRFRenderer",
+    "InfNeRFRendererConfig",
+    "create_inf_nerf_renderer",
+    "render_demo_images",
+    # Volume renderer
+    "VolumeRenderer",
+    "VolumeRendererConfig",
+    "create_volume_renderer",
 ]

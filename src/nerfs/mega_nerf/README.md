@@ -1,200 +1,97 @@
-# Mega-NeRF: Scalable Construction of Large-Scale NeRFs for Virtual Fly-Throughs
+# Mega-NeRF
 
-This package implements Mega-NeRF, a method for scalable construction of large-scale Neural Radiance Fields that enables virtual fly-throughs of real-world environments.
+A scalable, modular implementation of Mega-NeRF for large-scale neural scene representation and rendering.
 
 ## Overview
 
-Mega-NeRF addresses the challenges of applying NeRF to large-scale scenes by:
-- **Spatial Partitioning**: Decomposing large scenes into manageable subregions
-- **Geometry-Aware Data Partitioning**: Intelligently distributing training data across submodules
-- **Parallel Training**: Training multiple submodules simultaneously for efficiency
-- **Temporal Coherence**: Ensuring smooth rendering across submodule boundaries
+Mega-NeRF is designed for efficient, distributed neural radiance field (NeRF) training and rendering on large scenes. This implementation is modular, extensible, and supports both research and production use cases.
 
 ## Features
+- **Modular Design**: Decoupled core, trainer, renderer, dataset, and utilities for easy extension.
+- **Scalable Partitioning**: Supports spatial partitioning and distributed training.
+- **Efficient Rendering**: Fast batch and video rendering with chunked processing.
+- **Flexible Dataset Support**: Compatible with NeRF-style datasets and custom data.
+- **Mixed Precision & Multi-GPU**: Supports AMP and distributed training.
+- **Comprehensive Testing**: Full test suite for all modules.
 
-### Core Components
+## Directory Structure
 
-- **MegaNeRF Model**: Main model with spatial decomposition
-- **MegaNeRFSubmodule**: Individual NeRF networks for scene regions
-- **Spatial Partitioners**: Grid-based and geometry-aware partitioning strategies
-- **Volumetric Renderer**: Efficient ray-based rendering with hierarchical sampling
-- **Training Pipeline**: Sequential and parallel training modes
-
-### Key Capabilities
-
-- ✅ Large-scale scene reconstruction (city-scale)
-- ✅ Spatial decomposition with configurable grid sizes
-- ✅ Geometry-aware partitioning using camera positions
-- ✅ Parallel training of submodules
-- ✅ Appearance embedding for varying lighting conditions
-- ✅ Interactive rendering with caching
-- ✅ Video generation for fly-through sequences
-- ✅ Multiple data format support (COLMAP, LLFF, NeRF format)
-
-## Installation
-
-```bash
-# Clone the repository
-git clone <repository-url>
-cd NeuroCity
-
-# Install dependencies
-pip install -r requirements.txt
-
-# Install the package in development mode
-pip install -e .
+```
+src/nerfs/mega_nerf/
+├── __init__.py           # Main API and exports
+├── core.py               # Core model and config
+├── trainer.py            # Training logic and config
+├── renderer.py           # Rendering logic and config
+├── dataset.py            # Dataset loading and camera handling
+├── utils/                # Utility functions (partitioning, metrics, etc.)
 ```
 
 ## Quick Start
 
-### 1. Training a Mega-NeRF Model
-
+### Installation
 ```bash
-python src/nerfs/mega_nerf/train_mega_nerf.py \
-    --dataset_path /path/to/dataset \
-    --output_dir /path/to/output \
-    --config_path configs/mega_nerf_config.yaml
+# Install dependencies
+conda activate neurocity
+pip install -r requirements.txt
 ```
 
-### 2. Rendering Views
-
-```bash  
-python src/nerfs/mega_nerf/render_mega_nerf.py \
-    --model_path /path/to/trained/model \
-    --output_dir /path/to/renders \
-    --camera_path /path/to/camera/poses
-```
-
-### 3. Using the Python API
-
+### Training
 ```python
-from src.mega_nerf import (
-    MegaNeRF, MegaNeRFConfig, MegaNeRFTrainer,
-    MegaNeRFDataset, GridPartitioner
-)
-Urban radiance field representation with deformable neural mesh primitives
-# Setup configuration
-config = MegaNeRFConfig(
-    num_submodules=8,
-    grid_size=(4, 2),
-    hidden_dim=256,
-    num_layers=8
-)
+from src.nerfs.mega_nerf import MegaNeRF, MegaNeRFConfig, MegaNeRFTrainer, MegaNeRFTrainerConfig
 
-# Create spatial partitioner
-partitioner = GridPartitioner(
-    scene_bounds=(-100, -100, -10, 100, 100, 50),
-    grid_size=(4, 2),
-    overlap_factor=0.15
-)
+# Configure model and trainer
+model_config = MegaNeRFConfig()
+trainer_config = MegaNeRFTrainerConfig()
 
-# Create dataset
-dataset = MegaNeRFDataset(
-    data_root="path/to/data",
-    partitioner=partitioner
-)
+# Initialize model and trainer
+model = MegaNeRF(model_config)
+trainer = MegaNeRFTrainer(model, trainer_config)
 
-# Create and train model
-model = MegaNeRF(config)
-trainer = MegaNeRFTrainer(config, model, dataset, "output_dir")
-trainer.train_sequential()
+# Start training
+trainer.train()
 ```
 
-## Configuration
-
-### Model Configuration
-
+### Rendering
 ```python
-config = MegaNeRFConfig(
-    # Scene decomposition
-    num_submodules=8,           # Number of submodules
-    grid_size=(4, 2),           # 2D grid decomposition
-    overlap_factor=0.15,        # Overlap between submodules
-    
-    # Network architecture
-    hidden_dim=256,             # Hidden layer dimension
-    num_layers=8,               # Number of network layers
-    use_viewdirs=True,          # Use view directions
-    
-    # Training parameters
-    batch_size=1024,            # Ray batch size
-    learning_rate=5e-4,         # Learning rate
-    max_iterations=500000,      # Maximum iterations
-    
-    # Sampling parameters
-    num_coarse=256,             # Coarse samples per ray
-    num_fine=512,               # Fine samples per ray
-    near=0.1,                   # Near plane
-    far=1000.0,                 # Far plane
-    
-    # Scene bounds (x_min, y_min, z_min, x_max, y_max, z_max)
-    scene_bounds=(-100, -100, -10, 100, 100, 50)
-)
+from src.nerfs.mega_nerf import MegaNeRFRenderer, MegaNeRFRendererConfig
+
+renderer_config = MegaNeRFRendererConfig()
+renderer = MegaNeRFRenderer(model, renderer_config)
+
+# Render an image
+image = renderer.render_image(camera_pose, intrinsics)
 ```
 
-### Partitioning Strategies
-
-#### Grid Partitioner
-```python
-partitioner = GridPartitioner(
-    scene_bounds=scene_bounds,
-    grid_size=(4, 2),           # 4x2 grid
-    overlap_factor=0.15         # 15% overlap
-)
-```
-
-#### Geometry-Aware Partitioner
-```python
-partitioner = GeometryAwarePartitioner(
-    scene_bounds=scene_bounds,
-    camera_positions=camera_positions,
-    num_partitions=8,
-    use_kmeans=True             # Use k-means clustering
-)
-```
-
-## Training Modes
-
-### Sequential Training
-Trains submodules one after another:
+### Testing
 ```bash
-python train_mega_nerf.py --training_mode sequential
+# Run all tests
+python tests/nerfs/mega_nerf/run_tests.py
 ```
 
-### Parallel Training
-Trains multiple submodules simultaneously:
-```bash
-python train_mega_nerf.py --training_mode parallel --num_parallel_workers 4
-```
+## Environment
+- Python 3.10+
+- PyTorch 2.0+
+- NumPy 1.20+
+- pytest 7.0+
+- CUDA (optional, for GPU)
 
-## Data Formats
+## Contributing
+- Follow modular structure and type annotation conventions.
+- Add/Update tests for new features.
+- Document all public APIs.
+- See `tests/nerfs/mega_nerf/README.md` for test guidelines.
 
-### Supported Formats
-
-1. **COLMAP**: Standard COLMAP sparse reconstruction
-2. **LLFF**: Local Light Field Fusion format
-3. **NeRF**: Original NeRF transforms.json format
-4. **Synthetic**: Generated synthetic data
-
-### Data Structure
-```
-dataset/
-├── images/              # Input images
-├── sparse/             # COLMAP sparse reconstruction (optional)
-├── transforms.json     # NeRF format (optional)
-├── poses_bounds.npy    # LLFF format (optional)
-└── train.txt          # Training split (optional)
-```
-
-## Rendering Options
-
-### Render Types
-
-1. **Single View**: Render a single viewpoint
-2. **Spiral Path**: Circular camera path around scene center
-3. **Custom Path**: User-defined camera trajectory
-4. **Dataset Views**: Render dataset test views
-
-### Example Commands
+## Citation
+If you use this codebase, please cite the original Mega-NeRF paper and this repository.
 
 ```
+@article{turki2022megenerf,
+  title={Mega-NeRF: Scalable Construction of Large-Scale NeRFs for Virtual Fly-Throughs},
+  author={Turki, H and others},
+  journal={arXiv preprint arXiv:2112.10703},
+  year={2022}
+}
+```
+
+## License
+This project is part of the NeuroCity suite and is licensed under the same terms as the main repository. 

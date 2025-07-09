@@ -1,4 +1,4 @@
-# Instant-NGP 实现
+# Instant NGP 实现
 
 **Instant Neural Graphics Primitives with Multiresolution Hash Encoding** 的 PyTorch 实现，基于 SIGGRAPH 2022 论文。
 
@@ -10,8 +10,7 @@
 - **🎯 高质量渲染**：在保持渲染质量的同时大幅提升速度
 - **🔧 易于使用**：用于训练和推理的简单 API
 - **📦 完整包**：包含数据集加载、训练和渲染功能
-- **🧪 充分测试**：95%+覆盖率的综合测试套件
-- **📖 文档完善**：详细的文档和示例
+- **🧪 CUDA 加速**：优化的 CUDA 内核，实现最佳性能
 
 ## 🏗️ 架构概览
 
@@ -30,24 +29,162 @@
 
 ## 📦 安装
 
-该模块作为 NeuroCity 包的一部分提供。确保您拥有所需的依赖：
-
 ```bash
-pip install torch torchvision numpy pillow matplotlib tqdm
+pip install -r requirements.txt
+```
+
+CUDA 支持：
+```bash
+cd cuda
+python setup.py build_ext --inplace
 ```
 
 ## 🚀 快速开始
 
-### 基础使用
+### 基础训练
 
 ```python
-from instant_ngp import InstantNGPConfig, InstantNGP, InstantNGPTrainer
+from nerfs.instant_ngp import (
+    InstantNGPConfig, InstantNGPModel,
+    InstantNGPTrainer, InstantNGPTrainerConfig,
+    InstantNGPDataset, InstantNGPDatasetConfig
+)
 
-# 创建配置
+# 创建模型
 config = InstantNGPConfig(
     num_levels=16,
-    level_dim=2,
     base_resolution=16,
+    finest_resolution=512
+)
+model = InstantNGPModel(config)
+
+# 创建训练器
+trainer_config = InstantNGPTrainerConfig(
+    num_epochs=20,
+    batch_size=8192,
+    learning_rate=1e-2
+)
+trainer = InstantNGPTrainer(model, trainer_config)
+
+# 创建数据集
+dataset_config = InstantNGPDatasetConfig(
+    data_root="data/nerf_synthetic/lego",
+    dataset_type="blender"
+)
+train_dataset = InstantNGPDataset(dataset_config, split="train")
+val_dataset = InstantNGPDataset(dataset_config, split="val")
+
+# 训练
+trainer.train(train_dataset, val_dataset)
+```
+
+### 推理
+
+```python
+from nerfs.instant_ngp import (
+    InstantNGPInferenceRenderer, InstantNGPRendererConfig
+)
+
+# 创建渲染器
+renderer_config = InstantNGPRendererConfig(
+    num_samples=64,
+    batch_size=4096
+)
+renderer = InstantNGPInferenceRenderer(model, renderer_config)
+
+# 渲染图像
+result = renderer.render_image(
+    camera_pose=camera_pose,
+    intrinsics=intrinsics,
+    width=800,
+    height=800
+)
+```
+
+### 命令行接口
+
+```bash
+# 训练
+python -m nerfs.instant_ngp.cli train \
+    --data-dir data/nerf_synthetic/lego \
+    --output-dir outputs \
+    --num-epochs 20
+
+# 渲染
+python -m nerfs.instant_ngp.cli render \
+    --checkpoint outputs/model.pth \
+    --output-dir renders \
+    --width 800 --height 800
+```
+
+## 🔧 配置
+
+主要配置参数：
+
+```python
+config = InstantNGPConfig(
+    # 哈希编码
+    num_levels=16,           # 分辨率级别数量
+    level_dim=2,             # 每级别特征数
+    base_resolution=16,      # 基础网格分辨率
+    finest_resolution=512,   # 最细分辨率
+    log2_hashmap_size=19,    # 哈希表大小
+    
+    # 网络架构
+    hidden_dim=64,           # MLP 隐藏维度
+    num_layers=2,            # MLP 层数
+    
+    # 训练
+    learning_rate=1e-2,      # 学习率
+    batch_size=8192,         # 光线批次大小
+)
+```
+
+## 📊 性能
+
+| 指标 | 经典 NeRF | Instant NGP | 提升 |
+|------|-----------|-------------|------|
+| 训练时间 | 1-2 天 | 20-60 分钟 | **20-50x 更快** |
+| 推理速度 | 30 秒/图 | 实时 | **>100x 更快** |
+| 模型大小 | 100-500 MB | 10-50 MB | **5-10x 更小** |
+| GPU 内存 | 8-16 GB | 2-4 GB | **2-4x 更少** |
+
+## 🧪 测试
+
+运行测试套件：
+
+```bash
+python run_tests.py
+```
+
+## 📄 引用
+
+```bibtex
+@article{mueller2022instant,
+    title={Instant Neural Graphics Primitives with a Multiresolution Hash Encoding},
+    author={Thomas M{\"u}ller and Alex Evans and Christoph Schied and Alexander Keller},
+    journal={ACM Transactions on Graphics (SIGGRAPH)},
+    year={2022},
+    volume={41},
+    number={4},
+    pages={102:1--102:15}
+}
+```
+
+## 📧 支持
+
+问题和疑问：
+- 🐛 **错误报告**：提供重现步骤的问题报告
+- 💡 **功能请求**：描述所需功能
+- ❓ **使用问题**：首先查看示例和 API 文档
+
+## 📜 许可证
+
+MIT 许可证 - 详见 LICENSE 文件。
+
+---
+
+**愉快的神经渲染！ 🎨🚀**
     desired_resolution=2048
 )
 

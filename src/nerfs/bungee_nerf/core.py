@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import Any, Optional, Union
+from typing import Any
 
 """
 BungeeNeRF Core Module
@@ -38,7 +38,7 @@ class BungeeNeRFConfig:
     # MLP architecture
     hidden_dim: int = 256
     num_layers: int = 8
-    skip_layers: List[int] = None
+    skip_layers: list[int] = None
 
     # Progressive blocks
     block_hidden_dim: int = 128
@@ -55,8 +55,8 @@ class BungeeNeRFConfig:
     perturb: bool = True
 
     # Multi-scale parameters
-    scale_weights: List[float] = None
-    distance_thresholds: List[float] = None
+    scale_weights: list[float] = None
+    distance_thresholds: list[float] = None
 
     # Loss weights
     color_loss_weight: float = 1.0
@@ -236,8 +236,8 @@ class BungeeNeRF(nn.Module):
         rays_o: torch.Tensor,
         rays_d: torch.Tensor,
         bounds: torch.Tensor,
-        distances: Optional[torch.Tensor] = None,
-    ) -> Dict[str, torch.Tensor]:
+        distances: torch.Tensor | None = None,
+    ) -> dict[str, torch.Tensor]:
         """
         Forward pass through BungeeNeRF
 
@@ -311,7 +311,7 @@ class BungeeNeRF(nn.Module):
 
         return outputs
 
-    def _forward_base_mlp(self, x: torch.Tensor) -> Dict[str, torch.Tensor]:
+    def _forward_base_mlp(self, x: torch.Tensor) -> dict[str, torch.Tensor]:
         """Forward pass through base MLP"""
 
         # Store input for skip connections
@@ -365,7 +365,7 @@ class BungeeNeRF(nn.Module):
         """Count total number of parameters"""
         return sum(p.numel() for p in self.parameters() if p.requires_grad)
 
-    def get_progressive_info(self) -> Dict[str, any]:
+    def get_progressive_info(self) -> dict[str, any]:
         """Get information about progressive structure"""
         return {
             "current_stage": self.current_stage,
@@ -384,8 +384,8 @@ class BungeeNeRFLoss(nn.Module):
         self.config = config
 
     def forward(
-        self, outputs: Dict[str, torch.Tensor], targets: Dict[str, torch.Tensor], stage: int = 0
-    ) -> Dict[str, torch.Tensor]:
+        self, outputs: dict[str, torch.Tensor], targets: dict[str, torch.Tensor], stage: int = 0
+    ) -> dict[str, torch.Tensor]:
         """
         Compute BungeeNeRF loss
 

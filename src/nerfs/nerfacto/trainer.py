@@ -57,8 +57,8 @@ class NerfactoTrainerConfig:
 
     # Progressive training
     use_progressive_training: bool = True
-    progressive_levels: List[int] = field(default_factory=lambda: [64, 128, 256, 512])
-    progressive_epochs: List[int] = field(default_factory=lambda: [5000, 10000, 20000, 30000])
+    progressive_levels: list[int] = field(default_factory=lambda: [64, 128, 256, 512])
+    progressive_epochs: list[int] = field(default_factory=lambda: [5000, 10000, 20000, 30000])
 
     # Loss weights scheduling
     color_loss_weight: float = 1.0
@@ -280,8 +280,8 @@ class NerfactoTrainer:
                 self.model.field.set_resolution(target_resolution)
 
     def compute_loss(
-        self, outputs: Dict[str, torch.Tensor], targets: Dict[str, torch.Tensor]
-    ) -> Dict[str, torch.Tensor]:
+        self, outputs: dict[str, torch.Tensor], targets: dict[str, torch.Tensor]
+    ) -> dict[str, torch.Tensor]:
         """Compute training loss."""
         losses = self.loss_fn(outputs, targets)
 
@@ -297,7 +297,7 @@ class NerfactoTrainer:
 
         return losses
 
-    def train_step(self, batch: Dict[str, torch.Tensor]) -> Dict[str, float]:
+    def train_step(self, batch: dict[str, torch.Tensor]) -> dict[str, float]:
         """Single training step."""
         # Move batch to device
         for key in batch:
@@ -358,7 +358,7 @@ class NerfactoTrainer:
 
         return loss_dict
 
-    def validate(self) -> Dict[str, float]:
+    def validate(self) -> dict[str, float]:
         """Validation step."""
         if self.val_dataset is None:
             return {}
@@ -428,7 +428,7 @@ class NerfactoTrainer:
             for checkpoint in checkpoints[: -self.config.keep_n_checkpoints]:
                 os.remove(os.path.join(checkpoint_dir, checkpoint))
 
-    def log_metrics(self, metrics: Dict[str, float], prefix: str = "train") -> None:
+    def log_metrics(self, metrics: dict[str, float], prefix: str = "train") -> None:
         """Log metrics to TensorBoard and wandb."""
         # TensorBoard
         for key, value in metrics.items():

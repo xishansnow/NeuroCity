@@ -160,7 +160,7 @@ class MegaNeRFPlusTrainer:
             )
         )
     
-    def _create_resolution_schedule(self) -> List[Tuple[int, int]]:
+    def _create_resolution_schedule(self) -> list[tuple[int, int]]:
         """Create progressive resolution training schedule"""
         
         if not self.config.progressive_upsampling:
@@ -227,7 +227,7 @@ class MegaNeRFPlusTrainer:
         # Save final model
         self._save_checkpoint('final_model.pth')
     
-    def _train_epoch(self) -> Dict[str, float]:
+    def _train_epoch(self) -> dict[str, float]:
         """Train for one epoch"""
         
         self.model.train()
@@ -296,7 +296,7 @@ class MegaNeRFPlusTrainer:
             'total_loss': total_loss / num_batches, 'rgb_loss': rgb_loss / num_batches, 'depth_loss': depth_loss / num_batches, 'semantic_loss': semantic_loss / num_batches, 'distortion_loss': distortion_loss / num_batches
         }
     
-    def _forward_pass(self, batch: Dict[str, torch.Tensor]) -> Dict[str, torch.Tensor]:
+    def _forward_pass(self, batch: dict[str, torch.Tensor]) -> dict[str, torch.Tensor]:
         """Forward pass and loss computation"""
         
         rays = batch['rays']  # [B, 6] (origin + direction)
@@ -317,12 +317,12 @@ class MegaNeRFPlusTrainer:
     
     def _compute_losses(
         self,
-        render_results: Dict[str,
+        render_results: dict[str,
         torch.Tensor],
         target_rgb: torch.Tensor,
-        batch: Dict[str,
+        batch: dict[str,
         torch.Tensor],
-    ) -> Dict[str, torch.Tensor]:
+    ) -> dict[str, torch.Tensor]:
         """Compute all loss components"""
         
         losses = {}
@@ -409,7 +409,7 @@ class MegaNeRFPlusTrainer:
         
         return torch.mean(variance)
     
-    def _validate(self) -> Dict[str, float]:
+    def _validate(self) -> dict[str, float]:
         """Validation loop"""
         
         self.model.eval()
@@ -454,7 +454,7 @@ class MegaNeRFPlusTrainer:
         self,
         pose: torch.Tensor,
         intrinsic: torch.Tensor,
-        image_size: Tuple[int,
+        image_size: tuple[int,
         int],
     ) -> torch.Tensor:
         """Render a full image"""
@@ -569,7 +569,7 @@ class MegaNeRFPlusTrainer:
             self.train_dataset, batch_size=self.config.batch_size, shuffle=True, num_workers=4, pin_memory=True
         )
     
-    def _batch_to_device(self, batch: Dict[str, torch.Tensor]) -> Dict[str, torch.Tensor]:
+    def _batch_to_device(self, batch: dict[str, torch.Tensor]) -> dict[str, torch.Tensor]:
         """Move batch to training device"""
         device_batch = {}
         for key, value in batch.items():
@@ -581,9 +581,9 @@ class MegaNeRFPlusTrainer:
     
     def _log_metrics(
         self,
-        train_metrics: Dict[str,
+        train_metrics: dict[str,
         float],
-        val_metrics: Dict[str,
+        val_metrics: dict[str,
         float],
         epoch: int,
     ) -> None:
@@ -613,7 +613,7 @@ class MegaNeRFPlusTrainer:
             
             wandb.log(wandb_dict)
     
-    def _log_step_metrics(self, loss_dict: Dict[str, torch.Tensor], step: int):
+    def _log_step_metrics(self, loss_dict: dict[str, torch.Tensor], step: int):
         """Log step-level metrics"""
         
         if self.use_wandb and step % 100 == 0:
@@ -678,7 +678,7 @@ class MultiScaleTrainer(MegaNeRFPlusTrainer):
         self.current_scale_idx = 0
         self.steps_per_scale = self.config.lr_decay_steps // len(self.scale_factors)
     
-    def _create_resolution_schedule(self) -> List[Tuple[int, int]]:
+    def _create_resolution_schedule(self) -> list[tuple[int, int]]:
         """Create multi-scale resolution schedule"""
         
         schedules = []
@@ -746,9 +746,9 @@ class DistributedTrainer(MegaNeRFPlusTrainer):
     
     def _log_metrics(
         self,
-        train_metrics: Dict[str,
+        train_metrics: dict[str,
         float],
-        val_metrics: Dict[str,
+        val_metrics: dict[str,
         float],
         epoch: int,
     ) -> None:

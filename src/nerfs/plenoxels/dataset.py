@@ -13,9 +13,6 @@ Key features:
 - Camera pose handling and normalization
 """
 
-from typing import Any, Optional
-
-
 import os
 import json
 import numpy as np
@@ -82,7 +79,7 @@ def load_blender_data(
     half_res: bool = False,
     testskip: int = 1,
     white_bkgd: bool = False,
-) -> Dict[str, np.ndarray]:
+) -> dict[str, np.ndarray]:
     """Load Blender synthetic dataset."""
     splits = ["train", "val", "test"]
     metas = {}
@@ -166,7 +163,7 @@ def load_colmap_data(
     width: Optional[int] = None,
     height: Optional[int] = None,
     load_imgs: bool = True,
-) -> Dict[str, np.ndarray]:
+) -> dict[str, np.ndarray]:
     """Load COLMAP dataset."""
     try:
         from .colmap_utils import read_cameras_binary, read_images_binary, read_points3d_binary
@@ -333,7 +330,7 @@ class PlenoxelDataset(Dataset):
                 self.precrop_indices = coords[:, 0] * self.W + coords[:, 1]
                 self.precrop_indices = self.precrop_indices.numpy()
 
-    def _get_rays_np(self) -> Tuple[np.ndarray, np.ndarray]:
+    def _get_rays_np(self) -> tuple[np.ndarray, np.ndarray]:
         """Generate ray origins and directions for all images."""
         rays_o = []
         rays_d = []
@@ -375,14 +372,14 @@ class PlenoxelDataset(Dataset):
         else:
             return len(self.images)
 
-    def __getitem__(self, idx: int) -> Dict[str, torch.Tensor]:
+    def __getitem__(self, idx: int) -> dict[str, torch.Tensor]:
         """Get a batch of data."""
         if self.split == "train":
             return self._get_train_batch(idx)
         else:
             return self._get_eval_batch(idx)
 
-    def _get_train_batch(self, idx: int) -> Dict[str, torch.Tensor]:
+    def _get_train_batch(self, idx: int) -> dict[str, torch.Tensor]:
         """Get training batch with random ray sampling."""
         # Random ray sampling
         if hasattr(self, "precrop_indices") and idx < self.config.precrop_iterations:
@@ -410,7 +407,7 @@ class PlenoxelDataset(Dataset):
             ),
         }
 
-    def _get_eval_batch(self, idx: int) -> Dict[str, torch.Tensor]:
+    def _get_eval_batch(self, idx: int) -> dict[str, torch.Tensor]:
         """Get evaluation batch (full image)."""
         # Return full image data
         rays_o = torch.from_numpy(self.rays_o[idx]).float()  # [H, W, 3]

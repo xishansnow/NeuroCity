@@ -118,7 +118,7 @@ def transform_points(points: torch.Tensor, transformation: torch.Tensor) -> torc
     
     return transformed_points
 
-def compute_bounding_box(points: torch.Tensor) -> Tuple[torch.Tensor, torch.Tensor]:
+def compute_bounding_box(points: torch.Tensor) -> tuple[torch.Tensor, torch.Tensor]:
     """
     Compute axis-aligned bounding box.
     
@@ -134,7 +134,7 @@ def compute_bounding_box(points: torch.Tensor) -> Tuple[torch.Tensor, torch.Tens
     
     return min_bounds, max_bounds
 
-def compute_oriented_bounding_box(points: torch.Tensor) -> Dict[str, torch.Tensor]:
+def compute_oriented_bounding_box(points: torch.Tensor) -> dict[str, torch.Tensor]:
     """
     Compute oriented bounding box using PCA.
     

@@ -302,7 +302,7 @@ class CustomPlenoxelLoss(PlenoxelLoss):
 
 ## 实用工具
 
-### 体素网格操作
+### 体素网格操作u
 
 ```python
 from src.plenoxels.utils import (
@@ -362,7 +362,7 @@ model(rays_o, rays_d, num_samples=64)  # 相对于质量的 192
 ```
 
 ## 评估指标
-
+u
 ```python
 # 计算 PSNR
 mse = torch.mean((pred_rgb - gt_rgb) ** 2)

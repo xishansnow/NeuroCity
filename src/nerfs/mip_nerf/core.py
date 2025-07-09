@@ -1,5 +1,5 @@
 from __future__ import annotations
-from typing import Any, Optional, TypeVar, TypedDict, cast
+from typing import Any, TypeVar, TypedDict, cast
 
 """
 Core Mip-NeRF implementation
@@ -20,12 +20,12 @@ import math
 from torch.amp.autocast_mode import autocast
 from torch.amp.grad_scaler import GradScaler
 from pathlib import Path
-from typing import TypeAlias, Any
+from typing import TypeAlias
 
 Tensor: TypeAlias = torch.Tensor
 Device: TypeAlias = torch.device | str
 DType: TypeAlias = torch.dtype
-TensorDict: TypeAlias = Dict[str, Tensor]
+TensorDict: TypeAlias = dict[str, Tensor]
 
 TensorType = TypeVar("TensorType", bound=torch.Tensor)
 
@@ -69,7 +69,7 @@ class MipNeRFConfig:
     # Network architecture
     hidden_dim: int = 256
     num_layers: int = 8
-    skip_connections: List[int] = (4,)
+    skip_connections: list[int] = (4,)
     activation: str = "relu"
     output_activation: str = "sigmoid"
 
@@ -285,7 +285,7 @@ class ConicalFrustum:
 
         return cls(means, covs)
 
-    def to_gaussian(self) -> Tuple[torch.Tensor, torch.Tensor]:
+    def to_gaussian(self) -> tuple[torch.Tensor, torch.Tensor]:
         """Convert to Gaussian representation (means and variances)"""
         # Extract diagonal variances from covariance matrices
         vars = torch.diagonal(self.covs, dim1=-2, dim2=-1)
@@ -337,8 +337,8 @@ class MipNeRFMLP(nn.Module):
     def forward(
         self,
         frustums: ConicalFrustum,
-        viewdirs: Optional[torch.Tensor] = None,
-    ) -> Dict[str, torch.Tensor]:
+        viewdirs: torch.Tensor | None = None,
+    ) -> dict[str, torch.Tensor]:
         """
         Forward pass of MLP
 
@@ -466,7 +466,7 @@ class MipNeRFRenderer(nn.Module):
         densities: torch.Tensor,
         colors: torch.Tensor,
         t_vals: torch.Tensor,
-    ) -> Dict[str, torch.Tensor]:
+    ) -> dict[str, torch.Tensor]:
         """Volumetric rendering equation"""
         # Compute distances between samples
         dists = torch.diff(t_vals, dim=-1)
@@ -528,7 +528,7 @@ class MipNeRF(nn.Module):
         self,
         rays_o: Tensor,
         rays_d: Tensor,
-        view_dirs: Tensor | None = None,
+        view_dirs: torch.Tensor | None = None,
         near: Tensor | None = None,
         far: Tensor | None = None,
     ) -> TensorDict:
@@ -682,7 +682,7 @@ class MipNeRF(nn.Module):
 
     def training_step(
         self, batch: TensorDict, optimizer: torch.optim.Optimizer
-    ) -> Tuple[Tensor, TensorDict]:
+    ) -> tuple[Tensor, TensorDict]:
         """Optimized training step with AMP support."""
         # Zero gradients efficiently
         optimizer.zero_grad(set_to_none=self.config.set_grad_to_none)

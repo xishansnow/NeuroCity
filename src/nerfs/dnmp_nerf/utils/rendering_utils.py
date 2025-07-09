@@ -14,7 +14,7 @@ import numpy as np
 def generate_camera_rays(
     camera_matrix: torch.Tensor,
     view_matrix: torch.Tensor,
-    image_size: Tuple[int, int]
+    image_size: tuple[int, int]
 ):
     """
     Generate camera rays for given camera parameters.

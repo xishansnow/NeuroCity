@@ -145,7 +145,7 @@ def compute_depth_metrics(
     pred_depth: torch.Tensor,
     target_depth: torch.Tensor,
     mask: torch.Tensor | None = None
-) -> Dict[str, torch.Tensor]:
+) -> dict[str, torch.Tensor]:
     """
     Compute depth estimation metrics.
     
@@ -180,7 +180,7 @@ def compute_depth_metrics(
 def compute_novel_view_metrics(
     pred_images: torch.Tensor,
     target_images: torch.Tensor
-) -> Dict[str, torch.Tensor]:
+) -> dict[str, torch.Tensor]:
     """
     Compute novel view synthesis metrics.
     
@@ -318,7 +318,7 @@ def save_rendering_comparison(
     plt.savefig(save_path, dpi=150, bbox_inches='tight')
     plt.close()
 
-def compute_rendering_statistics(images: torch.Tensor) -> Dict[str, float]:
+def compute_rendering_statistics(images: torch.Tensor) -> dict[str, float]:
     """
     Compute statistics of rendered images.
     
@@ -348,7 +348,7 @@ def evaluate_model_performance(
     test_dataloader: torch.utils.data.DataLoader,
     device: str = 'cuda',
     save_dir: str | Path | None = None
-) -> Dict[str, float]:
+) -> dict[str, float]:
     """
     Evaluate model performance on test dataset.
     
@@ -512,7 +512,7 @@ def create_comparison_grid(
     images: Sequence[torch.Tensor],
     titles: Sequence[str] | None = None,
     save_path: str | Path | None = None,
-    grid_size: Tuple[int, int] | None = None
+    grid_size: tuple[int, int] | None = None
 ) -> np.ndarray | None:
     """
     Create a comparison grid of images.

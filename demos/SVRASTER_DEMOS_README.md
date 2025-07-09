@@ -33,7 +33,7 @@ python demos/demo_svraster_training.py
 **用途**: 展示 SVRaster 的实时高效渲染能力
 
 **特点**:
-- ✅ 使用 `TrueVoxelRasterizer` 进行快速光栅化
+- ✅ 使用 `VoxelRasterizer` 进行快速光栅化
 - ✅ GPU 加速实时渲染
 - ✅ 多分辨率性能基准测试
 - ✅ 训练/推理模式质量对比
@@ -60,7 +60,7 @@ python demos/demo_svraster_rendering.py
 | 特性 | 训练演示 | 渲染演示 |
 |------|----------|----------|
 | **主要用途** | 模型训练 | 实时渲染 |
-| **渲染器** | VolumeRenderer | TrueVoxelRasterizer |
+| **渲染器** | VolumeRenderer | VoxelRasterizer |
 | **渲染模式** | mode="training" | mode="inference" |
 | **性能** | 精确但慢 | 快速实时 |
 | **质量** | 高质量 | 近似高质量 |

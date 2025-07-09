@@ -20,7 +20,7 @@ def generate_rays_from_camera(
     image_height: int,
     image_width: int,
     device: str = "cuda",
-) -> Tuple[torch.Tensor, torch.Tensor]:
+) -> tuple[torch.Tensor, torch.Tensor]:
     """
     Generate rays from camera parameters.
 
@@ -86,7 +86,7 @@ def sample_points_along_rays(
     num_samples: int,
     stratified: bool = True,
     perturb: bool = True,
-) -> Tuple[torch.Tensor, torch.Tensor]:
+) -> tuple[torch.Tensor, torch.Tensor]:
     """
     Sample points along rays.
 
@@ -139,7 +139,7 @@ def hierarchical_sampling(
     weights_coarse: torch.Tensor,
     num_fine_samples: int,
     perturb: bool = True,
-) -> Tuple[torch.Tensor, torch.Tensor]:
+) -> tuple[torch.Tensor, torch.Tensor]:
     """
     Perform hierarchical sampling based on coarse weights.
 
@@ -202,7 +202,7 @@ def ray_aabb_intersection(
     ray_directions: torch.Tensor,
     aabb_min: torch.Tensor,
     aabb_max: torch.Tensor,
-) -> Tuple[torch.Tensor, torch.Tensor]:
+) -> tuple[torch.Tensor, torch.Tensor]:
     """
     Compute ray-AABB intersection.
 
@@ -235,7 +235,7 @@ def compute_ray_grid_intersections(
     ray_directions: torch.Tensor,
     grid_bounds: torch.Tensor,
     grid_resolution: int,
-) -> Tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
+) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
     """
     Compute which grid cells each ray intersects.
 
@@ -287,7 +287,7 @@ def voxel_traversal_3d(
     grid_bounds: torch.Tensor,
     grid_resolution: int,
     max_steps: int = 1000,
-) -> Tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
+) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
     """
     Perform 3D voxel traversal using DDA algorithm.
 
@@ -379,7 +379,7 @@ def importance_sampling_from_grid(
     num_samples: int,
     near: float = 0.1,
     far: float = 10.0,
-) -> Tuple[torch.Tensor, torch.Tensor]:
+) -> tuple[torch.Tensor, torch.Tensor]:
     """
     Sample points along rays based on grid importance.
 
@@ -435,7 +435,7 @@ def compute_ray_weights(
     densities: torch.Tensor,
     t_vals: torch.Tensor,
     ray_directions: torch.Tensor,
-) -> Tuple[torch.Tensor, torch.Tensor]:
+) -> tuple[torch.Tensor, torch.Tensor]:
     """
     Compute weights for volume rendering.
 
@@ -472,7 +472,7 @@ def sample_stratified_rays(
     image_height: int,
     image_width: int,
     device: str = "cuda",
-) -> Tuple[torch.Tensor, torch.Tensor]:
+) -> tuple[torch.Tensor, torch.Tensor]:
     """
     Sample stratified rays from image plane.
 

@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import Any, Optional, Union
+from typing import Any
 
 """
 PyNeRF Core Module
@@ -27,7 +27,7 @@ logger = logging.getLogger(__name__)
 Tensor = torch.Tensor
 Device = torch.device | str
 DType = torch.dtype
-TensorDict = Dict[str, Tensor]
+TensorDict = dict[str, Tensor]
 
 
 @dataclass
@@ -37,13 +37,13 @@ class PyramidNeRFConfig:
     # Network architecture
     hidden_dim: int = 256
     num_layers: int = 8
-    skip_connections: List[int] = (4,)
+    skip_connections: list[int] = (4,)
     activation: str = "relu"
     output_activation: str = "sigmoid"
 
     # Pyramid settings
     num_levels: int = 4
-    base_resolution: Tuple[int, int, int] = (32, 32, 32)
+    base_resolution: tuple[int, int, int] = (32, 32, 32)
     feature_dim: int = 32
     use_trilinear: bool = True
 
@@ -201,7 +201,7 @@ class PyramidNeRF(nn.Module):
 
     def training_step(
         self, batch: TensorDict, optimizer: torch.optim.Optimizer
-    ) -> Tuple[Tensor, TensorDict]:
+    ) -> tuple[Tensor, TensorDict]:
         """Optimized training step with AMP support."""
         # Zero gradients efficiently
         optimizer.zero_grad(set_to_none=self.config.set_grad_to_none)
@@ -277,7 +277,7 @@ class PyramidNeRF(nn.Module):
 class PyramidLevel(nn.Module):
     """Single level of the pyramid representation."""
 
-    def __init__(self, resolution: List[int], feature_dim: int, use_trilinear: bool = True):
+    def __init__(self, resolution: list[int], feature_dim: int, use_trilinear: bool = True):
         super().__init__()
         self.resolution = resolution
         self.feature_dim = feature_dim
@@ -319,7 +319,7 @@ class PyramidNeRFNetwork(nn.Module):
     """Network module for Pyramid NeRF."""
 
     def __init__(
-        self, feature_dim: int, hidden_dim: int, num_layers: int, skip_connections: List[int]
+        self, feature_dim: int, hidden_dim: int, num_layers: int, skip_connections: list[int]
     ):
         super().__init__()
         self.feature_dim = feature_dim
@@ -415,8 +415,8 @@ class PyNeRFMLP(nn.Module):
         self.feature_linear = nn.Linear(input_dim, hidden_dim)
 
     def forward(
-        self, encoded_pts: torch.Tensor, viewdirs: Optional[torch.Tensor] = None
-    ) -> Tuple[torch.Tensor, torch.Tensor]:
+        self, encoded_pts: torch.Tensor, viewdirs: torch.Tensor | None = None
+    ) -> tuple[torch.Tensor, torch.Tensor]:
         """
         Forward pass through MLP
 
@@ -455,8 +455,8 @@ class PyNeRFLoss(nn.Module):
         self.mse_loss = nn.MSELoss()
 
     def forward(
-        self, predictions: Dict[str, torch.Tensor], targets: Dict[str, torch.Tensor]
-    ) -> Dict[str, torch.Tensor]:
+        self, predictions: dict[str, torch.Tensor], targets: dict[str, torch.Tensor]
+    ) -> dict[str, torch.Tensor]:
         """
         Compute PyNeRF loss
 

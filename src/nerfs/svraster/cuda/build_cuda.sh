@@ -33,8 +33,8 @@ print_error() {
 }
 
 # Check if we're in the right directory
-if [ ! -f "svraster_cuda_kernel.h" ]; then
-    print_error "Please run this script from the src/nerfs/svraster/ directory"
+if [ ! -f "trainer/svraster_cuda_kernel.h" ] || [ ! -f "renderer/voxel_rasterizer_cuda_kernel.h" ]; then
+    print_error "Please run this script from the src/nerfs/svraster/cuda/ directory"
     exit 1
 fi
 
@@ -111,7 +111,7 @@ print_status "Building CUDA extension..."
 cd "$BUILD_DIR"
 
 # Run setup.py with verbose output
-python3 ../setup_cuda.py build_ext --inplace -v
+python3 ../setup.py build_ext --inplace -v
 
 # Check if build was successful
 if [ -f "../svraster_cuda*.so" ] || [ -f "../svraster_cuda*.pyd" ]; then
@@ -148,15 +148,26 @@ else
 fi
 
 # Run comprehensive tests if available
-if [ -f "test_svraster_gpu.py" ]; then
-    print_status "Running GPU tests..."
-    if python3 test_svraster_gpu.py; then
-        print_success "All GPU tests passed!"
+if [ -f "trainer/test_svraster_gpu.py" ]; then
+    print_status "Running trainer GPU tests..."
+    if python3 trainer/test_svraster_gpu.py; then
+        print_success "All trainer GPU tests passed!"
     else
-        print_warning "Some GPU tests failed. Check the output above."
+        print_warning "Some trainer GPU tests failed. Check the output above."
     fi
 else
-    print_warning "GPU test file not found. Skipping tests."
+    print_warning "Trainer GPU test file not found. Skipping tests."
+fi
+
+if [ -f "renderer/test_voxel_rasterizer_cuda.py" ]; then
+    print_status "Running renderer GPU tests..."
+    if python3 renderer/test_voxel_rasterizer_cuda.py; then
+        print_success "All renderer GPU tests passed!"
+    else
+        print_warning "Some renderer GPU tests failed. Check the output above."
+    fi
+else
+    print_warning "Renderer GPU test file not found. Skipping tests."
 fi
 
 # Performance benchmark
@@ -168,7 +179,7 @@ import sys
 sys.path.insert(0, '.')
 
 try:
-    from svraster_gpu import SVRasterGPU
+    from trainer.svraster_gpu import SVRasterGPU
     from core import SVRasterConfig
     
     config = SVRasterConfig(
@@ -211,7 +222,7 @@ except Exception as e:
 
 # Installation
 print_status "Installing extension..."
-if python3 setup_cuda.py install --user; then
+if python3 setup.py install --user; then
     print_success "Extension installed successfully!"
 else
     print_warning "Installation failed. You can still use the extension from the current directory."

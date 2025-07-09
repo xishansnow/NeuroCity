@@ -179,7 +179,7 @@ class GridNeRFTrainer:
             epoch_path = self.checkpoint_dir / f"epoch_{self.current_epoch:04d}.pth"
             torch.save(checkpoint, epoch_path)
 
-    def train_step(self, batch: Dict[str, torch.Tensor]) -> Dict[str, float]:
+    def train_step(self, batch: dict[str, torch.Tensor]) -> dict[str, float]:
         """Perform a single training step."""
         self.model.train()
         self.optimizer.zero_grad()
@@ -210,7 +210,7 @@ class GridNeRFTrainer:
 
         return loss_dict_cpu
 
-    def validate(self, val_dataloader) -> Dict[str, float]:
+    def validate(self, val_dataloader) -> dict[str, float]:
         """Validate the model on validation set."""
         self.model.eval()
         total_loss = 0.0
@@ -438,7 +438,7 @@ def setup_distributed_training(rank: int, world_size: int, backend: str = "nccl"
 
 
 def main_worker(
-    rank: int, world_size: int, config: GridNeRFConfig, output_dir: str, data_config: Dict[str, Any]
+    rank: int, world_size: int, config: GridNeRFConfig, output_dir: str, data_config: dict[str, Any]
 ) -> None:
     """Main worker function for distributed training."""
     # Setup distributed training

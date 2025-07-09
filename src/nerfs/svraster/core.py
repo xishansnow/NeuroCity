@@ -21,11 +21,9 @@ import numpy as np
 from dataclasses import dataclass, field
 import logging
 import os
-from typing import Optional, Union, Dict, List, Tuple
-from .utils.rendering_utils import ray_direction_dependent_ordering
-import math
 from contextlib import nullcontext
 from pathlib import Path
+from typing import Optional
 
 logger = logging.getLogger(__name__)
 
@@ -81,13 +79,13 @@ class SVRasterConfig:
         pointwise_rgb_loss_weight: Pointwise RGB loss weight
 
         # New attributes for modern optimizations
-        volume_size: Tuple[int, int, int] = (128, 128, 128)
+        volume_size: tuple[int, int, int] = (128, 128, 128)
         feature_dim: int = 32
         num_planes: int = 3
         plane_channels: int = 16
         hidden_dim: int = 64
         num_layers: int = 4
-        skip_connections: List[int] = (2,)
+        skip_connections: list[int] = (2,)
         activation: str = "relu"
         output_activation: str = "sigmoid"
         num_samples: int = 128
@@ -115,7 +113,7 @@ class SVRasterConfig:
     # Scene representation
     max_octree_levels: int = 16
     base_resolution: int = 64
-    scene_bounds: Tuple[float, float, float, float, float, float] = (
+    scene_bounds: tuple[float, float, float, float, float, float] = (
         -1.0,
         -1.0,
         -1.0,
@@ -151,7 +149,7 @@ class SVRasterConfig:
     ray_samples_per_voxel: int = 8
     depth_peeling_layers: int = 4
     morton_ordering: bool = True
-    background_color: Tuple[float, float, float] = (0.0, 0.0, 0.0)
+    background_color: tuple[float, float, float] = (0.0, 0.0, 0.0)
     near_plane: float = 0.1
     far_plane: float = 100.0
     use_view_dependent_color: bool = True
@@ -165,13 +163,13 @@ class SVRasterConfig:
     pointwise_rgb_loss_weight: float = 1.0
 
     # New attributes for modern optimizations
-    volume_size: Tuple[int, int, int] = (128, 128, 128)
+    volume_size: tuple[int, int, int] = (128, 128, 128)
     feature_dim: int = 32
     num_planes: int = 3
     plane_channels: int = 16
     hidden_dim: int = 64
     num_layers: int = 4
-    skip_connections: List[int] = field(default_factory=lambda: [2])
+    skip_connections: list[int] = field(default_factory=lambda: [2])
     activation: str = "relu"
     output_activation: str = "sigmoid"
     num_samples: int = 128
@@ -198,6 +196,19 @@ class SVRasterConfig:
 
     def __post_init__(self):
         """Post-initialization validation and initialization."""
+        # Validate parameters
+        if self.max_octree_levels <= 0:
+            raise ValueError("max_octree_levels must be positive")
+        if self.base_resolution <= 0:
+            raise ValueError("base_resolution must be positive")
+        if self.sh_degree < 0:
+            raise ValueError("sh_degree must be non-negative")
+        if self.learning_rate <= 0:
+            raise ValueError("learning_rate must be positive")
+        if self.num_epochs <= 0:
+            raise ValueError("num_epochs must be positive")
+        if self.batch_size <= 0:
+            raise ValueError("batch_size must be positive")
         # Validate volume settings
         assert len(self.volume_size) == 3, "Volume size must be a 3-tuple"
         assert all(s > 0 for s in self.volume_size), "Volume dimensions must be positive"
@@ -262,7 +273,7 @@ class AdaptiveSparseVoxels:
         # Initialize with base level voxels
         self._initialize_base_voxels()
 
-    def parameters(self) -> List[torch.Tensor]:
+    def parameters(self) -> list[torch.Tensor]:
         """Get all optimizable parameters."""
         params = []
         for level_idx in range(len(self.voxel_densities)):
@@ -505,7 +516,7 @@ class AdaptiveSparseVoxels:
         self.voxel_levels[level_idx] = self.voxel_levels[level_idx][keep_mask]
         self.voxel_morton_codes[level_idx] = self.voxel_morton_codes[level_idx][keep_mask]
 
-    def prune_voxels(self, threshold: Optional[float] = None):
+    def prune_voxels(self, threshold: float | None = None):
         """
         移除低密度体素
 
@@ -538,7 +549,7 @@ class AdaptiveSparseVoxels:
                 self.voxel_levels[level_idx] = self.voxel_levels[level_idx][keep_mask]
                 self.voxel_morton_codes[level_idx] = self.voxel_morton_codes[level_idx][keep_mask]
 
-    def get_all_voxels(self) -> Dict[str, torch.Tensor]:
+    def get_all_voxels(self) -> dict[str, torch.Tensor]:
         """
         获取所有层级的体素数据
 
@@ -618,15 +629,15 @@ class SVRasterModel(nn.Module):
 
         # Initialize components - 延迟导入避免循环依赖
         from .volume_renderer import VolumeRenderer
-        
+
         self.voxels = AdaptiveSparseVoxels(config)
         self.volume_renderer = VolumeRenderer(config)  # 用于训练
-        
+
         # 注册体素参数为模型参数
         self._register_voxel_parameters()
-        
+
         # 懒加载真正的光栅化器（用于推理）
-        self._true_rasterizer = None
+        self._voxel_rasterizer = None
 
         # Initialize AMP scaler
         self.scaler = GradScaler()
@@ -634,30 +645,30 @@ class SVRasterModel(nn.Module):
         # Move model to device
         self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
         self.to(self.device)
-    
+
     def _register_voxel_parameters(self):
         """注册体素参数为模型参数"""
         # 获取体素参数并注册为 nn.Parameter
         voxel_params = self.voxels.parameters()
         for i, param in enumerate(voxel_params):
-            self.register_parameter(f'voxel_param_{i}', nn.Parameter(param))
-    
-    
+            self.register_parameter(f"voxel_param_{i}", nn.Parameter(param))
+
     @property
-    def true_rasterizer(self):
-        """懒加载真正的光栅化器"""
-        if self._true_rasterizer is None:
-            from .true_rasterizer import TrueVoxelRasterizer
-            self._true_rasterizer = TrueVoxelRasterizer(self.config)
-        return self._true_rasterizer
+    def voxel_rasterizer(self):
+        """懒加载体素光栅化器"""
+        if self._voxel_rasterizer is None:
+            from .voxel_rasterizer import VoxelRasterizer
+
+            self._voxel_rasterizer = VoxelRasterizer(self.config)
+        return self._voxel_rasterizer
 
     def forward(
         self,
         ray_origins: torch.Tensor,
         ray_directions: torch.Tensor,
-        camera_params: Optional[Dict[str, torch.Tensor]] = None,
+        camera_params: Optional[dict[str, torch.Tensor]] = None,
         mode: str = "training",
-    ) -> Dict[str, torch.Tensor]:
+    ) -> dict[str, torch.Tensor]:
         """Forward pass with modern optimizations.
 
         Args:
@@ -692,13 +703,14 @@ class SVRasterModel(nn.Module):
                 )
             elif mode == "inference":
                 # 使用光栅化渲染（用于推理）
-                from .true_rasterizer import rays_to_camera_matrix
+                from .voxel_rasterizer import rays_to_camera_matrix
+
                 camera_matrix, intrinsics = rays_to_camera_matrix(ray_origins, ray_directions)
-                
+
                 # 推断视口尺寸
                 viewport_size = (self.config.image_width, self.config.image_height)
-                
-                outputs = self.true_rasterizer(
+
+                outputs = self.voxel_rasterizer(
                     voxels,
                     camera_matrix,
                     intrinsics,
@@ -711,9 +723,9 @@ class SVRasterModel(nn.Module):
 
     def train_step(
         self,
-        batch: Dict[str, torch.Tensor],
+        batch: dict[str, torch.Tensor],
         optimizer: torch.optim.Optimizer,
-    ) -> Dict[str, torch.Tensor]:
+    ) -> dict[str, torch.Tensor]:
         """Perform a single training step with modern optimizations.
 
         Args:
@@ -732,7 +744,7 @@ class SVRasterModel(nn.Module):
             camera_params = batch.get("camera_params")
             if camera_params is not None and not isinstance(camera_params, dict):
                 camera_params = None
-            
+
             outputs = self.forward(
                 batch["rays_o"],
                 batch["rays_d"],
@@ -756,7 +768,9 @@ class SVRasterModel(nn.Module):
             if self.config.use_distortion_loss and "weights" in outputs and "depth" in outputs:
                 # Create temporary loss calculator
                 loss_calc = SVRasterLoss(self.config)
-                distortion_loss = loss_calc._compute_distortion_loss(outputs["weights"], outputs["depth"])
+                distortion_loss = loss_calc._compute_distortion_loss(
+                    outputs["weights"], outputs["depth"]
+                )
                 loss_dict["distortion_loss"] = distortion_loss * self.config.distortion_loss_weight
 
             # Opacity regularization
@@ -781,8 +795,8 @@ class SVRasterModel(nn.Module):
     @torch.inference_mode()
     def evaluate(
         self,
-        batch: Dict[str, torch.Tensor],
-    ) -> Dict[str, torch.Tensor]:
+        batch: dict[str, torch.Tensor],
+    ) -> dict[str, torch.Tensor]:
         """Evaluate model with modern optimizations.
 
         Args:
@@ -800,7 +814,7 @@ class SVRasterModel(nn.Module):
             camera_params = batch.get("camera_params")
             if camera_params is not None and not isinstance(camera_params, dict):
                 camera_params = None
-                
+
             outputs = self.forward(
                 batch["rays_o"],
                 batch["rays_d"],
@@ -832,9 +846,9 @@ class SVRasterModel(nn.Module):
         self,
         camera_pose: torch.Tensor,
         camera_intrinsics: torch.Tensor,
-        image_size: Tuple[int, int],
+        image_size: tuple[int, int],
         device: Optional[torch.device] = None,
-    ) -> Dict[str, torch.Tensor]:
+    ) -> dict[str, torch.Tensor]:
         """Render a full image efficiently.
 
         Args:
@@ -915,34 +929,46 @@ class SVRasterLoss:
     - Pointwise RGB loss
     """
 
-    def __init__(self, config: SVRasterConfig):
+    def __init__(self, config: Optional[SVRasterConfig] = None):
         """Initialize loss functions.
 
         Args:
-            config: Model configuration
+            config: Model configuration (if None, use default config)
         """
+        if config is None:
+            config = SVRasterConfig()
         self.config = config
 
     def __call__(
         self,
-        outputs: Dict[str, torch.Tensor],
-        targets: Dict[str, torch.Tensor],
+        outputs_or_predicted: Union[dict[str, torch.Tensor], torch.Tensor],
+        targets_or_target: Union[dict[str, torch.Tensor], torch.Tensor, None] = None,
         model: Optional[SVRasterModel] = None,
-    ) -> Dict[str, torch.Tensor]:
+    ) -> Union[dict[str, torch.Tensor], torch.Tensor]:
         """Compute all loss terms.
 
         Args:
-            outputs: Model outputs
-            targets: Ground truth targets
+            outputs_or_predicted: Model outputs dict or predicted tensor
+            targets_or_target: Ground truth targets dict or target tensor
             model: Optional model for regularization
 
         Returns:
-            Dictionary containing all loss terms and total loss
+            Dictionary containing all loss terms and total loss, or scalar loss
         """
+        # Handle simple tensor format (for backward compatibility)
+        if isinstance(outputs_or_predicted, torch.Tensor) and isinstance(
+            targets_or_target, torch.Tensor
+        ):
+            # Simple MSE loss
+            return F.mse_loss(outputs_or_predicted, targets_or_target)
+
+        # Handle dict format
+        outputs = outputs_or_predicted
+        targets = targets_or_target
         losses = {}
 
         # RGB loss (always used)
-        if self.config.use_pointwise_rgb_loss:
+        if self.config.use_pointwise_rgb_loss and "rgb" in outputs:
             rgb_loss = F.mse_loss(outputs["rgb"], targets["rgb"])
             losses["rgb"] = rgb_loss * self.config.pointwise_rgb_loss_weight
 
@@ -965,7 +991,7 @@ class SVRasterLoss:
             losses["opacity_reg"] = opacity_reg * self.config.opacity_reg_weight
 
         # Compute total loss
-        total_loss = sum(losses.values())
+        total_loss = sum(losses.values()) if losses else torch.tensor(0.0)
         losses["total_loss"] = total_loss
 
         return losses

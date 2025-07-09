@@ -9,40 +9,68 @@ import torch
 import numpy as np
 
 def voxel_pruning(
-    voxel_densities: torch.Tensor,
-    voxel_positions: torch.Tensor,
-    voxel_sizes: torch.Tensor,
+    densities: Optional[torch.Tensor] = None,
+    colors: Optional[torch.Tensor] = None,
+    positions: Optional[torch.Tensor] = None,
     threshold: float = 0.001,
-) -> Tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
+    **kwargs
+) -> dict[str, torch.Tensor]:
     """
     Prune voxels with low density.
     
     Args:
-        voxel_densities: Voxel density values [N]
-        voxel_positions: Voxel positions [N, 3]
-        voxel_sizes: Voxel sizes [N]
+        densities: Voxel density values [N, 1] (optional)
+        colors: Voxel colors [N, 3] (optional)
+        positions: Voxel positions [N, 3] (optional)
         threshold: Pruning threshold
+        **kwargs: Additional voxel data to prune
         
     Returns:
-        tuple of (pruned_densities, pruned_positions, pruned_sizes)
+        Dictionary of pruned voxel data
     """
-    # Apply activation (assume exp activation)
-    densities = torch.exp(voxel_densities)
+    # Determine the number of voxels and which ones to keep
+    if densities is not None:
+        N = densities.shape[0]
+        # Apply activation and create keep mask
+        if densities.dim() == 2 and densities.shape[1] == 1:
+            density_values = torch.exp(densities.squeeze(-1))
+        else:
+            density_values = torch.exp(densities)
+        keep_mask = density_values > threshold
+    elif colors is not None:
+        N = colors.shape[0]
+        # Use color magnitude for pruning
+        color_magnitudes = torch.norm(colors, dim=1)
+        keep_mask = color_magnitudes > threshold
+    elif positions is not None:
+        N = positions.shape[0]
+        # Use position magnitude for pruning
+        position_magnitudes = torch.norm(positions, dim=1)
+        keep_mask = position_magnitudes > threshold
+    else:
+        raise ValueError("At least one of densities, colors, or positions must be provided")
     
-    # Create keep mask
-    keep_mask = densities > threshold
+    # Apply pruning to all provided data
+    result = {}
     
-    # Apply pruning
-    pruned_densities = voxel_densities[keep_mask]
-    pruned_positions = voxel_positions[keep_mask]
-    pruned_sizes = voxel_sizes[keep_mask]
+    if densities is not None:
+        result['densities'] = densities[keep_mask]
+    if colors is not None:
+        result['colors'] = colors[keep_mask]
+    if positions is not None:
+        result['positions'] = positions[keep_mask]
     
-    return pruned_densities, pruned_positions, pruned_sizes
+    # Handle additional keyword arguments
+    for key, value in kwargs.items():
+        if isinstance(value, torch.Tensor) and value.shape[0] == N:
+            result[key] = value[keep_mask]
+    
+    return result
 
 def compute_voxel_bounds(
     voxel_positions: torch.Tensor,
     voxel_sizes: torch.Tensor,
-) -> Tuple[torch.Tensor, torch.Tensor]:
+) -> tuple[torch.Tensor, torch.Tensor]:
     """
     Compute bounding boxes for voxels.
     
@@ -61,7 +89,7 @@ def compute_voxel_bounds(
 
 def voxel_to_world_coords(
     voxel_coords: torch.Tensor,
-    scene_bounds: Tuple[float,
+    scene_bounds: tuple[float,
     float,
     float,
     float,
@@ -94,7 +122,7 @@ def voxel_to_world_coords(
 
 def world_to_voxel_coords(
     world_coords: torch.Tensor,
-    scene_bounds: Tuple[float,
+    scene_bounds: tuple[float,
     float,
     float,
     float,

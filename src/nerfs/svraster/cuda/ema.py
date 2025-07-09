@@ -9,7 +9,7 @@ which can help stabilize training and improve model performance.
 
 import copy
 import torch
-from typing import Dict, Optional
+from typing import Optional, Any, cast
 
 __all__ = ["EMAModel"]
 
@@ -35,12 +35,8 @@ class EMAModel:
         """
         self.decay = decay
         self.device = device or torch.device("cuda" if torch.cuda.is_available() else "cpu")
-
-        # Deep copy of the model parameters
-        self.shadow = {}
-        self.original = {}
-
-        # Register model parameters
+        self.shadow = cast(dict[str, torch.Tensor], {})
+        self.original = cast(dict[str, torch.Tensor], {})
         for name, param in model.named_parameters():
             if param.requires_grad:
                 self.shadow[name] = param.data.clone().detach().to(self.device)
@@ -85,7 +81,7 @@ class EMAModel:
                 assert name in self.original
                 param.data.copy_(self.original[name])
 
-    def state_dict(self) -> Dict[str, torch.Tensor]:
+    def state_dict(self) -> dict[str, Any]:
         """Get the state dictionary of the EMA model."""
         return {
             "decay": self.decay,
@@ -93,7 +89,7 @@ class EMAModel:
             "original": copy.deepcopy(self.original),
         }
 
-    def load_state_dict(self, state_dict: Dict[str, torch.Tensor]) -> None:
+    def load_state_dict(self, state_dict: dict[str, torch.Tensor]) -> None:
         """
         Load a state dictionary into the EMA model.
 

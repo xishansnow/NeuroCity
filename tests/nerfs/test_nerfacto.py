@@ -13,7 +13,7 @@ import os
 import tempfile
 import unittest
 from pathlib import Path
-from typing import Any, Optional, TypeAlias
+from typing import TypeAlias
 
 # Third-party imports
 import numpy as np

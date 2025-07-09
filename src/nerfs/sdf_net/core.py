@@ -24,7 +24,7 @@ from typing import TypeAlias
 Tensor: TypeAlias = torch.Tensor
 Device: TypeAlias = torch.device | str
 DType: TypeAlias = torch.dtype
-TensorDict: TypeAlias = Dict[str, Tensor]
+TensorDict: TypeAlias = dict[str, Tensor]
 
 
 @dataclass
@@ -34,7 +34,7 @@ class SDFNetConfig:
     # Network architecture
     hidden_dim: int = 256
     num_layers: int = 8
-    skip_connections: List[int] = (4,)
+    skip_connections: list[int] = (4,)
     activation: str = "relu"
     output_activation: str = "sigmoid"
 
@@ -116,7 +116,7 @@ class SDFNetwork(nn.Module):
         self,
         hidden_dim: int,
         num_layers: int,
-        skip_connections: List[int],
+        skip_connections: list[int],
         use_sphere_init: bool = True,
         sphere_radius: float = 1.0,
     ):
@@ -183,7 +183,7 @@ class SDFNetwork(nn.Module):
 class ColorNetwork(nn.Module):
     """Network for predicting colors based on position, normals, and view direction."""
 
-    def __init__(self, hidden_dim: int, num_layers: int, skip_connections: List[int]):
+    def __init__(self, hidden_dim: int, num_layers: int, skip_connections: list[int]):
         super().__init__()
         self.hidden_dim = hidden_dim
         self.skip_connections = skip_connections
@@ -264,7 +264,7 @@ class SDFNet(nn.Module):
                 if m.bias is not None:
                     nn.init.zeros_(m.bias)
 
-    def forward(self, coords: Tensor, view_dirs: Tensor | None = None) -> TensorDict:
+    def forward(self, coords: Tensor, view_dirs: torch.Tensor | None = None) -> TensorDict:
         """Forward pass with automatic mixed precision support."""
         # Move inputs to device efficiently
         coords = coords.to(self.config.device, non_blocking=self.config.use_non_blocking)
@@ -306,7 +306,7 @@ class SDFNet(nn.Module):
 
     def training_step(
         self, batch: TensorDict, optimizer: torch.optim.Optimizer
-    ) -> Tuple[Tensor, TensorDict]:
+    ) -> tuple[Tensor, TensorDict]:
         """Optimized training step with AMP support."""
         # Zero gradients efficiently
         optimizer.zero_grad(set_to_none=self.config.set_grad_to_none)
@@ -468,13 +468,13 @@ class MultiScaleSDFNetwork(SDFNetwork):
     在不同分辨率下进行SDF预测
     """
 
-    def __init__(self, scales: List[float] = [1.0, 0.5, 0.25], **kwargs):
+    def __init__(self, scales: list[float] = [1.0, 0.5, 0.25], **kwargs):
         super().__init__(**kwargs)
         self.scales = scales
 
     def forward_multiscale(
         self, points: torch.Tensor, latent_code: torch.Tensor
-    ) -> Dict[str, torch.Tensor]:
+    ) -> dict[str, torch.Tensor]:
         """多尺度前向传播
 
         Args:

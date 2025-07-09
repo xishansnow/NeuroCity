@@ -1,0 +1,134 @@
+# Block-NeRF Configuration Template
+
+# This is a template configuration file for Block-NeRF training and inference.
+# Copy this file and modify the parameters according to your scene and requirements.
+
+# Model Configuration
+model:
+  # Scene decomposition
+  scene_bounds: [-100, -100, -10, 100, 100, 30]  # [x_min, y_min, z_min, x_max, y_max, z_max]
+  block_size: 50.0                               # Size of each block in meters
+  overlap_ratio: 0.1                             # Overlap ratio between blocks
+  
+  # Network architecture
+  hidden_dim: 256                                # Hidden layer dimension
+  num_layers: 8                                  # Number of layers in the MLP
+  skip_layers: [4]                               # Skip connection layers
+  
+  # Appearance modeling
+  use_appearance_embedding: true                 # Enable appearance embeddings
+  appearance_embedding_dim: 32                   # Appearance embedding dimension
+  max_appearance_count: 1000                     # Maximum number of appearance codes
+  
+  # Pose refinement
+  use_pose_refinement: true                      # Enable learned pose refinement
+  pose_refinement_lr: 1e-4                       # Learning rate for pose refinement
+  
+  # Rendering
+  samples_per_ray: 64                            # Coarse samples per ray
+  samples_per_ray_fine: 128                      # Fine samples per ray
+  use_hierarchical_sampling: true                # Enable hierarchical sampling
+
+# Training Configuration
+training:
+  # Optimization
+  learning_rate: 5e-4                           # Base learning rate
+  weight_decay: 1e-6                            # Weight decay
+  optimizer_type: "adam"                         # Optimizer type (adam, adamw)
+  gradient_clip_val: 1.0                        # Gradient clipping value
+  
+  # Schedule
+  num_epochs: 1000                              # Number of training epochs
+  batch_size: 1024                              # Batch size for training
+  ray_batch_size: 1024                          # Ray batch size
+  
+  # Training strategy
+  training_strategy: "adaptive"                  # Block training strategy (sequential, random, adaptive)
+  blocks_per_iteration: 4                       # Number of blocks to train per iteration
+  
+  # Validation and checkpointing
+  val_every: 100                                 # Validation frequency
+  checkpoint_every: 500                         # Checkpoint saving frequency
+  
+  # Progressive training
+  use_progressive_training: true                 # Enable progressive training
+  coarse_epochs: 200                            # Epochs for coarse training
+  fine_epochs: 800                              # Epochs for fine training
+  
+  # Mixed precision
+  use_amp: true                                  # Use automatic mixed precision
+
+# Data Configuration
+data:
+  # Data source
+  data_root: "./data/city_scene/"                # Root directory for training data
+  format: "colmap"                               # Data format (colmap, llff, custom)
+  
+  # Preprocessing
+  img_scale: 1.0                                 # Image scale factor
+  white_background: false                        # Use white background
+  
+  # Loading
+  use_cache: true                                # Enable data caching
+  cache_dir: "./cache/"                          # Cache directory
+  num_workers: 4                                 # Number of data loading workers
+
+# Rendering Configuration
+rendering:
+  # Quality settings
+  image_width: 800                               # Rendered image width
+  image_height: 600                              # Rendered image height
+  antialiasing: true                             # Enable antialiasing
+  samples_per_pixel: 1                          # Samples per pixel for rendering
+  
+  # Performance
+  chunk_size: 1024                               # Ray processing chunk size
+  use_cached_blocks: true                        # Enable block caching
+  max_cached_blocks: 8                           # Maximum cached blocks
+  
+  # Block selection
+  visibility_culling: true                       # Enable visibility culling
+  max_render_distance: 1000.0                   # Maximum rendering distance
+  
+  # Output
+  output_format: "rgb"                           # Output format (rgb, depth, alpha, all)
+  background_color: [1.0, 1.0, 1.0]            # Background color (RGB)
+  use_white_background: true                     # Use white background
+
+# System Configuration
+system:
+  # Device
+  device: "cuda"                                 # Device for computation (cuda, cpu)
+  
+  # Logging
+  log_dir: "./logs/"                             # Logging directory
+  checkpoint_dir: "./checkpoints/"               # Checkpoint directory
+  
+  # Performance
+  use_cuda_extensions: true                      # Use CUDA extensions if available
+  
+# Paths Configuration
+paths:
+  # Output directories
+  output_dir: "./outputs/"                       # Main output directory
+  renders_dir: "./renders/"                      # Rendered images directory
+  
+  # Data paths
+  poses_file: "poses.txt"                        # Camera poses file
+  intrinsics_file: "intrinsics.txt"              # Camera intrinsics file
+  
+  # Model paths
+  pretrained_model: null                         # Path to pretrained model (optional)
+
+# Advanced Configuration
+advanced:
+  # Memory optimization
+  gradient_checkpointing: false                  # Enable gradient checkpointing
+  dataloader_pin_memory: true                    # Pin memory in dataloader
+  
+  # Numerical stability
+  eps: 1e-8                                      # Small epsilon for numerical stability
+  
+  # Debugging
+  debug_mode: false                              # Enable debug mode
+  verbose_logging: false                         # Enable verbose logging

@@ -18,7 +18,7 @@ if str(project_root) not in sys.path:
 
 try:
     from src.nerfs.plenoxels import (
-        PlenoxelConfig, PlenoxelModel, PlenoxelTrainer, PlenoxelTrainerConfig,
+        PlenoxelConfig, PlenoxelModel, PlenoxelTrainer, PlenoxelTrainingConfig,
         PlenoxelDatasetConfig, create_plenoxel_dataloader, create_plenoxel_dataset
     )
 except ImportError as e:
@@ -125,11 +125,11 @@ def training_example(data_path=None):
         use_coarse_to_fine=True,
     )
     
-    trainer_config = PlenoxelTrainerConfig(
-        max_epochs=100,
+    trainer_config = PlenoxelTrainingConfig(
+        num_epochs=100,
         learning_rate=0.1,
         experiment_name="plenoxel_training_example",
-        output_dir="outputs/plenoxels",
+        checkpoint_dir="outputs/plenoxels",
     )
     
     dataset_config = PlenoxelDatasetConfig(

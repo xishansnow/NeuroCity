@@ -161,7 +161,7 @@ class MeshRasterizer(nn.Module):
     
     def depth_test(
         self,
-        fragments: Dict[str,
+        fragments: dict[str,
         torch.Tensor],
         new_depths: torch.Tensor,
         new_face_ids: torch.Tensor
@@ -447,7 +447,7 @@ class DNMPRasterizer(nn.Module):
     
     def render_fragments_to_image(
         self,
-        fragments: Dict[str,
+        fragments: dict[str,
         torch.Tensor],
         image_features: torch.Tensor
     ):

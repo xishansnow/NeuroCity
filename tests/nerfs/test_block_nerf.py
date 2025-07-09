@@ -12,7 +12,7 @@ import torch
 import pytest
 import numpy as np
 from pathlib import Path
-from typing import Any, Generator
+from collections.abc import Generator
 
 from src.nerfs.block_nerf.block_nerf_model import (
     BlockNeRFNetwork,
@@ -211,7 +211,6 @@ class TestBlockNeRF:
 
 
 # Integration Tests
-@pytest.mark.slow
 class TestBlockNeRFIntegration:
     """Integration tests for Block-NeRF."""
 

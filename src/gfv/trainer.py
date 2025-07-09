@@ -1,4 +1,4 @@
-from typing import Any, Optional
+from typing import Any
 """
 GFV Trainer Module - 训练器组件
 
@@ -33,7 +33,7 @@ logger = logging.getLogger(__name__)
 class GFVTrainer:
     """GFV传统训练器"""
     
-    def __init__(self, model: GlobalFeatureLibrary, config: Optional[dict[str, Any]] = None):
+    def __init__(self, model: GlobalFeatureLibrary, config: dict[str, Any] = None):
         """
         初始化训练器
         
@@ -324,7 +324,7 @@ else:
 class GFVMultiScaleTrainer(GFVTrainer):
     """多尺度GFV训练器"""
     
-    def __init__(self, model: GlobalFeatureLibrary, config: Optional[dict[str, Any]] = None):
+    def __init__(self, model: GlobalFeatureLibrary, config: dict[str, Any] = None):
         super().__init__(model, config)
         
         # 多尺度配置

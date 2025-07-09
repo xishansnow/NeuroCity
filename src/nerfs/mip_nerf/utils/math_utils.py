@@ -181,7 +181,7 @@ def compute_alpha_weights(
 
 def piecewise_constant_pdf(
     t_vals: torch.Tensor,
-    weights: torch.Tensor,
+    weights: torch.Tensor | None = None,
     num_samples: int,
     randomized: bool = True,
 )
@@ -198,36 +198,36 @@ def piecewise_constant_pdf(
         [..., num_samples] sampled t values
     """
     # Add small epsilon to weights to prevent issues with zero weights
-    weights = weights + 1e-5
+    weights = weights + 1e-5 if weights is not None else None
     
     # Normalize weights to get PDF
-    pdf = weights / torch.sum(weights, dim=-1, keepdim=True)
+    pdf = weights / torch.sum(weights, dim=-1, keepdim=True) if weights is not None else None
     
     # Compute CDF
-    cdf = torch.cumsum(pdf, dim=-1)
-    cdf = torch.cat([torch.zeros_like(cdf[..., :1]), cdf], dim=-1)
+    cdf = torch.cumsum(pdf, dim=-1) if pdf is not None else None
+    cdf = torch.cat([torch.zeros_like(cdf[..., :1]), cdf], dim=-1) if cdf is not None else None
     
     # Sample uniformly
     if randomized:
-        u = torch.rand(*weights.shape[:-1], num_samples, device=weights.device)
+        u = torch.rand(*weights.shape[:-1], num_samples, device=weights.device) if weights is not None else None
     else:
-        u = torch.linspace(0., 1., num_samples, device=weights.device)
-        u = u.expand(*weights.shape[:-1], num_samples)
+        u = torch.linspace(0., 1., num_samples, device=weights.device) if weights is not None else None
+        u = u.expand(*weights.shape[:-1], num_samples) if weights is not None else None
     
     # Invert CDF
-    inds = torch.searchsorted(cdf, u, right=True)
-    below = torch.clamp(inds - 1, 0, cdf.shape[-1] - 1)
-    above = torch.clamp(inds, 0, cdf.shape[-1] - 1)
+    inds = torch.searchsorted(cdf, u, right=True) if cdf is not None else None
+    below = torch.clamp(inds - 1, 0, cdf.shape[-1] - 1) if cdf is not None else None
+    above = torch.clamp(inds, 0, cdf.shape[-1] - 1) if cdf is not None else None
     
     # Linear interpolation
-    inds_g = torch.stack([below, above], dim=-1)
-    cdf_g = torch.gather(cdf[..., None], -2, inds_g)
-    t_vals_g = torch.gather(t_vals[..., None], -2, inds_g)
+    inds_g = torch.stack([below, above], dim=-1) if cdf is not None else None
+    cdf_g = torch.gather(cdf[..., None], -2, inds_g) if cdf is not None else None
+    t_vals_g = torch.gather(t_vals[..., None], -2, inds_g) if cdf is not None else None
     
-    denom = cdf_g[..., 1] - cdf_g[..., 0]
-    denom = torch.where(denom < 1e-5, torch.ones_like(denom), denom)
-    t = (u - cdf_g[..., 0]) / denom
-    samples = t_vals_g[..., 0] + t * (t_vals_g[..., 1] - t_vals_g[..., 0])
+    denom = cdf_g[..., 1] - cdf_g[..., 0] if cdf is not None else None
+    denom = torch.where(denom < 1e-5, torch.ones_like(denom), denom) if cdf is not None else None
+    t = (u - cdf_g[..., 0]) / denom if cdf is not None else None
+    samples = t_vals_g[..., 0] + t * (t_vals_g[..., 1] - t_vals_g[..., 0]) if cdf is not None else None
     
     return samples
 

@@ -1,7 +1,5 @@
 from __future__ import annotations
 
-from typing import Any, Optional, Union
-
 """
 Instant NGP: Instant Neural Graphics Primitives with Multiresolution Hash Encoding.
 
@@ -24,13 +22,12 @@ import math
 from dataclasses import dataclass
 from torch.amp import autocast, GradScaler
 from pathlib import Path
-from typing import TypeAlias, Any
 
 # Type aliases for modern Python 3.10
-Tensor: TypeAlias = torch.Tensor
-Device: TypeAlias = torch.device | str
-DType: TypeAlias = torch.dtype
-TensorDict: TypeAlias = dict[str, Tensor]
+Tensor = torch.Tensor
+Device = torch.device | str
+DType = torch.dtype
+TensorDict = dict[str, Tensor]
 
 
 @dataclass
@@ -380,7 +377,7 @@ class InstantNGPModel(nn.Module):
         near: float | None = None,
         far: float | None = None,
         num_samples: int | None = None,
-    ) -> Tuple[torch.Tensor, torch.Tensor]:
+    ) -> tuple[torch.Tensor, torch.Tensor]:
         """
         Forward pass with modern optimizations.
 
@@ -445,9 +442,9 @@ class InstantNGPModel(nn.Module):
 
     def train_step(
         self,
-        batch: Dict[str, torch.Tensor],
+        batch: dict[str, torch.Tensor],
         optimizer: torch.optim.Optimizer,
-    ) -> Dict[str, torch.Tensor]:
+    ) -> dict[str, torch.Tensor]:
         """Perform a single training step with modern optimizations.
 
         Args:
@@ -483,8 +480,8 @@ class InstantNGPModel(nn.Module):
     @torch.inference_mode()
     def evaluate(
         self,
-        batch: Dict[str, torch.Tensor],
-    ) -> Dict[str, torch.Tensor]:
+        batch: dict[str, torch.Tensor],
+    ) -> dict[str, torch.Tensor]:
         """Evaluate model with modern optimizations.
 
         Args:

@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import Any, Optional, Union
+from typing import Any
 
 """
 Nerfacto Core Implementation
@@ -32,7 +32,7 @@ from typing import TypeAlias
 Tensor: TypeAlias = torch.Tensor
 Device: TypeAlias = torch.device | str
 DType: TypeAlias = torch.dtype
-TensorDict: TypeAlias = Dict[str, Tensor]
+TensorDict: TypeAlias = dict[str, Tensor]
 
 
 class SHEncoding(nn.Module):
@@ -78,7 +78,7 @@ class NeRFactoConfig:
     # Network architecture
     hidden_dim: int = 256
     num_layers: int = 8
-    skip_connections: List[int] = (4,)
+    skip_connections: list[int] = (4,)
     activation: str = "relu"
     output_activation: str = "sigmoid"
 
@@ -248,7 +248,7 @@ class NeRFacto(nn.Module):
 
     def training_step(
         self, batch: TensorDict, optimizer: torch.optim.Optimizer
-    ) -> Tuple[Tensor, TensorDict]:
+    ) -> tuple[Tensor, TensorDict]:
         """Optimized training step with AMP support."""
         # Zero gradients efficiently
         optimizer.zero_grad(set_to_none=self.config.set_grad_to_none)
@@ -333,7 +333,7 @@ class NeRFactoNetwork(nn.Module):
         appearance_dim: int,
         hidden_dim: int,
         num_layers: int,
-        skip_connections: List[int],
+        skip_connections: list[int],
     ):
         super().__init__()
         self.factor_dim = factor_dim
@@ -574,7 +574,7 @@ class NerfactoField(nn.Module):
         if config.use_appearance_embedding:
             self.appearance_embedding = nn.Embedding(1000, config.appearance_embed_dim)
 
-    def _check_shapes(self, **tensors: Dict[str, torch.Tensor]) -> None:
+    def _check_shapes(self, **tensors: dict[str, torch.Tensor]) -> None:
         """Check if tensor shapes are compatible.
 
         Args:
@@ -603,7 +603,7 @@ class NerfactoField(nn.Module):
         ray_samples: Float[Tensor, "*batch 3"],
         directions: Float[Tensor, "*batch 3"],
         camera_indices: Optional[Int[Tensor, "*batch 1"]] = None,
-    ) -> Dict[str, Float[Tensor, "*batch channels"]]:
+    ) -> dict[str, Float[Tensor, "*batch channels"]]:
         """Get color and density outputs."""
         # Check input shapes
         self._check_shapes(ray_samples=ray_samples, directions=directions)
@@ -731,7 +731,7 @@ class NerfactoRenderer(nn.Module):
         else:
             self.background_color = None
 
-    def _check_shapes(self, **tensors: Dict[str, torch.Tensor]) -> None:
+    def _check_shapes(self, **tensors: dict[str, torch.Tensor]) -> None:
         """Check if tensor shapes are compatible.
 
         Args:
@@ -761,7 +761,7 @@ class NerfactoRenderer(nn.Module):
         densities: Float[Tensor, "*batch num_samples 1"],
         ray_indices: Optional[Int[Tensor, "*batch"]] = None,
         num_rays: Optional[int] = None,
-    ) -> Tuple[Float[Tensor, "*batch num_samples 1"], Float[Tensor, "*batch 1"]]:
+    ) -> tuple[Float[Tensor, "*batch num_samples 1"], Float[Tensor, "*batch 1"]]:
         """Render weights from densities using volumetric rendering."""
         # Check shapes
         self._check_shapes(ray_samples=ray_samples, densities=densities)
@@ -817,7 +817,7 @@ class NerfactoRenderer(nn.Module):
         ray_indices: Optional[Int[Tensor, "*batch"]] = None,
         num_rays: Optional[int] = None,
         background_color: Optional[Float[Tensor, "*batch 3"]] = None,
-    ) -> Dict[str, Float[Tensor, "*batch channels"]]:
+    ) -> dict[str, Float[Tensor, "*batch channels"]]:
         """Render RGB image from samples."""
         # Check shapes
         self._check_shapes(rgb=rgb, weights=weights)
@@ -866,8 +866,8 @@ class NerfactoLoss(nn.Module):
         self.mse_loss = nn.MSELoss()
 
     def forward(
-        self, outputs: Dict[str, Any], batch: Dict[str, Any]
-    ) -> Dict[str, Float[Tensor, ""]]:
+        self, outputs: dict[str, Any], batch: dict[str, Any]
+    ) -> dict[str, Float[Tensor, ""]]:
         """Compute loss."""
         losses = {}
 
@@ -919,8 +919,8 @@ class NerfactoLoss(nn.Module):
 
     def _compute_interlevel_loss(
         self,
-        weights_list: List[Float[Tensor, "*batch num_samples 1"]],
-        ray_samples_list: List[Float[Tensor, "*batch num_samples 3"]],
+        weights_list: list[Float[Tensor, "*batch num_samples 1"]],
+        ray_samples_list: list[Float[Tensor, "*batch num_samples 3"]],
     ) -> Float[Tensor, ""]:
         """Compute interlevel loss between proposal networks."""
         # Simplified interlevel loss
@@ -978,8 +978,8 @@ class NerfactoModel(nn.Module):
             )
 
     def sample_and_forward(
-        self, ray_bundle: Dict[str, Any], return_samples: bool = False
-    ) -> Dict[str, Any]:
+        self, ray_bundle: dict[str, Any], return_samples: bool = False
+    ) -> dict[str, Any]:
         """Sample points along rays and forward through networks."""
         # Extract ray information
         ray_origins = ray_bundle["origins"]  # [batch_size, 3]
@@ -1120,14 +1120,14 @@ class NerfactoModel(nn.Module):
 
         return samples
 
-    def forward(self, ray_bundle: Dict[str, Any]) -> Dict[str, Any]:
+    def forward(self, ray_bundle: dict[str, Any]) -> dict[str, Any]:
         """Forward pass through the model."""
         return self.sample_and_forward(ray_bundle, return_samples=True)
 
     def get_loss_dict(
         self,
-        outputs: Dict[str, Any],
-        batch: Dict[str, Any],
-    ) -> Dict[str, Float[Tensor, ""]]:
+        outputs: dict[str, Any],
+        batch: dict[str, Any],
+    ) -> dict[str, Float[Tensor, ""]]:
         """Get loss dictionary."""
         return self.loss_fn(outputs, batch)

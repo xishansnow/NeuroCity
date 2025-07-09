@@ -3,22 +3,102 @@
     "python.analysis.diagnosticMode": "workspace",
     "python.analysis.autoImportCompletions": true,
     "python.analysis.extraPaths": [
-        "src"
+        "src",
+        "src/nerfs",
+        "src/nerfs/plenoxels",
+        "demos",
+        "examples",
+        "tests"
     ],
     "python.analysis.indexing": true,
     "python.analysis.packageIndexDepths": [
         {
             "name": "neurocity",
             "depth": 5
+        },
+        {
+            "name": "nerfs",
+            "depth": 4
+        },
+        {
+            "name": "plenoxels",
+            "depth": 3
         }
     ],
+    "python.analysis.include": [
+        "src/**",
+        "demos/**",
+        "examples/**",
+        "tests/**"
+    ],
+    "python.analysis.exclude": [
+        "**/node_modules",
+        "**/__pycache__",
+        "**/.*",
+        "build/**",
+        "dist/**",
+        "*.egg-info/**",
+        "outputs/**",
+        "logs/**",
+        "checkpoints/**"
+    ],
+    "python.analysis.stubPath": "typings",
+    "python.analysis.useLibraryCodeForTypes": true,
+    "python.analysis.autoSearchPaths": true,
     "python.languageServer": "Pylance",
     "python.defaultInterpreterPath": "~/anaconda3/envs/neurocity/bin/python",
+    // 编辑器设置
     "editor.formatOnSave": true,
     "editor.codeActionsOnSave": {
-        "source.organizeImports": "explicit"
+        "source.organizeImports": "explicit",
+        "source.fixAll": "explicit"
     },
     "[python]": {
-        "editor.defaultFormatter": "ms-python.black-formatter"
-    }
+        "editor.insertSpaces": true,
+        "editor.tabSize": 4,
+        "editor.rulers": [
+            88,
+            100
+        ]
+    },
+    // CUDA 和 C++ 支持
+    "[cuda-cpp]": {
+        "editor.insertSpaces": true,
+        "editor.tabSize": 2
+    },
+    "[cpp]": {
+        "editor.insertSpaces": true,
+        "editor.tabSize": 2
+    },
+    // Jupyter 支持
+    "jupyter.askForKernelRestart": false,
+    "jupyter.interactiveWindow.creationMode": "perFile",
+    // 文件关联
+    "files.associations": {
+        "*.cu": "cuda-cpp",
+        "*.cuh": "cuda-cpp",
+        "*.py": "python",
+        "*.pyi": "python"
+    },
+    // 自动补全和IntelliSense
+    "python.analysis.completeFunctionParens": true,
+    "python.analysis.importFormat": "relative",
+    "python.analysis.inlayHints.functionReturnTypes": true,
+    "python.analysis.inlayHints.variableTypes": true,
+    // 错误和警告
+    "python.linting.enabled": true,
+    "python.linting.pylintEnabled": false,
+    "python.linting.flake8Enabled": true,
+    "python.linting.mypyEnabled": false,
+    // 测试支持
+    "python.testing.pytestEnabled": true,
+    "python.testing.unittestEnabled": false,
+    "python.testing.pytestArgs": [
+        "tests",
+        "-v"
+    ],
+    // 性能优化
+    "python.analysis.memory.keepLibraryAst": true,
+    "python.analysis.persistent": true,
+    "python.analysis.logLevel": "Information"
 }

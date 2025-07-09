@@ -5,9 +5,54 @@
     "version": "0.2.0",
     "configurations": [
         {
-                "name": "Python Debugger: Current File",
-            "type": "debugpy",
-            "request": "launch", 
+            "name": "Debug Plenoxels Demo",
+            "type": "python",
+            "request": "launch",
+            "program": "${workspaceFolder}/demos/demo_plenoxels.py",
+            "console": "integratedTerminal",
+            "cwd": "${workspaceFolder}",
+            "env": {
+                "PYTHONPATH": "${workspaceFolder}/src"
+            }
+        },
+        {
+            "name": "Debug Plenoxels Training",
+            "type": "python",
+            "request": "launch",
+            "program": "${workspaceFolder}/examples/plenoxels_example.py",
+            "console": "integratedTerminal",
+            "cwd": "${workspaceFolder}",
+            "env": {
+                "PYTHONPATH": "${workspaceFolder}/src"
+            }
+        },
+        {
+            "name": "Debug CUDA Extensions",
+            "type": "python",
+            "request": "launch",
+            "program": "${workspaceFolder}/tests/nerfs/test_plenoxels_cuda.py",
+            "console": "integratedTerminal",
+            "cwd": "${workspaceFolder}",
+            "env": {
+                "PYTHONPATH": "${workspaceFolder}/src",
+                "CUDA_LAUNCH_BLOCKING": "1"
+            }
+        },
+        {
+            "name": "Debug Current File",
+            "type": "python",
+            "request": "launch",
+            "program": "${file}",
+            "console": "integratedTerminal",
+            "cwd": "${workspaceFolder}",
+            "env": {
+                "PYTHONPATH": "${workspaceFolder}/src"
+            }
+        },
+        {
+            "name": "Python Debugger: SVRaster Example",
+            "type": "python",
+            "request": "launch",
             "program": "examples/svraster_example.py",
             "console": "integratedTerminal"
         }

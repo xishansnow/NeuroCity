@@ -48,10 +48,10 @@ def get_rays(
 
 def render_path(
     render_poses: torch.Tensor,
-    hwf: Tuple[int, int,float],
+    hwf: tuple[int, int,float],
     K: torch.Tensor,
     chunk: int,
-    render_kwargs: Dict[str,Any],
+    render_kwargs: dict[str,Any],
     savedir: str | None = None
 ):
     """Render images along a path."""

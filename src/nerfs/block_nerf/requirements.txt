@@ -1,0 +1,51 @@
+# Block-NeRF Requirements
+# Essential dependencies for Block-NeRF v1.0.0
+
+# Core ML frameworks
+torch>=1.12.0
+torchvision>=0.13.0
+numpy>=1.20.0
+
+# Image and video processing
+opencv-python>=4.6.0
+imageio>=2.19.0
+imageio-ffmpeg>=0.4.7
+Pillow>=9.0.0
+
+# Scientific computing
+scipy>=1.8.0
+
+# Configuration and utilities
+PyYAML>=6.0
+tensorboard>=2.9.0
+tqdm>=4.64.0
+
+# Data handling
+h5py>=3.7.0
+
+# Development and testing (optional)
+pytest>=6.0.0
+black>=21.0.0
+flake8>=3.8.0
+
+# Optional dependencies for enhanced functionality
+# matplotlib>=3.5.0  # For advanced visualization
+# plotly>=5.0.0      # For interactive plots
+# wandb>=0.12.0      # For experiment tracking
+# plotly>=5.0.0
+
+# For mesh processing (if needed)
+# trimesh>=3.15.0
+# open3d>=0.15.0
+
+# For additional data formats
+# natsort>=8.0.0
+
+# Development dependencies (for contributors)
+# pytest>=7.0.0
+# black>=22.0.0
+# flake8>=4.0.0
+# mypy>=0.950
+
+# CUDA extensions build dependencies (if building from source)
+# ninja>=1.10.0

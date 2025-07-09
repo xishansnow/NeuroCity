@@ -9,7 +9,7 @@ This module provides standard metrics used in NeRF evaluation including:
 - LPIPS (Learned Perceptual Image Patch Similarity)
 """
 
-from typing import Dict, Optional, Union
+from typing import Optional, Union
 import torch
 import torch.nn.functional as F
 import numpy as np
@@ -202,7 +202,7 @@ def compute_all_metrics(
     mask: Optional[torch.Tensor] = None,
     lpips_net_type: str = "alex",
     device: Optional[torch.device] = None,
-) -> Dict[str, float]:
+) -> dict[str, float]:
     """Compute all available metrics between predicted and target images.
 
     Args:

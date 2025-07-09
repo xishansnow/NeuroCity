@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-from typing import Optional, Union, List, TypeAlias, TypeVar, Callable
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -18,10 +17,10 @@ import numpy as np
 import math
 
 # Type aliases
-Tensor: TypeAlias = torch.Tensor
-Device: TypeAlias = torch.device | str
-DType: TypeAlias = torch.dtype
-TensorDict: TypeAlias = Dict[str, Tensor]
+Tensor = torch.Tensor
+Device = Union[torch.device, str]
+DType = torch.dtype
+TensorDict = dict[str, Tensor]
 
 # Generic types
 T = TypeVar("T")
@@ -90,7 +89,7 @@ class BlockNeRFNetwork(nn.Module):
         exposure_dim: int = 8,
         hidden_dim: int = 256,
         num_layers: int = 8,
-        skip_connections: List[int] | None = None,
+        skip_connections: list[int] | None = None,
         use_integrated_encoding: bool = True,
     ):
         super().__init__()
@@ -382,7 +381,7 @@ class BlockNeRF(nn.Module):
 
         return outputs
 
-    def get_block_info(self) -> Dict[str, Union[Tensor, float]]:
+    def get_block_info(self) -> dict[str, Union[Tensor, float]]:
         """Get block metadata"""
         return {
             "center": self.block_center,
@@ -399,7 +398,7 @@ class BlockNeRF(nn.Module):
         far: float,
         appearance_embedding: Optional[Tensor] = None,
         **kwargs,
-    ) -> Dict[str, Tensor]:
+    ) -> dict[str, Tensor]:
         """Render rays"""
         # Implementation of render_rays method
         pass
@@ -410,7 +409,7 @@ class BlockNeRF(nn.Module):
         rays_d: Tensor,
         appearance_embedding: Optional[Tensor] = None,
         **kwargs,
-    ) -> Dict[str, Tensor]:
+    ) -> dict[str, Tensor]:
         """Forward pass for rays"""
         # Implementation of forward method for rays
         pass

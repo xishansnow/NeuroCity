@@ -52,7 +52,7 @@ def save_image(
     else:
         cv2.imwrite(str(path), cv2.cvtColor(image, cv2.COLOR_RGB2BGR))
 
-def load_image(path: str | Path, target_size: Tuple[int, int] | None = None) -> np.ndarray:
+def load_image(path: str | Path, target_size: tuple[int, int] | None = None) -> np.ndarray:
     """
     Load an image from file.
     
@@ -120,7 +120,7 @@ def create_video_from_images(
     print(f"Created video: {output_path}")
 
 def create_comparison_grid(
-    images: Sequence[torch.Tensor], titles: Sequence[str] | None = None, output_path: str | Path | None = None, figsize: Tuple[int, int] = (15, 5)
+    images: Sequence[torch.Tensor], titles: Sequence[str] | None = None, output_path: str | Path | None = None, figsize: tuple[int, int] = (15, 5)
 ) -> plt.Figure | None:
     """
     Create a comparison grid of images.

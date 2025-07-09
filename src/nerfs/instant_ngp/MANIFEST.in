@@ -1,0 +1,57 @@
+include README.md
+include LICENSE
+include CHANGELOG.md
+include pyproject.toml
+include setup.py
+include requirements.txt
+
+# Source code
+recursive-include src/instant_ngp *.py
+recursive-include src/instant_ngp *.pyi
+
+# CUDA extensions
+recursive-include src/instant_ngp/cuda *.cu
+recursive-include src/instant_ngp/cuda *.cpp
+recursive-include src/instant_ngp/cuda *.h
+recursive-include src/instant_ngp/cuda *.cuh
+include src/instant_ngp/cuda/setup.py
+include src/instant_ngp/cuda/build_cuda.sh
+
+# Examples and demos
+recursive-include src/instant_ngp *.py
+include src/instant_ngp/example_refactored.py
+
+# Documentation
+recursive-include docs *.md
+recursive-include docs *.rst
+recursive-include docs *.py
+recursive-include docs *.txt
+
+# Configuration files  
+include *.toml
+include *.cfg
+include *.ini
+include *.yaml
+include *.yml
+
+# Exclude unwanted files
+global-exclude *.pyc
+global-exclude *.pyo
+global-exclude *.pyd
+global-exclude __pycache__
+global-exclude *.so
+global-exclude .git*
+global-exclude .pytest_cache
+global-exclude .mypy_cache
+global-exclude .coverage
+global-exclude *.egg-info
+
+# Exclude build artifacts
+global-exclude build/*
+global-exclude dist/*
+global-exclude *.egg-info/*
+
+# Exclude CUDA build artifacts specifically
+exclude src/instant_ngp/cuda/build/*
+exclude src/instant_ngp/cuda/*.so
+exclude src/instant_ngp/cuda/*.o

@@ -21,7 +21,7 @@ def generate_rays(
     W: int,
     near: float = 0.1,
     far: float = 10.0,
-) -> Tuple[torch.Tensor, torch.Tensor]:
+) -> tuple[torch.Tensor, torch.Tensor]:
     """
     Generate rays from camera poses.
 
@@ -79,7 +79,7 @@ def sample_points_along_rays(
     far: float,
     num_samples: int,
     perturb: bool = True,
-) -> Tuple[torch.Tensor, torch.Tensor]:
+) -> tuple[torch.Tensor, torch.Tensor]:
     """
     Sample points along rays for volume rendering.
 
@@ -121,7 +121,7 @@ def volume_render(
     t_vals: torch.Tensor,
     ray_directions: torch.Tensor,
     white_background: bool = False,
-) -> Dict[str, torch.Tensor]:
+) -> dict[str, torch.Tensor]:
     """
     Perform volume rendering given densities and colors.
 
@@ -187,7 +187,7 @@ def compute_ray_aabb_intersection(
     ray_directions: torch.Tensor,
     aabb_min: torch.Tensor,
     aabb_max: torch.Tensor,
-) -> Tuple[torch.Tensor, torch.Tensor]:
+) -> tuple[torch.Tensor, torch.Tensor]:
     """
     Compute ray-AABB intersection for efficient ray marching.
 
@@ -228,7 +228,7 @@ def hierarchical_sampling(
     weights_coarse: torch.Tensor,
     num_fine_samples: int,
     perturb: bool = True,
-) -> Tuple[torch.Tensor, torch.Tensor]:
+) -> tuple[torch.Tensor, torch.Tensor]:
     """
     Perform hierarchical sampling based on coarse weights.
 
@@ -360,7 +360,7 @@ def ray_sphere_intersection(
     ray_directions: torch.Tensor,
     sphere_center: torch.Tensor,
     sphere_radius: float,
-) -> Tuple[torch.Tensor, torch.Tensor]:
+) -> tuple[torch.Tensor, torch.Tensor]:
     """
     Compute ray-sphere intersection.
 

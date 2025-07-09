@@ -1,0 +1,152 @@
+[build-system]
+requires = ["setuptools>=64", "wheel", "pybind11>=2.10.0", "torch"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "instant_ngp"
+version = "1.0.0"
+description = "Instant Neural Graphics Primitives with Multiresolution Hash Encoding"
+readme = "README.md"
+license = {file = "LICENSE"}
+authors = [
+    {name = "NeuroCity Team", email = "team@neurocity.ai"}
+]
+maintainers = [
+    {name = "NeuroCity Team", email = "team@neurocity.ai"}
+]
+keywords = [
+    "neural-radiance-fields",
+    "nerf", 
+    "instant-ngp",
+    "computer-vision",
+    "3d-reconstruction",
+    "neural-rendering",
+    "hash-encoding",
+    "cuda",
+    "pytorch"
+]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Science/Research",
+    "Intended Audience :: Developers", 
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: POSIX :: Linux",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.8",
+    "Programming Language :: Python :: 3.9", 
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: C++",
+    "Programming Language :: CUDA",
+    "Topic :: Scientific/Engineering :: Artificial Intelligence",
+    "Topic :: Scientific/Engineering :: Image Recognition",
+    "Topic :: Multimedia :: Graphics :: 3D Rendering"
+]
+requires-python = ">=3.8"
+dependencies = [
+    "torch>=1.12.0",
+    "torchvision>=0.13.0", 
+    "numpy>=1.21.0",
+    "opencv-python>=4.5.0",
+    "imageio>=2.19.0",
+    "imageio-ffmpeg>=0.4.7",
+    "tqdm>=4.64.0",
+    "tensorboard>=2.9.0",
+    "matplotlib>=3.5.0",
+    "scipy>=1.9.0",
+    "pillow>=9.0.0",
+    "pyyaml>=6.0"
+]
+
+[project.optional-dependencies]
+cuda = [
+    "pybind11>=2.10.0",
+    "ninja"
+]
+dev = [
+    "pytest>=7.0.0",
+    "pytest-cov>=4.0.0", 
+    "black>=22.0.0",
+    "flake8>=5.0.0",
+    "mypy>=0.991",
+    "pre-commit>=2.20.0"
+]
+docs = [
+    "sphinx>=5.0.0",
+    "sphinx-rtd-theme>=1.0.0",
+    "myst-parser>=0.18.0"
+]
+all = [
+    "instant-ngp[cuda,dev,docs]"
+]
+
+[project.urls]
+Homepage = "https://github.com/neurocity/instant-ngp"
+Documentation = "https://instant-ngp.readthedocs.io/"
+Repository = "https://github.com/neurocity/instant-ngp.git"
+"Bug Tracker" = "https://github.com/neurocity/instant-ngp/issues"
+Changelog = "https://github.com/neurocity/instant-ngp/blob/main/CHANGELOG.md"
+
+[project.scripts]
+train_cli = "nerfs.instant_ngp.cli:train_cli"
+render_cli = "nerfs.instant_ngp.cli:render_cli"
+
+[tool.setuptools]
+package-dir = {"" = "src"}
+
+[tool.setuptools.packages.find]
+where = ["src"]
+include = ["instant_ngp*"]
+
+[tool.setuptools.package-data]
+instant_ngp = [
+    "cuda/*.cu",
+    "cuda/*.cpp", 
+    "cuda/*.h",
+    "cuda/*.so",
+    "*.md",
+    "examples/*.py"
+]
+
+[tool.black]
+line-length = 100
+target-version = ['py38', 'py39', 'py310', 'py311']
+include = '\.pyi?$'
+extend-exclude = '''
+/(
+    \.eggs
+  | \.git
+  | \.hg
+  | \.mypy_cache
+  | \.tox
+  | \.venv
+  | _build
+  | buck-out
+  | build
+  | dist
+  | cuda/build
+)/
+'''
+
+[tool.mypy]
+python_version = "3.8"
+warn_return_any = true
+warn_unused_configs = true
+disallow_untyped_defs = true
+ignore_missing_imports = true
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+python_files = ["test_*.py", "*_test.py"]
+addopts = [
+    "--strict-markers",
+    "--strict-config", 
+    "--verbose",
+    "--cov=instant_ngp",
+    "--cov-report=term-missing"
+]
+markers = [
+    "slow: marks tests as slow (deselect with '-m \"not slow\"')",
+    "cuda: marks tests that require CUDA",
+    "integration: marks tests as integration tests"
+]

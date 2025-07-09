@@ -22,7 +22,7 @@ from typing import TypeAlias, Any
 Tensor: TypeAlias = torch.Tensor
 Device: TypeAlias = torch.device | str
 DType: TypeAlias = torch.dtype
-TensorDict: TypeAlias = Dict[str, Tensor]
+TensorDict: TypeAlias = dict[str, Tensor]
 
 
 @dataclass
@@ -36,7 +36,7 @@ class DNMPConfig:
 
     # Voxel grid settings
     voxel_size: float = 1.0  # Size of each voxel
-    scene_bounds: Tuple[float, float, float, float, float, float] = (
+    scene_bounds: tuple[float, float, float, float, float, float] = (
         -50,
         50,
         -50,
@@ -187,7 +187,7 @@ class DeformableNeuralMeshPrimitive(nn.Module):
         """Get deformed mesh vertices from latent code."""
         return self.mesh_decoder(self.latent_code.unsqueeze(0)).squeeze(0)
 
-    def forward(self) -> Tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
+    def forward(self) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
         """
         Forward pass of DNMP.
 
@@ -225,7 +225,7 @@ class RadianceMLP(nn.Module):
 
         self.mlp = nn.Sequential(*layers)
 
-    def forward(self, vertex_features: torch.Tensor, view_dirs: Optional[torch.Tensor] = None):
+    def forward(self, vertex_features: torch.Tensor, view_dirs: torch.Tensor | None = None):
         """
         Predict radiance from vertex features.
 
@@ -262,7 +262,7 @@ class DNMPRenderer(nn.Module):
         self,
         ray_origins: torch.Tensor,
         ray_directions: torch.Tensor,
-        primitives: List[DeformableNeuralMeshPrimitive],
+        primitives: list[DeformableNeuralMeshPrimitive],
         rasterizer,
     ):
         """
@@ -387,9 +387,9 @@ class DNMPLoss(nn.Module):
 
     def forward(
         self,
-        predictions: Dict[str, torch.Tensor],
-        targets: Dict[str, torch.Tensor],
-        primitives: List[DeformableNeuralMeshPrimitive],
+        predictions: dict[str, torch.Tensor],
+        targets: dict[str, torch.Tensor],
+        primitives: list[DeformableNeuralMeshPrimitive],
     ):
         """
         Compute DNMP loss.
@@ -543,7 +543,7 @@ class DNMP(nn.Module):
 
     def training_step(
         self, batch: TensorDict, optimizer: torch.optim.Optimizer
-    ) -> Tuple[Tensor, TensorDict]:
+    ) -> tuple[Tensor, TensorDict]:
         """Optimized training step with AMP support."""
         # Zero gradients efficiently
         optimizer.zero_grad(set_to_none=self.config.set_grad_to_none)

@@ -72,7 +72,7 @@ class BungeeNeRFTrainer:
         self.writer = SummaryWriter(log_dir)
         logger.info(f"Logging setup at {log_dir}")
     
-    def train_step(self, batch: Dict[str, torch.Tensor]) -> Dict[str, float]:
+    def train_step(self, batch: dict[str, torch.Tensor]) -> dict[str, float]:
         """
         Single training step
         
@@ -122,7 +122,7 @@ class BungeeNeRFTrainer:
         
         return loss_dict
     
-    def validate(self) -> Dict[str, float]:
+    def validate(self) -> dict[str, float]:
         """
         Validation step
         
@@ -252,7 +252,7 @@ class BungeeNeRFTrainer:
         
         logger.info("Training completed")
     
-    def _log_training(self, loss_dict: Dict[str, float]):
+    def _log_training(self, loss_dict: dict[str, float]):
         """Log training metrics"""
         if self.writer is not None:
             for key, value in loss_dict.items():
@@ -266,7 +266,7 @@ class BungeeNeRFTrainer:
             
             self.writer.add_scalar("train/stage", self.current_stage, self.current_step)
     
-    def _log_validation(self, val_metrics: Dict[str, float]):
+    def _log_validation(self, val_metrics: dict[str, float]):
         """Log validation metrics"""
         if self.writer is not None and val_metrics:
             for key, value in val_metrics.items():
@@ -335,14 +335,14 @@ class ProgressiveTrainer(BungeeNeRFTrainer):
             for param_group in self.optimizer.param_groups:
                 param_group['lr'] *= 0.8  # Reduce learning rate for new stage
     
-    def get_stage_data(self) -> List[int]:
+    def get_stage_data(self) -> list[int]:
         """Get training data indices for current stage"""
         if hasattr(self.train_dataset, 'get_progressive_data'):
             return self.train_dataset.get_progressive_data(self.current_stage)
         else:
             return list(range(len(self.train_dataset)))
     
-    def train_step(self, batch: Dict[str, torch.Tensor]) -> Dict[str, float]:
+    def train_step(self, batch: dict[str, torch.Tensor]) -> dict[str, float]:
         """
         Progressive training step
         
@@ -437,7 +437,7 @@ class MultiScaleTrainer(ProgressiveTrainer):
     """
     
     def __init__(
-        self, model: BungeeNeRF, config: BungeeNeRFConfig, train_dataset: MultiScaleDataset, val_dataset: Optional[BungeeNeRFDataset] = None, device: str = "cuda", scale_weights: Optional[List[float]] = None
+        self, model: BungeeNeRF, config: BungeeNeRFConfig, train_dataset: MultiScaleDataset, val_dataset: Optional[BungeeNeRFDataset] = None, device: str = "cuda", scale_weights: Optional[list[float]] = None
     ):
         super().__init__(model, config, train_dataset, val_dataset, device)
         
@@ -450,8 +450,8 @@ class MultiScaleTrainer(ProgressiveTrainer):
         logger.info("Multi-scale trainer initialized")
     
     def compute_scale_weighted_loss(
-        self, outputs: Dict[str, torch.Tensor], targets: Dict[str, torch.Tensor], distances: torch.Tensor
-    ) -> Dict[str, torch.Tensor]:
+        self, outputs: dict[str, torch.Tensor], targets: dict[str, torch.Tensor], distances: torch.Tensor
+    ) -> dict[str, torch.Tensor]:
         """
         Compute scale-weighted loss
         
@@ -468,7 +468,7 @@ class MultiScaleTrainer(ProgressiveTrainer):
             outputs, targets, distances, self.current_stage, self.config
         )
     
-    def train_step(self, batch: Dict[str, torch.Tensor]) -> Dict[str, float]:
+    def train_step(self, batch: dict[str, torch.Tensor]) -> dict[str, float]:
         """
         Multi-scale training step
         

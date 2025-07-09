@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import Any, Optional, Union
+from typing import Any
 
 """
 Core components for Mega-NeRF++
@@ -21,13 +21,13 @@ import math
 from torch.amp.autocast_mode import autocast
 from torch.amp.grad_scaler import GradScaler
 from pathlib import Path
-from typing import TypeAlias, Any
+from typing import TypeAlias
 
 # Type aliases for modern Python 3.10
 Tensor: TypeAlias = torch.Tensor
 Device: TypeAlias = torch.device | str
 DType: TypeAlias = torch.dtype
-TensorDict: TypeAlias = Dict[str, Tensor]
+TensorDict: TypeAlias = dict[str, Tensor]
 
 
 @dataclass
@@ -36,14 +36,14 @@ class MegaNeRFPlusConfig:
 
     # Scene decomposition
     num_blocks: int = 8
-    block_size: Tuple[int, int, int] = (32, 32, 32)
+    block_size: tuple[int, int, int] = (32, 32, 32)
     overlap: int = 4  # Overlap between blocks
 
     # Network architecture
     feature_dim: int = 256
     hidden_dim: int = 256
     num_layers: int = 8
-    skip_connections: List[int] = (4,)
+    skip_connections: list[int] = (4,)
     activation: str = "relu"
     output_activation: str = "sigmoid"
 
@@ -255,7 +255,7 @@ class MultiResolutionMLP(nn.Module):
 
         return nn.Sequential(*layers)
 
-    def forward(self, features: torch.Tensor, lod: int = 0) -> Dict[str, torch.Tensor]:
+    def forward(self, features: torch.Tensor, lod: int = 0) -> dict[str, torch.Tensor]:
         """
         Forward pass through MLP at specified LOD
 
@@ -366,7 +366,7 @@ class PhotogrammetricRenderer(nn.Module):
         z_vals: torch.Tensor,
         rays_d: torch.Tensor,
         white_bkgd: bool = False,
-    ) -> Dict[str, torch.Tensor]:
+    ) -> dict[str, torch.Tensor]:
         """Volume rendering with photogrammetric optimizations"""
 
         # Compute distances between samples
@@ -448,9 +448,9 @@ class ScalableNeRFModel(nn.Module):
     def forward(
         self,
         positions: torch.Tensor,
-        view_dirs: Optional[torch.Tensor] = None,
+        view_dirs: torch.Tensor | None = None,
         lod: int = 0,
-    ) -> Dict[str, torch.Tensor]:
+    ) -> dict[str, torch.Tensor]:
         """
         Forward pass through scalable NeRF model
 
@@ -586,7 +586,7 @@ class MegaNeRFPlus(nn.Module):
 
     def training_step(
         self, batch: TensorDict, optimizer: torch.optim.Optimizer
-    ) -> Tuple[Tensor, TensorDict]:
+    ) -> tuple[Tensor, TensorDict]:
         """Optimized training step with AMP support."""
         # Zero gradients efficiently
         optimizer.zero_grad(set_to_none=self.config.set_grad_to_none)
@@ -696,7 +696,7 @@ class AttentiveBlockAssignment(nn.Module):
             nn.Linear(config.hidden_dim, config.num_blocks),
         )
 
-    def forward(self, coords: Tensor) -> Tuple[Tensor, Tensor]:
+    def forward(self, coords: Tensor) -> tuple[Tensor, Tensor]:
         """Forward pass with attention."""
         # Encode coordinates
         encoded_coords = self.pos_encoder(coords)
